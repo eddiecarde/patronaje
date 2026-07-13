@@ -28,9 +28,9 @@ python -m patronaje.cli --size S --method mueller --output output  # método Mü
 python -m patronaje.cli --all-sizes --output output           # grada XS..XXL + nido
 ```
 
-**Métodos de patronaje**: `aldrich` (por defecto) y `mueller` (Müller & Sohn).
-El motor de geometría y todo lo demás se reutiliza entre métodos — ver
-`docs/motor_metodos.md`, `docs/metodo_mueller.md`.
+**Métodos de patronaje**: `aldrich` (por defecto), `mueller` (Müller & Sohn),
+`bunka` (文化式) y `esmod`. El motor de geometría y todo lo demás se reutiliza
+entre métodos — ver `docs/motor_metodos.md` y `docs/metodo_{aldrich,mueller,bunka,esmod}.md`.
 
 Genera en `output/` (por talla):
 

@@ -8,6 +8,8 @@ from __future__ import annotations
 from .base import DraftingMethod
 from .aldrich_method import AldrichMethod
 from .mueller_method import MuellerMethod
+from .bunka_method import BunkaMethod
+from .esmod_method import EsmodMethod
 
 _REGISTRY: dict[str, DraftingMethod] = {}
 
@@ -43,3 +45,5 @@ def list_methods() -> list[dict]:
 # métodos registrados
 register(AldrichMethod())
 register(MuellerMethod())
+register(BunkaMethod())
+register(EsmodMethod())

@@ -7,9 +7,28 @@ from patronaje.garment.shirt import build_shirt
 from patronaje.validation.validators import validate_all
 
 
+ALL_METHODS = ["aldrich", "mueller", "bunka", "esmod"]
+
+
 def test_registry_lists_methods():
     names = {m["name"] for m in list_methods()}
-    assert "aldrich" in names and "mueller" in names
+    for m in ALL_METHODS:
+        assert m in names
+
+
+@pytest.mark.parametrize("method", ALL_METHODS)
+def test_every_method_valid_all_sizes(method):
+    for size in ["XS", "S", "M", "L", "XL", "XXL"]:
+        sh = build_shirt(size, method=method)
+        assert len(sh.pieces) == 10
+        assert validate_all(sh, tol=0.6).ok, f"{method} {size} inválido"
+
+
+def test_methods_produce_distinct_blocks():
+    necks = {m: build_shirt("S", method=m).bodice.neckline_length()
+             for m in ALL_METHODS}
+    # al menos 3 valores de escote distintos entre los 4 métodos
+    assert len(set(round(v, 1) for v in necks.values())) >= 3, necks
 
 
 def test_aldrich_is_available_and_valid():

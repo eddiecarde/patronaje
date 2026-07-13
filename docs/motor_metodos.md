@@ -54,11 +54,12 @@ CLI/UX. Añadir un método = escribir su clase y registrarla; nada más cambia.
 |--------|--------|----------------|
 | **Aldrich** | ✅ disponible | `blocks/aldrich_method.py` (referencia) |
 | **Müller & Sohn** | ✅ disponible | `blocks/mueller_method.py` + `mueller_bodice.py` / `mueller_sleeve.py` |
-| **ESMOD** | ⬜ por diseñar | — |
-| **Bunka** | ⬜ por diseñar | — |
+| **Bunka (文化式)** | ✅ disponible | `blocks/bunka_method.py` |
+| **ESMOD** | ✅ disponible | `blocks/esmod_method.py` |
 
-Selección: `build_shirt(size, method="mueller")` o CLI `--method mueller`.
-Detalle de fórmulas de Müller en `docs/metodo_mueller.md`.
+Selección: `build_shirt(size, method="bunka")` o CLI `--method bunka`. Los tres
+métodos no-Aldrich usan el constructor genérico `blocks/_bodice_common.py`
+(mismo bloque estructural, distintas fórmulas). Detalle en `docs/metodo_*.md`.
 
 ## Diferencias de método a capturar (fidelidad, no cosmética)
 
