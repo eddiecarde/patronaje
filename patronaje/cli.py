@@ -30,6 +30,8 @@ from .export.csv_points import export_csv
 from .export.scr import export_scr
 from .grading.rules import SIZE_ORDER, grading_table_text
 from .grading.grader import export_grade_nest
+from .techpack.techpack import export_techpack
+from .marker.layout import export_marker_svg, marker_report
 
 
 def generate(size: str = "S", outdir: str = "output", *,
@@ -56,7 +58,17 @@ def generate(size: str = "S", outdir: str = "output", *,
     outputs["json"] = export_json(shirt, f"{base}.json")
     outputs["csv"] = export_csv(shirt, f"{base}_puntos.csv")
     outputs["scr"] = export_scr(shirt, f"{base}.scr", include_seam=include_seam)
+    # Fase 3: tech pack + planos de corte
+    outputs["techpack"] = export_techpack(shirt, f"{base}_tech_pack.html")
+    for W in (110, 150, 160):
+        outputs[f"marker_{W}"] = export_marker_svg(shirt, float(W), f"{base}_marker_{W}.svg")
 
+    if not quiet:
+        rep = marker_report(shirt)
+        print("\n=== CONSUMO DE TELA (marker) ===")
+        for W, dd in rep["por_ancho"].items():
+            print(f"  ancho {dd['ancho_cm']:.0f} cm -> {dd['largo_m']:.2f} m  "
+                  f"(desperdicio {dd['desperdicio']*100:.1f} %)")
     if not quiet:
         print(f"\n=== ARCHIVOS GENERADOS (talla {size}) ===")
         for k, v in outputs.items():

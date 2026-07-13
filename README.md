@@ -8,10 +8,11 @@ G2 aptas para corte CNC, validaciones de casado y exportación multiformato.
 talla S internacional. El mismo motor es la base para futuras prendas (blusas,
 vestidos, chaquetas, pantalones, faldas).
 
-> Estado: **Fases 1 y 2 completas** — motor geométrico, bloques Aldrich, 10
-> piezas, validaciones y exportadores DXF R2013 / **DXF AAMA/ASTM** / SVG /
-> PDF 1:1 / PDF A4 / **AI** / JSON / CSV / SCR, más **grading XS–XXL** con nido.
-> (Fase 3: tech pack + plano de corte.)
+> Estado: **Fases 1, 2 y 3 completas** — motor geométrico, bloques Aldrich, 10
+> piezas, validaciones, exportadores DXF R2013 / **DXF AAMA/ASTM** / SVG /
+> PDF 1:1 / PDF A4 / **AI** / JSON / CSV / SCR, **grading XS–XXL** con nido,
+> **tech pack** HTML completo y **plano de corte** (marker) con consumo y
+> desperdicio para telas 110/150/160 cm.
 
 ## Instalación
 
@@ -39,6 +40,8 @@ Genera en `output/` (por talla):
 | `camisa_S.json`            | Geometría completa + parámetros                    |
 | `camisa_S_puntos.csv`      | Todos los puntos (costura y corte)                 |
 | `camisa_S.scr`             | Script de AutoCAD que reconstruye el patrón        |
+| `camisa_S_tech_pack.html`  | **Tech pack** completo (ficha, BOM, consumo, QC…)  |
+| `camisa_S_marker_150.svg`  | **Plano de corte** (marker) por ancho de tela      |
 
 Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 
