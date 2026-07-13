@@ -8,9 +8,10 @@ G2 aptas para corte CNC, validaciones de casado y exportación multiformato.
 talla S internacional. El mismo motor es la base para futuras prendas (blusas,
 vestidos, chaquetas, pantalones, faldas).
 
-> Estado: **Fase 1 completa** — motor geométrico, bloques Aldrich, 10 piezas,
-> validaciones y exportadores DXF R2013 / SVG / PDF 1:1 / PDF A4 / JSON / CSV /
-> SCR. (Fase 2: AAMA/ASTM + AI + grading. Fase 3: tech pack + plano de corte.)
+> Estado: **Fases 1 y 2 completas** — motor geométrico, bloques Aldrich, 10
+> piezas, validaciones y exportadores DXF R2013 / **DXF AAMA/ASTM** / SVG /
+> PDF 1:1 / PDF A4 / **AI** / JSON / CSV / SCR, más **grading XS–XXL** con nido.
+> (Fase 3: tech pack + plano de corte.)
 
 ## Instalación
 
@@ -21,23 +22,29 @@ pip install -r requirements.txt      # numpy, ezdxf, shapely, reportlab, svgwrit
 ## Uso
 
 ```bash
-python -m patronaje.cli --size S --output output
+python -m patronaje.cli --size S --output output      # una talla
+python -m patronaje.cli --all-sizes --output output   # grada XS..XXL + nido
 ```
 
-Genera en `output/`:
+Genera en `output/` (por talla):
 
-| Archivo               | Formato                                            |
-|-----------------------|----------------------------------------------------|
-| `camisa_S.dxf`        | DXF **AutoCAD R2013** con 11 capas independientes  |
-| `camisa_S.svg`        | SVG vectorial por capas                            |
-| `camisa_S_1a1.pdf`    | PDF **escala real 1:1** en mosaico A4              |
-| `camisa_S_A4.pdf`     | PDF de conjunto ajustado a A4                       |
-| `camisa_S.json`       | Geometría completa + parámetros                    |
-| `camisa_S_puntos.csv` | Todos los puntos (costura y corte)                 |
-| `camisa_S.scr`        | Script de AutoCAD que reconstruye el patrón        |
+| Archivo                    | Formato                                            |
+|----------------------------|----------------------------------------------------|
+| `camisa_S.dxf`             | DXF **AutoCAD R2013** con 11 capas independientes  |
+| `camisa_S_AAMA_ASTM.dxf`   | DXF **AAMA/ASTM D6673** (bloques + capas numéricas) |
+| `camisa_S.svg`             | SVG vectorial por capas                            |
+| `camisa_S_1a1.pdf`         | PDF **escala real 1:1** en mosaico A4              |
+| `camisa_S_A4.pdf`          | PDF de conjunto ajustado a A4                       |
+| `camisa_S.ai`              | **AI** compatible con PDF (Illustrator), 1:1        |
+| `camisa_S.json`            | Geometría completa + parámetros                    |
+| `camisa_S_puntos.csv`      | Todos los puntos (costura y corte)                 |
+| `camisa_S.scr`             | Script de AutoCAD que reconstruye el patrón        |
+
+Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
-`patronaje/parametric/measurements.py`).
+`patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
+formatos industriales: `docs/aama_astm.md`.
 
 ## Piezas generadas
 

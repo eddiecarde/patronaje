@@ -57,7 +57,7 @@ def test_export_all_formats(tmp_path=None):
     from patronaje.cli import generate
     d = tempfile.mkdtemp()
     outs = generate("S", d)
-    for k in ["dxf", "svg", "pdf_1a1", "pdf_a4", "json", "csv", "scr"]:
+    for k in ["dxf_r2013", "dxf_aama", "svg", "pdf_1a1", "pdf_a4", "ai", "json", "csv", "scr"]:
         assert os.path.exists(outs[k]) and os.path.getsize(outs[k]) > 0
 
 
@@ -66,7 +66,7 @@ def test_dxf_opens_and_has_layers():
     d = tempfile.mkdtemp()
     from patronaje.cli import generate
     outs = generate("S", d)
-    doc = ezdxf.readfile(outs["dxf"])
+    doc = ezdxf.readfile(outs["dxf_r2013"])
     assert doc.dxfversion == "AC1027"  # R2013
     layers = {l.dxf.name for l in doc.layers}
     for req in ["CORTE", "COSTURA", "PIQUETES", "HILO", "DOBLEZ", "TEXTOS"]:
