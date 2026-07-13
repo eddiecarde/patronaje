@@ -16,8 +16,9 @@ from dataclasses import dataclass, field
 
 from ..parametric.parameters import Parameters
 from ..parametric.measurements import build_parameters
-from ..blocks.aldrich_bodice import build_bodice, BodiceDraft
-from ..blocks.aldrich_sleeve import build_sleeve, SleeveDraft
+from ..blocks.aldrich_bodice import BodiceDraft
+from ..blocks.aldrich_sleeve import SleeveDraft
+from ..blocks.registry import get_method
 from ..core.point import polyline_length
 from ..piece import Piece
 from .pieces.simple_shapes import rounded_rect, arc_band, collar_with_point
@@ -42,13 +43,18 @@ class Shirt:
     sleeve: SleeveDraft = None
     pieces: list[Piece] = field(default_factory=list)
     sleeve_ease: float = 1.0
+    method: str = "aldrich"
 
     # ------------------------------------------------------------------
     def build(self) -> "Shirt":
         p = self.p
         size = p._base["talla_nombre"].descripcion.replace("talla ", "")
-        self.bodice = build_bodice(p)
-        self.sleeve = build_sleeve(p, self.bodice.armhole_length(), self.sleeve_ease)
+        m = get_method(self.method)
+        missing = m.check_measurements(p)
+        if missing:
+            raise ValueError(f"Faltan medidas para el método {m.label}: {missing}")
+        self.bodice = m.build_bodice(p)
+        self.sleeve = m.build_sleeve(p, self.bodice.armhole_length(), self.sleeve_ease)
         self.pieces = [
             self._front(size),
             self._back(size),
@@ -317,5 +323,7 @@ class Shirt:
         return self
 
 
-def build_shirt(size: str = "S", sleeve_ease: float = 1.0) -> Shirt:
-    return Shirt(p=build_parameters(size), sleeve_ease=sleeve_ease).build()
+def build_shirt(size: str = "S", sleeve_ease: float = 1.0,
+                method: str = "aldrich") -> Shirt:
+    return Shirt(p=build_parameters(size), sleeve_ease=sleeve_ease,
+                 method=method).build()
