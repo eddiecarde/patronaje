@@ -53,9 +53,12 @@ CLI/UX. Añadir un método = escribir su clase y registrarla; nada más cambia.
 | Método | Estado | Implementación |
 |--------|--------|----------------|
 | **Aldrich** | ✅ disponible | `blocks/aldrich_method.py` (referencia) |
-| **Müller & Sohn** | 🟡 planificado | `blocks/mueller_method.py` (fórmulas documentadas) |
+| **Müller & Sohn** | ✅ disponible | `blocks/mueller_method.py` + `mueller_bodice.py` / `mueller_sleeve.py` |
 | **ESMOD** | ⬜ por diseñar | — |
 | **Bunka** | ⬜ por diseñar | — |
+
+Selección: `build_shirt(size, method="mueller")` o CLI `--method mueller`.
+Detalle de fórmulas de Müller en `docs/metodo_mueller.md`.
 
 ## Diferencias de método a capturar (fidelidad, no cosmética)
 

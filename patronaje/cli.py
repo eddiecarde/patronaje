@@ -36,18 +36,20 @@ from .marker.layout import export_marker_svg, marker_report
 
 def generate(size: str = "S", outdir: str = "output", *,
              include_seam: bool = True, force: bool = False,
-             tol: float = 0.5, quiet: bool = False) -> dict:
+             tol: float = 0.5, quiet: bool = False, method: str = "aldrich") -> dict:
     os.makedirs(outdir, exist_ok=True)
-    shirt = build_shirt(size).layout()
+    shirt = build_shirt(size, method=method).layout()
 
     report = validate_all(shirt, tol=tol)
     if not quiet:
+        print(f"[método: {method}]")
         print(report.text())
     if not report.ok and not force:
         print("\n[ABORTADO] Hay errores de validación. Use --force para exportar de todos modos.")
         sys.exit(2)
 
-    base = os.path.join(outdir, f"camisa_{size}")
+    suffix = "" if method == "aldrich" else f"_{method}"
+    base = os.path.join(outdir, f"camisa_{size}{suffix}")
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
     outputs["dxf_aama"] = export_dxf_aama(shirt, f"{base}_AAMA_ASTM.dxf")
@@ -77,7 +79,8 @@ def generate(size: str = "S", outdir: str = "output", *,
 
 
 def generate_all_sizes(outdir: str = "output", *, include_seam: bool = True,
-                       force: bool = False, tol: float = 0.6) -> dict:
+                       force: bool = False, tol: float = 0.6,
+                       method: str = "aldrich") -> dict:
     """Grada todas las tallas (regeneración paramétrica) y el nido de grading."""
     print(grading_table_text())
     print()
@@ -85,7 +88,7 @@ def generate_all_sizes(outdir: str = "output", *, include_seam: bool = True,
     for s in SIZE_ORDER:
         sub = os.path.join(outdir, s)
         all_out[s] = generate(s, sub, include_seam=include_seam, force=force,
-                              tol=tol, quiet=True)
+                              tol=tol, quiet=True, method=method)
         print(f"  [OK] talla {s}: {len(all_out[s])} archivos -> {sub}/")
     # nidos de grading de piezas clave
     nests = {}
@@ -105,13 +108,15 @@ def main(argv=None):
     ap.add_argument("--no-seam", action="store_true", help="No dibujar línea de costura")
     ap.add_argument("--force", action="store_true", help="Exportar aunque falle la validación")
     ap.add_argument("--tol", type=float, default=0.5, help="Tolerancia de casado (cm)")
+    ap.add_argument("--method", default="aldrich",
+                    help="Método de patronaje (aldrich, mueller)")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,
-                           force=args.force, tol=max(args.tol, 0.6))
+                           force=args.force, tol=max(args.tol, 0.6), method=args.method)
     else:
         generate(args.size, args.output, include_seam=not args.no_seam,
-                 force=args.force, tol=args.tol)
+                 force=args.force, tol=args.tol, method=args.method)
 
 
 if __name__ == "__main__":

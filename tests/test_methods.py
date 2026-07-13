@@ -26,11 +26,21 @@ def test_default_method_is_aldrich():
     assert len(sh_default.pieces) == len(sh_aldrich.pieces) == 10
 
 
-def test_planned_method_raises():
-    with pytest.raises(NotImplementedError):
-        get_method("mueller")
-    with pytest.raises(NotImplementedError):
-        build_shirt("S", method="mueller")
+def test_mueller_available_and_valid():
+    m = get_method("mueller")
+    assert m.available
+    for size in ["XS", "S", "M", "L", "XL", "XXL"]:
+        sh = build_shirt(size, method="mueller")
+        assert len(sh.pieces) == 10
+        assert validate_all(sh, tol=0.6).ok, f"Müller {size} inválido"
+
+
+def test_mueller_differs_from_aldrich():
+    a = build_shirt("S", method="aldrich").bodice
+    m = build_shirt("S", method="mueller").bodice
+    # bloques distintos: escote y sisa no coinciden
+    assert abs(a.neckline_length() - m.neckline_length()) > 0.5
+    assert abs(a.armhole_length() - m.armhole_length()) > 0.3
 
 
 def test_unknown_method_raises():

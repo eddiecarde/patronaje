@@ -23,9 +23,14 @@ pip install -r requirements.txt      # numpy, ezdxf, shapely, reportlab, svgwrit
 ## Uso
 
 ```bash
-python -m patronaje.cli --size S --output output      # una talla
-python -m patronaje.cli --all-sizes --output output   # grada XS..XXL + nido
+python -m patronaje.cli --size S --output output              # una talla (Aldrich)
+python -m patronaje.cli --size S --method mueller --output output  # método Müller & Sohn
+python -m patronaje.cli --all-sizes --output output           # grada XS..XXL + nido
 ```
+
+**Métodos de patronaje**: `aldrich` (por defecto) y `mueller` (Müller & Sohn).
+El motor de geometría y todo lo demás se reutiliza entre métodos — ver
+`docs/motor_metodos.md`, `docs/metodo_mueller.md`.
 
 Genera en `output/` (por talla):
 

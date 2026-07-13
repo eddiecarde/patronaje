@@ -15,19 +15,27 @@ from .parameters import Parameters
 
 # Medidas del cuerpo por talla (cm). Talla S = enunciado. El resto se completa
 # con incrementos industriales estándar y se usa en el grading (Fase 2).
+# Medidas por talla. `talle_espalda` (Rückenlänge, nuca->cintura) y
+# `altura_cadera` (cintura->cadera) las usan métodos proporcionales (Müller).
 SIZE_CHART: dict[str, dict[str, float]] = {
     "XS": dict(busto=84, cintura=66, cadera=90, largo_camisa=66, largo_manga=58.5,
-               contorno_cuello=36, ancho_espalda=35.5, hombro=12.0, contorno_brazo=28.5, muneca=17),
+               contorno_cuello=36, ancho_espalda=35.5, hombro=12.0, contorno_brazo=28.5, muneca=17,
+               talle_espalda=40.0, altura_cadera=19.0),
     "S":  dict(busto=88, cintura=70, cadera=94, largo_camisa=68, largo_manga=60,
-               contorno_cuello=37, ancho_espalda=37, hombro=12.5, contorno_brazo=30, muneca=18),
+               contorno_cuello=37, ancho_espalda=37, hombro=12.5, contorno_brazo=30, muneca=18,
+               talle_espalda=41.0, altura_cadera=20.0),
     "M":  dict(busto=92, cintura=74, cadera=98, largo_camisa=70, largo_manga=61.5,
-               contorno_cuello=38, ancho_espalda=38.5, hombro=13.0, contorno_brazo=31.5, muneca=19),
+               contorno_cuello=38, ancho_espalda=38.5, hombro=13.0, contorno_brazo=31.5, muneca=19,
+               talle_espalda=42.0, altura_cadera=20.5),
     "L":  dict(busto=96, cintura=78, cadera=102, largo_camisa=72, largo_manga=63,
-               contorno_cuello=39, ancho_espalda=40, hombro=13.5, contorno_brazo=33, muneca=20),
+               contorno_cuello=39, ancho_espalda=40, hombro=13.5, contorno_brazo=33, muneca=20,
+               talle_espalda=43.0, altura_cadera=21.0),
     "XL": dict(busto=100, cintura=82, cadera=106, largo_camisa=74, largo_manga=64.5,
-               contorno_cuello=40, ancho_espalda=41.5, hombro=14.0, contorno_brazo=34.5, muneca=21),
+               contorno_cuello=40, ancho_espalda=41.5, hombro=14.0, contorno_brazo=34.5, muneca=21,
+               talle_espalda=44.0, altura_cadera=21.5),
     "XXL": dict(busto=104, cintura=86, cadera=110, largo_camisa=76, largo_manga=66,
-                contorno_cuello=41, ancho_espalda=43, hombro=14.5, contorno_brazo=36, muneca=22),
+                contorno_cuello=41, ancho_espalda=43, hombro=14.5, contorno_brazo=36, muneca=22,
+                talle_espalda=45.0, altura_cadera=22.0),
 }
 
 # Holguras de confección (ease) — camisa básica semi-entallada.
@@ -77,6 +85,8 @@ def build_parameters(size: str = "S") -> Parameters:
     p.set("hombro", m["hombro"], descripcion="largo de hombro")
     p.set("contorno_brazo", m["contorno_brazo"], descripcion="contorno de brazo")
     p.set("muneca", m["muneca"], descripcion="contorno de muñeca")
+    p.set("talle_espalda", m["talle_espalda"], descripcion="talle de espalda (nuca->cintura)")
+    p.set("altura_cadera", m["altura_cadera"], descripcion="altura de cadera (cintura->cadera)")
 
     # holguras
     for k, v in EASE.items():

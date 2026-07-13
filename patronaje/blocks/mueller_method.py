@@ -30,13 +30,15 @@ from ..parametric.parameters import Parameters
 from .base import DraftingMethod
 from .aldrich_bodice import BodiceDraft
 from .aldrich_sleeve import SleeveDraft
+from .mueller_bodice import draft_mueller_bodice
+from .mueller_sleeve import draft_mueller_sleeve
 
 
 class MuellerMethod(DraftingMethod):
     name = "mueller"
     label = "Müller & Sohn"
     source = "M. Müller & Sohn, Schnittkonstruktion für Damen"
-    available = False   # planificado (ver docstring)
+    available = True
 
     def required_measurements(self) -> set[str]:
         return {
@@ -46,13 +48,8 @@ class MuellerMethod(DraftingMethod):
         }
 
     def build_bodice(self, p: Parameters) -> BodiceDraft:
-        raise NotImplementedError(
-            "Método Müller & Sohn planificado: ver docstring de mueller_method.py "
-            "y docs/motor_metodos.md para el plan de fórmulas."
-        )
+        return draft_mueller_bodice(p)
 
     def build_sleeve(self, p: Parameters, target_armhole: float,
                      sleeve_ease: float = 1.0) -> SleeveDraft:
-        raise NotImplementedError(
-            "Método Müller & Sohn planificado: manga pendiente de implementar."
-        )
+        return draft_mueller_sleeve(p, target_armhole, sleeve_ease)
