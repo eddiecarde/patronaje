@@ -1,0 +1,148 @@
+"""Estilos derivados por manipulación de bloque.
+
+A partir del ensamble base (:class:`~patronaje.garment.shirt.Shirt`) se generan
+variantes de estilo modificando las piezas con las operaciones geométricas de
+`operations.py`. Cada estilo reemplaza los contornos afectados y deja el resto
+del sistema (validación geométrica, exportadores, tech pack, marker) intacto.
+
+Estilos incluidos:
+* **flare** — camisa acampanada / túnica A-line (vuelo en delantero y espalda).
+* **puff** — manga abullonada (volumen + copa levantada; la cabeza se frunce).
+
+Nota: algunos estilos rompen a propósito el casado ``sisa = copa`` (p. ej. la
+manga abullonada se **frunce** en la sisa), por lo que se validan sólo las
+comprobaciones **geométricas** (polígono cerrado, simple, sin duplicados).
+"""
+from __future__ import annotations
+
+from ..garment.shirt import Shirt
+from . import operations as ops
+
+
+def _find(shirt, name):
+    return next((p for p in shirt.pieces if p.name == name), None)
+
+
+def flare_shirt(shirt: Shirt, added_hem: float = 10.0) -> Shirt:
+    """Convierte la camisa en acampanada/túnica añadiendo ``added_hem`` cm de
+    vuelo por costado en delantero y espalda (A-line por slash-and-spread)."""
+    p = shirt.p
+    top_y = p.prof_sisa
+    bot_y = p.largo_camisa
+    quarter = (p.busto + p.holgura_busto) / 4.0
+    ratio = added_hem / quarter
+    for name in ("DELANTERO", "ESPALDA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.flare(pc.net_contour, 0.0, top_y, bot_y, ratio, side=+1)
+            pc.name = name + " (acampanado)"
+    return shirt
+
+
+def puff_sleeve(shirt: Shirt, width_factor: float = 1.30, cap_lift: float = 3.5) -> Shirt:
+    """Manga abullonada: ensancha la manga y levanta la copa (se frunce en la
+    cabeza). Rompe intencionalmente el casado sisa=copa."""
+    pc = _find(shirt, "MANGA")
+    if pc:
+        cap_h = shirt.sleeve.cap_height
+        pts = ops.widen(pc.net_contour, 0.0, width_factor)
+        pts = ops.lift(pts, cap_lift, cap_h, above=True)
+        pc.net_contour = pts
+        pc.name = "MANGA (abullonada)"
+        pc.reference_texts = list(pc.reference_texts) + [((0.0, cap_h * 0.5), "fruncir cabeza")]
+    return shirt
+
+
+def bell_sleeve(shirt: Shirt, added: float = 16.0) -> Shirt:
+    """Manga campana: vuelo simétrico desde el codo hasta la boca de manga."""
+    pc = _find(shirt, "MANGA")
+    if pc:
+        s = shirt.sleeve
+        top_y = s.cap_height + (shirt.p.largo_manga - s.cap_height) * 0.45
+        ratio = added / 24.0
+        pc.net_contour = ops.flare_symmetric(pc.net_contour, 0.0, top_y,
+                                             shirt.p.largo_manga, ratio)
+        pc.name = "MANGA (campana)"
+    return shirt
+
+
+def mandarin_collar(shirt: Shirt) -> Shirt:
+    """Cuello mao: elimina la hoja de cuello y deja sólo la banda (más alta)."""
+    shirt.pieces = [p for p in shirt.pieces if p.name != "CUELLO"]
+    stand = _find(shirt, "PIE DE CUELLO")
+    if stand:
+        ys = [q[1] for q in stand.net_contour]
+        y0 = min(ys)
+        stand.net_contour = [(x, y0 + (y - y0) * 1.6) for x, y in stand.net_contour]
+        stand.name = "CUELLO MAO"
+    return shirt
+
+
+def sleeveless(shirt: Shirt) -> Shirt:
+    """Sin mangas: elimina manga, puño y tapeta (sisa acabada con vista/bies)."""
+    drop = {"PUNO", "TAPETA MANGA"}
+    shirt.pieces = [p for p in shirt.pieces
+                    if p.name not in drop and not p.name.startswith("MANGA")]
+    return shirt
+
+
+def crop_top(shirt: Shirt, at: float = 0.45) -> Shirt:
+    """Crop: recorta el largo de delantero, espalda y vista."""
+    p = shirt.p
+    cut_y = p.prof_sisa + (p.largo_camisa - p.prof_sisa) * at
+    for name in ("DELANTERO", "ESPALDA", "VISTA DELANTERA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.clip_below(pc.net_contour, cut_y)
+            pc.name = name + " (crop)"
+    return shirt
+
+
+def princess_front(shirt: Shirt) -> Shirt:
+    """Costura princesa: divide el delantero en panel centro + panel costado."""
+    from ..piece import Piece
+    p = shirt.p
+    b = shirt.bodice
+    pc = _find(shirt, "DELANTERO")
+    if pc is None:
+        return shirt
+    ytar = p.prof_sisa * 0.5
+    top = min(b.front_armhole, key=lambda q: abs(q[1] - ytar))
+    princess_x = p.busto / 8.0
+    bottom = (princess_x, p.largo_camisa)
+    c1, c2 = ops.split_panel(pc.net_contour, top, bottom, princess_x - 1.0)
+    center_c, side_c = (c1, c2) if min(q[0] for q in c1) < min(q[0] for q in c2) else (c2, c1)
+    center = Piece(name="DELANTERO CENTRO", number=1, size=pc.size, quantity=2,
+                   cut_type="par: izq + der", net_contour=center_c,
+                   seam_allowance=p.margen_costura,
+                   grain=((2.0, p.escote_del_prof + 4), (2.0, p.largo_camisa - 4)),
+                   buttons=pc.buttons, buttonholes=pc.buttonholes)
+    side = Piece(name="DELANTERO COSTADO", number=11, size=pc.size, quantity=2,
+                 cut_type="par: izq + der", net_contour=side_c,
+                 seam_allowance=p.margen_costura,
+                 grain=((p.cuarto_busto * 0.7, p.prof_sisa + 4),
+                        (p.cuarto_busto * 0.7, p.largo_camisa - 4)))
+    idx = shirt.pieces.index(pc)
+    shirt.pieces[idx:idx + 1] = [center, side]
+    return shirt
+
+
+STYLES = {
+    "flare": flare_shirt,
+    "puff": puff_sleeve,
+    "bell": bell_sleeve,
+    "mandarin": mandarin_collar,
+    "sleeveless": sleeveless,
+    "crop": crop_top,
+    "princess": princess_front,
+}
+
+
+def apply_style(shirt: Shirt, style: str, **kw) -> Shirt:
+    if style in (None, "", "none"):
+        return shirt
+    if style not in STYLES:
+        raise KeyError(f"Estilo desconocido: '{style}'. Opciones: {list(STYLES)}")
+    shirt = STYLES[style](shirt, **kw)
+    shirt.layout()
+    return shirt

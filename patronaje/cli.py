@@ -36,19 +36,34 @@ from .marker.layout import export_marker_svg, marker_report
 
 def generate(size: str = "S", outdir: str = "output", *,
              include_seam: bool = True, force: bool = False,
-             tol: float = 0.5, quiet: bool = False, method: str = "aldrich") -> dict:
+             tol: float = 0.5, quiet: bool = False, method: str = "aldrich",
+             style: str = "none") -> dict:
     os.makedirs(outdir, exist_ok=True)
     shirt = build_shirt(size, method=method).layout()
 
-    report = validate_all(shirt, tol=tol)
+    styled = style not in (None, "", "none")
+    if styled:
+        from .transform.styles import apply_style
+        shirt = apply_style(shirt, style)
+
+    if styled:
+        # los estilos pueden alterar el casado (p. ej. manga fruncida): sólo geometría
+        from .validation.validators import ValidationReport, validate_piece_geometry
+        report = ValidationReport()
+        for pc in shirt.pieces:
+            validate_piece_geometry(pc, report)
+    else:
+        report = validate_all(shirt, tol=tol)
     if not quiet:
-        print(f"[método: {method}]")
+        print(f"[método: {method}" + (f" | estilo: {style}]" if styled else "]"))
         print(report.text())
     if not report.ok and not force:
         print("\n[ABORTADO] Hay errores de validación. Use --force para exportar de todos modos.")
         sys.exit(2)
 
     suffix = "" if method == "aldrich" else f"_{method}"
+    if styled:
+        suffix += f"_{style}"
     base = os.path.join(outdir, f"camisa_{size}{suffix}")
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
@@ -109,14 +124,16 @@ def main(argv=None):
     ap.add_argument("--force", action="store_true", help="Exportar aunque falle la validación")
     ap.add_argument("--tol", type=float, default=0.5, help="Tolerancia de casado (cm)")
     ap.add_argument("--method", default="aldrich",
-                    help="Método de patronaje (aldrich, mueller)")
+                    help="Método de patronaje (aldrich, mueller, bunka, esmod)")
+    ap.add_argument("--style", default="none",
+                    help="Estilo (none, flare, puff, bell, mandarin, sleeveless, crop, princess)")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,
                            force=args.force, tol=max(args.tol, 0.6), method=args.method)
     else:
         generate(args.size, args.output, include_seam=not args.no_seam,
-                 force=args.force, tol=args.tol, method=args.method)
+                 force=args.force, tol=args.tol, method=args.method, style=args.style)
 
 
 if __name__ == "__main__":

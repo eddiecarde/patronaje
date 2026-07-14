@@ -32,6 +32,9 @@ python -m patronaje.cli --all-sizes --output output           # grada XS..XXL + 
 `bunka` (文化式) y `esmod`. El motor de geometría y todo lo demás se reutiliza
 entre métodos — ver `docs/motor_metodos.md` y `docs/metodo_{aldrich,mueller,bunka,esmod}.md`.
 
+**Estilos (manipulación de bloque)**: `--style flare` (túnica A-line) y `--style puff`
+(manga abullonada) — del mismo bloque salen varias prendas. Ver `docs/manipulacion_bloque.md`.
+
 Genera en `output/` (por talla):
 
 | Archivo                    | Formato                                            |
