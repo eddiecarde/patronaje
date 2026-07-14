@@ -24,6 +24,13 @@ patronaje, implementadas como operaciones geométricas en `patronaje/transform/`
 |--------|--------|-----------|
 | `flare` | Camisa acampanada / **túnica A-line** (vuelo en delantero y espalda) | `flare` |
 | `puff` | **Manga abullonada** (volumen + copa levantada; cabeza fruncida) | `widen` + `lift` |
+| `bell` | **Manga campana** (vuelo simétrico del codo a la boca de manga) | `flare_symmetric` |
+| `mandarin` | **Cuello mao** (elimina la hoja; sólo banda más alta) | intercambio de pieza |
+| `sleeveless` | **Sin mangas** (elimina manga/puño/tapeta; sisa con vista/bies) | eliminación de pieza |
+| `crop` | **Crop** (recorta el largo de delantero/espalda/vista) | `clip_below` |
+| `princess` | **Costura princesa** (parte el delantero en centro + costado) | `split_panel` |
+
+`STYLES` en `styles.py` es el registro; añadir uno = una función más.
 
 ## Uso
 

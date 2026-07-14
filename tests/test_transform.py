@@ -1,6 +1,8 @@
 """Tests de la capa de manipulación de bloque (estilos)."""
+import pytest
+
 from patronaje.garment.shirt import build_shirt
-from patronaje.transform.styles import flare_shirt, puff_sleeve, apply_style
+from patronaje.transform.styles import flare_shirt, puff_sleeve, apply_style, STYLES
 from patronaje.transform import operations as ops
 from patronaje.validation.validators import ValidationReport, validate_piece_geometry
 
@@ -47,6 +49,31 @@ def test_flare_keeps_center_front_straight():
     pc = next(p for p in fl.pieces if p.name.startswith("DELANTERO"))
     # el centro (x<=0, banda/CF) no se abre: no aparecen x negativos grandes nuevos
     assert min(q[0] for q in pc.net_contour) > -3.0
+
+
+@pytest.mark.parametrize("style", list(STYLES))
+def test_every_style_geometry_valid(style):
+    sh = apply_style(build_shirt("S"), style)
+    assert len(sh.pieces) >= 6
+    assert _geom_ok(sh), f"estilo {style} con geometría inválida"
+
+
+def test_style_piece_counts():
+    assert len(apply_style(build_shirt("S"), "mandarin").pieces) == 9    # sin hoja de cuello
+    assert len(apply_style(build_shirt("S"), "sleeveless").pieces) == 7  # sin manga/puño/tapeta
+    assert len(apply_style(build_shirt("S"), "princess").pieces) == 11   # delantero partido
+
+
+def test_bell_widens_wrist():
+    base = build_shirt("S")
+    def wrist_w(sh):
+        pc = next(p for p in sh.pieces if p.name.startswith("MANGA"))
+        ys = [q[1] for q in pc.net_contour]; ymax = max(ys)
+        xs = [q[0] for q in pc.net_contour if abs(q[1] - ymax) < 1.0]
+        return max(xs) - min(xs)
+    w0 = wrist_w(base)
+    w1 = wrist_w(apply_style(build_shirt("S"), "bell"))
+    assert w1 > w0 + 6
 
 
 def test_pivot_operation():

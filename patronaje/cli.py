@@ -126,7 +126,7 @@ def main(argv=None):
     ap.add_argument("--method", default="aldrich",
                     help="Método de patronaje (aldrich, mueller, bunka, esmod)")
     ap.add_argument("--style", default="none",
-                    help="Estilo por manipulación de bloque (none, flare, puff)")
+                    help="Estilo (none, flare, puff, bell, mandarin, sleeveless, crop, princess)")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,
