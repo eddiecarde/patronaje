@@ -29,8 +29,15 @@ patronaje, implementadas como operaciones geométricas en `patronaje/transform/`
 | `sleeveless` | **Sin mangas** (elimina manga/puño/tapeta; sisa con vista/bies) | eliminación de pieza |
 | `crop` | **Crop** (recorta el largo de delantero/espalda/vista) | `clip_below` |
 | `princess` | **Costura princesa** (parte el delantero en centro + costado) | `split_panel` |
+| `short_sleeve` | **Manga corta** (recorta manga; sin puño/tapeta) | `clip_below` |
+| `cap_sleeve` | **Manga cap** (muy corta sobre el hombro) | `clip_below` |
+| `dress` | **Camisa-vestido** (alarga + vuelo) | `lengthen` + `flare` |
+| `oversized` | **Corte holgado/oversize** (ensancha cuerpo y manga) | `widen` |
+| `empire` | **Corte imperio** (talle + falda con vuelo) | `clip_below/above` + `flare` |
 
-`STYLES` en `styles.py` es el registro; añadir uno = una función más.
+`STYLES` en `styles.py` es el registro; añadir uno = una función más. Nuevas
+primitivas: `flare_symmetric`, `clip_below/clip_above`, `lengthen`,
+`insert_on_contour`, `split_panel`, `dedup`.
 
 ## Uso
 

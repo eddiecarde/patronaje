@@ -98,6 +98,25 @@ def clip_below(contour, cut_y):
     return dedup([(float(x), float(y)) for x, y in r.exterior.coords])
 
 
+def clip_above(contour, cut_y):
+    """Recorta el polígono al semiplano ``y >= cut_y`` (parte inferior)."""
+    from shapely.geometry import Polygon, box
+    poly = Polygon(contour)
+    if not poly.is_valid:
+        poly = poly.buffer(0)
+    minx, miny, maxx, maxy = poly.bounds
+    r = poly.intersection(box(minx - 10, cut_y, maxx + 10, maxy + 10))
+    if r.geom_type == "MultiPolygon":
+        r = max(r.geoms, key=lambda g: g.area)
+    return dedup([(float(x), float(y)) for x, y in r.exterior.coords])
+
+
+def lengthen(points, hinge_y, factor):
+    """Alarga (o acorta) el largo por debajo de ``hinge_y`` escalando ``y``."""
+    return [(x, hinge_y + (y - hinge_y) * factor) if y > hinge_y else (x, y)
+            for x, y in points]
+
+
 def _dist_seg(p, a, b):
     ax, ay = a; bx, by = b; px, py = p
     vx, vy = bx - ax, by - ay

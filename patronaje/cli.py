@@ -126,7 +126,8 @@ def main(argv=None):
     ap.add_argument("--method", default="aldrich",
                     help="Método de patronaje (aldrich, mueller, bunka, esmod)")
     ap.add_argument("--style", default="none",
-                    help="Estilo (none, flare, puff, bell, mandarin, sleeveless, crop, princess)")
+                    help="Estilo: none, flare, puff, bell, mandarin, sleeveless, crop, "
+                         "princess, short_sleeve, cap_sleeve, dress, oversized, empire")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,

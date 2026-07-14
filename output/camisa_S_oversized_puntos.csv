@@ -1,0 +1,1014 @@
+pieza,numero,talla,tipo_linea,indice,x_cm,y_cm
+DELANTERO (oversize),1,S,costura,0,-1.9040,9.4000
+DELANTERO (oversize),1,S,costura,1,0.0000,9.4000
+DELANTERO (oversize),1,S,costura,2,0.2757,9.1835
+DELANTERO (oversize),1,S,costura,3,0.5501,8.9661
+DELANTERO (oversize),1,S,costura,4,0.8219,8.7468
+DELANTERO (oversize),1,S,costura,5,1.0898,8.5248
+DELANTERO (oversize),1,S,costura,6,1.3526,8.2991
+DELANTERO (oversize),1,S,costura,7,1.6089,8.0688
+DELANTERO (oversize),1,S,costura,8,1.8575,7.8329
+DELANTERO (oversize),1,S,costura,9,2.0971,7.5907
+DELANTERO (oversize),1,S,costura,10,2.3265,7.3412
+DELANTERO (oversize),1,S,costura,11,2.5460,7.0846
+DELANTERO (oversize),1,S,costura,12,2.7567,6.8218
+DELANTERO (oversize),1,S,costura,13,2.9597,6.5534
+DELANTERO (oversize),1,S,costura,14,3.1561,6.2802
+DELANTERO (oversize),1,S,costura,15,3.3470,6.0031
+DELANTERO (oversize),1,S,costura,16,3.5335,5.7227
+DELANTERO (oversize),1,S,costura,17,3.7167,5.4399
+DELANTERO (oversize),1,S,costura,18,3.8977,5.1554
+DELANTERO (oversize),1,S,costura,19,4.0777,4.8700
+DELANTERO (oversize),1,S,costura,20,4.2576,4.5845
+DELANTERO (oversize),1,S,costura,21,4.4386,4.2995
+DELANTERO (oversize),1,S,costura,22,4.6219,4.0160
+DELANTERO (oversize),1,S,costura,23,4.8084,3.7346
+DELANTERO (oversize),1,S,costura,24,4.9991,3.4560
+DELANTERO (oversize),1,S,costura,25,5.1937,3.1800
+DELANTERO (oversize),1,S,costura,26,5.3920,2.9064
+DELANTERO (oversize),1,S,costura,27,5.5937,2.6351
+DELANTERO (oversize),1,S,costura,28,5.7984,2.3658
+DELANTERO (oversize),1,S,costura,29,6.0058,2.0983
+DELANTERO (oversize),1,S,costura,30,6.2158,1.8325
+DELANTERO (oversize),1,S,costura,31,6.4278,1.5680
+DELANTERO (oversize),1,S,costura,32,6.6417,1.3048
+DELANTERO (oversize),1,S,costura,33,6.8571,1.0427
+DELANTERO (oversize),1,S,costura,34,7.0738,0.7813
+DELANTERO (oversize),1,S,costura,35,7.2913,0.5205
+DELANTERO (oversize),1,S,costura,36,7.5095,0.2602
+DELANTERO (oversize),1,S,costura,37,7.7280,0.0000
+DELANTERO (oversize),1,S,costura,38,20.5592,5.0000
+DELANTERO (oversize),1,S,costura,39,20.3275,5.5623
+DELANTERO (oversize),1,S,costura,40,20.0993,6.1239
+DELANTERO (oversize),1,S,costura,41,19.8779,6.6841
+DELANTERO (oversize),1,S,costura,42,19.6667,7.2424
+DELANTERO (oversize),1,S,costura,43,19.4691,7.7980
+DELANTERO (oversize),1,S,costura,44,19.2886,8.3502
+DELANTERO (oversize),1,S,costura,45,19.1285,8.8984
+DELANTERO (oversize),1,S,costura,46,18.9924,9.4419
+DELANTERO (oversize),1,S,costura,47,18.8835,9.9801
+DELANTERO (oversize),1,S,costura,48,18.8053,10.5123
+DELANTERO (oversize),1,S,costura,49,18.7612,11.0378
+DELANTERO (oversize),1,S,costura,50,18.7546,11.5559
+DELANTERO (oversize),1,S,costura,51,18.7889,12.0660
+DELANTERO (oversize),1,S,costura,52,18.8676,12.5674
+DELANTERO (oversize),1,S,costura,53,18.9940,13.0594
+DELANTERO (oversize),1,S,costura,54,19.1711,13.5414
+DELANTERO (oversize),1,S,costura,55,19.3967,14.0138
+DELANTERO (oversize),1,S,costura,56,19.6658,14.4771
+DELANTERO (oversize),1,S,costura,57,19.9734,14.9320
+DELANTERO (oversize),1,S,costura,58,20.3146,15.3792
+DELANTERO (oversize),1,S,costura,59,20.6842,15.8194
+DELANTERO (oversize),1,S,costura,60,21.0772,16.2534
+DELANTERO (oversize),1,S,costura,61,21.4887,16.6817
+DELANTERO (oversize),1,S,costura,62,21.9136,17.1050
+DELANTERO (oversize),1,S,costura,63,22.3468,17.5241
+DELANTERO (oversize),1,S,costura,64,22.7833,17.9397
+DELANTERO (oversize),1,S,costura,65,23.2181,18.3524
+DELANTERO (oversize),1,S,costura,66,23.6466,18.7628
+DELANTERO (oversize),1,S,costura,67,24.0674,19.1714
+DELANTERO (oversize),1,S,costura,68,24.4816,19.5785
+DELANTERO (oversize),1,S,costura,69,24.8901,19.9842
+DELANTERO (oversize),1,S,costura,70,25.2938,20.3887
+DELANTERO (oversize),1,S,costura,71,25.6937,20.7923
+DELANTERO (oversize),1,S,costura,72,26.0907,21.1953
+DELANTERO (oversize),1,S,costura,73,26.4858,21.5977
+DELANTERO (oversize),1,S,costura,74,26.8800,22.0000
+DELANTERO (oversize),1,S,costura,75,26.8800,68.0000
+DELANTERO (oversize),1,S,costura,76,-1.9040,68.0000
+DELANTERO (oversize),1,S,corte,0,-2.9040,69.0000
+DELANTERO (oversize),1,S,corte,1,27.8800,69.0000
+DELANTERO (oversize),1,S,corte,2,27.8800,21.5917
+DELANTERO (oversize),1,S,corte,3,27.1994,20.8972
+DELANTERO (oversize),1,S,corte,4,26.8037,20.4940
+DELANTERO (oversize),1,S,corte,5,26.4050,20.0895
+DELANTERO (oversize),1,S,corte,6,26.0029,19.6836
+DELANTERO (oversize),1,S,corte,7,25.5963,19.2762
+DELANTERO (oversize),1,S,corte,8,25.1844,18.8671
+DELANTERO (oversize),1,S,corte,9,24.7662,18.4561
+DELANTERO (oversize),1,S,corte,10,24.3408,18.0430
+DELANTERO (oversize),1,S,corte,11,23.9082,17.6286
+DELANTERO (oversize),1,S,corte,12,23.4722,17.2149
+DELANTERO (oversize),1,S,corte,13,23.0392,16.8026
+DELANTERO (oversize),1,S,corte,14,22.6142,16.3915
+DELANTERO (oversize),1,S,corte,15,22.2023,15.9810
+DELANTERO (oversize),1,S,corte,16,21.8086,15.5712
+DELANTERO (oversize),1,S,corte,17,21.4380,15.1620
+DELANTERO (oversize),1,S,corte,18,21.0955,14.7541
+DELANTERO (oversize),1,S,corte,19,20.7858,14.3481
+DELANTERO (oversize),1,S,corte,20,20.5133,13.9452
+DELANTERO (oversize),1,S,corte,21,20.2816,13.5464
+DELANTERO (oversize),1,S,corte,22,20.0936,13.1527
+DELANTERO (oversize),1,S,corte,23,19.9500,12.7618
+DELANTERO (oversize),1,S,corte,24,19.8481,12.3650
+DELANTERO (oversize),1,S,corte,25,19.7837,11.9547
+DELANTERO (oversize),1,S,corte,26,19.7550,11.5286
+DELANTERO (oversize),1,S,corte,27,19.7606,11.0860
+DELANTERO (oversize),1,S,corte,28,19.7992,10.6269
+DELANTERO (oversize),1,S,corte,29,19.8689,10.1521
+DELANTERO (oversize),1,S,corte,30,19.9680,9.6627
+DELANTERO (oversize),1,S,corte,31,20.0939,9.1601
+DELANTERO (oversize),1,S,corte,32,20.2441,8.6457
+DELANTERO (oversize),1,S,corte,33,20.4156,8.1209
+DELANTERO (oversize),1,S,corte,34,20.6055,7.5869
+DELANTERO (oversize),1,S,corte,35,20.8106,7.0449
+DELANTERO (oversize),1,S,corte,36,21.0275,6.4959
+DELANTERO (oversize),1,S,corte,37,21.2531,5.9410
+DELANTERO (oversize),1,S,corte,38,21.8722,4.4384
+DELANTERO (oversize),1,S,corte,39,7.4232,-1.1920
+DELANTERO (oversize),1,S,corte,40,6.7434,-0.3825
+DELANTERO (oversize),1,S,corte,41,6.5242,-0.1209
+DELANTERO (oversize),1,S,corte,42,6.3049,0.1419
+DELANTERO (oversize),1,S,corte,43,6.0859,0.4062
+DELANTERO (oversize),1,S,corte,44,5.8674,0.6721
+DELANTERO (oversize),1,S,corte,45,5.6497,0.9399
+DELANTERO (oversize),1,S,corte,46,5.4333,1.2098
+DELANTERO (oversize),1,S,corte,47,5.2183,1.4820
+DELANTERO (oversize),1,S,corte,48,5.0052,1.7567
+DELANTERO (oversize),1,S,corte,49,4.7943,2.0342
+DELANTERO (oversize),1,S,corte,50,4.5858,2.3147
+DELANTERO (oversize),1,S,corte,51,4.3802,2.5984
+DELANTERO (oversize),1,S,corte,52,4.1778,2.8855
+DELANTERO (oversize),1,S,corte,53,3.9790,3.1760
+DELANTERO (oversize),1,S,corte,54,3.7852,3.4683
+DELANTERO (oversize),1,S,corte,55,3.5967,3.7600
+DELANTERO (oversize),1,S,corte,56,3.4125,4.0498
+DELANTERO (oversize),1,S,corte,57,3.2317,4.3368
+DELANTERO (oversize),1,S,corte,58,3.0529,4.6204
+DELANTERO (oversize),1,S,corte,59,2.8752,4.8997
+DELANTERO (oversize),1,S,corte,60,2.6975,5.1739
+DELANTERO (oversize),1,S,corte,61,2.5189,5.4425
+DELANTERO (oversize),1,S,corte,62,2.3383,5.7046
+DELANTERO (oversize),1,S,corte,63,2.1548,5.9598
+DELANTERO (oversize),1,S,corte,64,1.9676,6.2073
+DELANTERO (oversize),1,S,corte,65,1.7757,6.4467
+DELANTERO (oversize),1,S,corte,66,1.5782,6.6775
+DELANTERO (oversize),1,S,corte,67,1.3732,6.9005
+DELANTERO (oversize),1,S,corte,68,1.1577,7.1184
+DELANTERO (oversize),1,S,corte,69,0.9305,7.3339
+DELANTERO (oversize),1,S,corte,70,0.6925,7.5477
+DELANTERO (oversize),1,S,corte,71,0.4449,7.7604
+DELANTERO (oversize),1,S,corte,72,0.1889,7.9726
+DELANTERO (oversize),1,S,corte,73,-0.0744,8.1850
+DELANTERO (oversize),1,S,corte,74,-0.3437,8.3984
+DELANTERO (oversize),1,S,corte,75,-0.3458,8.4000
+DELANTERO (oversize),1,S,corte,76,-2.9040,8.4000
+DELANTERO (oversize),1,S,corte,77,-2.9040,69.0000
+ESPALDA (oversize),2,S,costura,0,0.0000,10.0000
+ESPALDA (oversize),2,S,costura,1,20.4316,10.0000
+ESPALDA (oversize),2,S,costura,2,20.4470,10.3448
+ESPALDA (oversize),2,S,costura,3,20.4937,10.8596
+ESPALDA (oversize),2,S,costura,4,20.5659,11.3701
+ESPALDA (oversize),2,S,costura,5,20.6659,11.8759
+ESPALDA (oversize),2,S,costura,6,20.7956,12.3767
+ESPALDA (oversize),2,S,costura,7,20.9548,12.8724
+ESPALDA (oversize),2,S,costura,8,21.1410,13.3632
+ESPALDA (oversize),2,S,costura,9,21.3519,13.8492
+ESPALDA (oversize),2,S,costura,10,21.5850,14.3307
+ESPALDA (oversize),2,S,costura,11,21.8380,14.8077
+ESPALDA (oversize),2,S,costura,12,22.1085,15.2805
+ESPALDA (oversize),2,S,costura,13,22.3940,15.7492
+ESPALDA (oversize),2,S,costura,14,22.6922,16.2141
+ESPALDA (oversize),2,S,costura,15,23.0006,16.6752
+ESPALDA (oversize),2,S,costura,16,23.3168,17.1328
+ESPALDA (oversize),2,S,costura,17,23.6384,17.5870
+ESPALDA (oversize),2,S,costura,18,23.9630,18.0381
+ESPALDA (oversize),2,S,costura,19,24.2884,18.4861
+ESPALDA (oversize),2,S,costura,20,24.6133,18.9313
+ESPALDA (oversize),2,S,costura,21,24.9378,19.3742
+ESPALDA (oversize),2,S,costura,22,25.2620,19.8150
+ESPALDA (oversize),2,S,costura,23,25.5859,20.2540
+ESPALDA (oversize),2,S,costura,24,25.9096,20.6917
+ESPALDA (oversize),2,S,costura,25,26.2332,21.1284
+ESPALDA (oversize),2,S,costura,26,26.5566,21.5644
+ESPALDA (oversize),2,S,costura,27,26.8800,22.0000
+ESPALDA (oversize),2,S,costura,28,26.8800,68.0000
+ESPALDA (oversize),2,S,costura,29,0.0000,68.0000
+ESPALDA (oversize),2,S,corte,0,27.8800,21.6694
+ESPALDA (oversize),2,S,corte,1,27.3597,20.9684
+ESPALDA (oversize),2,S,corte,2,27.0365,20.5328
+ESPALDA (oversize),2,S,corte,3,26.7134,20.0968
+ESPALDA (oversize),2,S,corte,4,26.3903,19.6599
+ESPALDA (oversize),2,S,corte,5,26.0671,19.2219
+ESPALDA (oversize),2,S,corte,6,25.7439,18.7824
+ESPALDA (oversize),2,S,corte,7,25.4205,18.3411
+ESPALDA (oversize),2,S,corte,8,25.0968,17.8976
+ESPALDA (oversize),2,S,corte,9,24.7734,17.4522
+ESPALDA (oversize),2,S,corte,10,24.4523,17.0060
+ESPALDA (oversize),2,S,corte,11,24.1362,16.5596
+ESPALDA (oversize),2,S,corte,12,23.8276,16.1130
+ESPALDA (oversize),2,S,corte,13,23.5287,15.6661
+ESPALDA (oversize),2,S,corte,14,23.2420,15.2191
+ESPALDA (oversize),2,S,corte,15,22.9697,14.7720
+ESPALDA (oversize),2,S,corte,16,22.7140,14.3250
+ESPALDA (oversize),2,S,corte,17,22.4770,13.8783
+ESPALDA (oversize),2,S,corte,18,22.2609,13.4321
+ESPALDA (oversize),2,S,corte,19,22.0676,12.9866
+ESPALDA (oversize),2,S,corte,20,21.8989,12.5420
+ESPALDA (oversize),2,S,corte,21,21.7565,12.0983
+ESPALDA (oversize),2,S,corte,22,21.6412,11.6534
+ESPALDA (oversize),2,S,corte,23,21.5522,11.2030
+ESPALDA (oversize),2,S,corte,24,21.4873,10.7444
+ESPALDA (oversize),2,S,corte,25,21.4450,10.2774
+ESPALDA (oversize),2,S,corte,26,21.3879,9.0000
+ESPALDA (oversize),2,S,corte,27,0.0000,9.0000
+ESPALDA (oversize),2,S,corte,28,0.0000,69.0000
+ESPALDA (oversize),2,S,corte,29,27.8800,69.0000
+ESPALDA (oversize),2,S,corte,30,27.8800,21.6694
+CANESU (oversize),3,S,costura,0,0.0000,2.0000
+CANESU (oversize),3,S,costura,1,0.2827,2.0004
+CANESU (oversize),3,S,costura,2,0.5654,2.0001
+CANESU (oversize),3,S,costura,3,0.8479,1.9987
+CANESU (oversize),3,S,costura,4,1.1301,1.9955
+CANESU (oversize),3,S,costura,5,1.4120,1.9899
+CANESU (oversize),3,S,costura,6,1.6934,1.9813
+CANESU (oversize),3,S,costura,7,1.9744,1.9692
+CANESU (oversize),3,S,costura,8,2.2547,1.9529
+CANESU (oversize),3,S,costura,9,2.5343,1.9319
+CANESU (oversize),3,S,costura,10,2.8131,1.9055
+CANESU (oversize),3,S,costura,11,3.0911,1.8732
+CANESU (oversize),3,S,costura,12,3.3681,1.8344
+CANESU (oversize),3,S,costura,13,3.6440,1.7884
+CANESU (oversize),3,S,costura,14,3.9188,1.7349
+CANESU (oversize),3,S,costura,15,4.1921,1.6740
+CANESU (oversize),3,S,costura,16,4.4635,1.6058
+CANESU (oversize),3,S,costura,17,4.7329,1.5305
+CANESU (oversize),3,S,costura,18,4.9999,1.4481
+CANESU (oversize),3,S,costura,19,5.2641,1.3589
+CANESU (oversize),3,S,costura,20,5.5253,1.2628
+CANESU (oversize),3,S,costura,21,5.7832,1.1602
+CANESU (oversize),3,S,costura,22,6.0375,1.0511
+CANESU (oversize),3,S,costura,23,6.2878,0.9356
+CANESU (oversize),3,S,costura,24,6.5340,0.8140
+CANESU (oversize),3,S,costura,25,6.7762,0.6868
+CANESU (oversize),3,S,costura,26,7.0153,0.5549
+CANESU (oversize),3,S,costura,27,7.2517,0.4194
+CANESU (oversize),3,S,costura,28,7.4862,0.2812
+CANESU (oversize),3,S,costura,29,7.7194,0.1410
+CANESU (oversize),3,S,costura,30,7.9520,0.0000
+CANESU (oversize),3,S,costura,31,21.0133,4.5000
+CANESU (oversize),3,S,costura,32,20.9192,5.0385
+CANESU (oversize),3,S,costura,33,20.8272,5.5767
+CANESU (oversize),3,S,costura,34,20.7394,6.1142
+CANESU (oversize),3,S,costura,35,20.6581,6.6506
+CANESU (oversize),3,S,costura,36,20.5852,7.1855
+CANESU (oversize),3,S,costura,37,20.5231,7.7187
+CANESU (oversize),3,S,costura,38,20.4737,8.2497
+CANESU (oversize),3,S,costura,39,20.4393,8.7781
+CANESU (oversize),3,S,costura,40,20.4220,9.3037
+CANESU (oversize),3,S,costura,41,20.4238,9.8261
+CANESU (oversize),3,S,costura,42,20.4316,10.0000
+CANESU (oversize),3,S,costura,43,0.0000,10.0000
+CANESU (oversize),3,S,corte,0,21.4237,9.8020
+CANESU (oversize),3,S,corte,1,21.4220,9.3185
+CANESU (oversize),3,S,corte,2,21.4382,8.8271
+CANESU (oversize),3,S,corte,3,21.4707,8.3284
+CANESU (oversize),3,S,corte,4,21.5177,7.8229
+CANESU (oversize),3,S,corte,5,21.5774,7.3109
+CANESU (oversize),3,S,corte,6,21.6479,6.7930
+CANESU (oversize),3,S,corte,7,21.7273,6.2697
+CANESU (oversize),3,S,corte,8,21.8135,5.7416
+CANESU (oversize),3,S,corte,9,21.9046,5.2089
+CANESU (oversize),3,S,corte,10,22.1452,3.8323
+CANESU (oversize),3,S,corte,11,7.8344,-1.0982
+CANESU (oversize),3,S,corte,12,7.2026,-0.7151
+CANESU (oversize),3,S,corte,13,6.9747,-0.5781
+CANESU (oversize),3,S,corte,14,6.7491,-0.4451
+CANESU (oversize),3,S,corte,15,6.5252,-0.3168
+CANESU (oversize),3,S,corte,16,6.3023,-0.1939
+CANESU (oversize),3,S,corte,17,6.0799,-0.0771
+CANESU (oversize),3,S,corte,18,5.8568,0.0332
+CANESU (oversize),3,S,corte,19,5.6308,0.1374
+CANESU (oversize),3,S,corte,20,5.4011,0.2360
+CANESU (oversize),3,S,corte,21,5.1679,0.3288
+CANESU (oversize),3,S,corte,22,4.9316,0.4157
+CANESU (oversize),3,S,corte,23,4.6924,0.4964
+CANESU (oversize),3,S,corte,24,4.4508,0.5710
+CANESU (oversize),3,S,corte,25,4.2070,0.6392
+CANESU (oversize),3,S,corte,26,3.9614,0.7008
+CANESU (oversize),3,S,corte,27,3.7145,0.7559
+CANESU (oversize),3,S,corte,28,3.4663,0.8042
+CANESU (oversize),3,S,corte,29,3.2164,0.8458
+CANESU (oversize),3,S,corte,30,2.9639,0.8813
+CANESU (oversize),3,S,corte,31,2.7083,0.9110
+CANESU (oversize),3,S,corte,32,2.4497,0.9355
+CANESU (oversize),3,S,corte,33,2.1882,0.9551
+CANESU (oversize),3,S,corte,34,1.9238,0.9705
+CANESU (oversize),3,S,corte,35,1.6567,0.9820
+CANESU (oversize),3,S,corte,36,1.3869,0.9902
+CANESU (oversize),3,S,corte,37,1.1145,0.9956
+CANESU (oversize),3,S,corte,38,0.8397,0.9987
+CANESU (oversize),3,S,corte,39,0.5625,1.0001
+CANESU (oversize),3,S,corte,40,0.2830,1.0004
+CANESU (oversize),3,S,corte,41,0.0000,1.0000
+CANESU (oversize),3,S,corte,42,0.0000,11.0000
+CANESU (oversize),3,S,corte,43,21.4773,11.0000
+CANESU (oversize),3,S,corte,44,21.4237,9.8020
+MANGA (oversize),4,S,costura,0,-18.4709,9.9000
+MANGA (oversize),4,S,costura,1,-18.0989,9.3680
+MANGA (oversize),4,S,costura,2,-17.7197,8.8414
+MANGA (oversize),4,S,costura,3,-17.3264,8.3255
+MANGA (oversize),4,S,costura,4,-16.9118,7.8256
+MANGA (oversize),4,S,costura,5,-16.4716,7.3452
+MANGA (oversize),4,S,costura,6,-16.0071,6.8831
+MANGA (oversize),4,S,costura,7,-15.5209,6.4376
+MANGA (oversize),4,S,costura,8,-15.0152,6.0070
+MANGA (oversize),4,S,costura,9,-14.4923,5.5895
+MANGA (oversize),4,S,costura,10,-13.9547,5.1836
+MANGA (oversize),4,S,costura,11,-13.4047,4.7873
+MANGA (oversize),4,S,costura,12,-12.8446,4.3990
+MANGA (oversize),4,S,costura,13,-12.2767,4.0170
+MANGA (oversize),4,S,costura,14,-11.7032,3.6400
+MANGA (oversize),4,S,costura,15,-11.1241,3.2697
+MANGA (oversize),4,S,costura,16,-10.5387,2.9089
+MANGA (oversize),4,S,costura,17,-9.9465,2.5602
+MANGA (oversize),4,S,costura,18,-9.3467,2.2266
+MANGA (oversize),4,S,costura,19,-8.7387,1.9108
+MANGA (oversize),4,S,costura,20,-8.1218,1.6155
+MANGA (oversize),4,S,costura,21,-7.4954,1.3436
+MANGA (oversize),4,S,costura,22,-6.8588,1.0978
+MANGA (oversize),4,S,costura,23,-6.2114,0.8810
+MANGA (oversize),4,S,costura,24,-5.5525,0.6957
+MANGA (oversize),4,S,costura,25,-4.8826,0.5412
+MANGA (oversize),4,S,costura,26,-4.2031,0.4137
+MANGA (oversize),4,S,costura,27,-3.5152,0.3093
+MANGA (oversize),4,S,costura,28,-2.8205,0.2243
+MANGA (oversize),4,S,costura,29,-2.1202,0.1547
+MANGA (oversize),4,S,costura,30,-1.4158,0.0967
+MANGA (oversize),4,S,costura,31,-0.7086,0.0464
+MANGA (oversize),4,S,costura,32,0.0000,0.0000
+MANGA (oversize),4,S,costura,33,0.6937,0.0781
+MANGA (oversize),4,S,costura,34,1.3859,0.1601
+MANGA (oversize),4,S,costura,35,2.0749,0.2499
+MANGA (oversize),4,S,costura,36,2.7593,0.3513
+MANGA (oversize),4,S,costura,37,3.4374,0.4682
+MANGA (oversize),4,S,costura,38,4.1077,0.6045
+MANGA (oversize),4,S,costura,39,4.7686,0.7641
+MANGA (oversize),4,S,costura,40,5.4186,0.9509
+MANGA (oversize),4,S,costura,41,6.0562,1.1681
+MANGA (oversize),4,S,costura,42,6.6818,1.4147
+MANGA (oversize),4,S,costura,43,7.2961,1.6877
+MANGA (oversize),4,S,costura,44,7.8999,1.9842
+MANGA (oversize),4,S,costura,45,8.4941,2.3011
+MANGA (oversize),4,S,costura,46,9.0795,2.6356
+MANGA (oversize),4,S,costura,47,9.6570,2.9845
+MANGA (oversize),4,S,costura,48,10.2274,3.3451
+MANGA (oversize),4,S,costura,49,10.7915,3.7142
+MANGA (oversize),4,S,costura,50,11.3502,4.0890
+MANGA (oversize),4,S,costura,51,11.9041,4.4667
+MANGA (oversize),4,S,costura,52,12.4531,4.8473
+MANGA (oversize),4,S,costura,53,12.9966,5.2315
+MANGA (oversize),4,S,costura,54,13.5340,5.6202
+MANGA (oversize),4,S,costura,55,14.0646,6.0141
+MANGA (oversize),4,S,costura,56,14.5879,6.4142
+MANGA (oversize),4,S,costura,57,15.1033,6.8212
+MANGA (oversize),4,S,costura,58,15.6101,7.2360
+MANGA (oversize),4,S,costura,59,16.1077,7.6595
+MANGA (oversize),4,S,costura,60,16.5957,8.0924
+MANGA (oversize),4,S,costura,61,17.0737,8.5351
+MANGA (oversize),4,S,costura,62,17.5438,8.9857
+MANGA (oversize),4,S,costura,63,18.0087,9.4415
+MANGA (oversize),4,S,costura,64,18.4709,9.9000
+MANGA (oversize),4,S,costura,65,13.4400,60.0000
+MANGA (oversize),4,S,costura,66,-13.4400,60.0000
+MANGA (oversize),4,S,corte,0,-14.3446,61.0000
+MANGA (oversize),4,S,corte,1,14.3446,61.0000
+MANGA (oversize),4,S,corte,2,19.5136,9.5257
+MANGA (oversize),4,S,corte,3,18.7109,8.7295
+MANGA (oversize),4,S,corte,4,18.2399,8.2677
+MANGA (oversize),4,S,corte,5,17.7595,7.8072
+MANGA (oversize),4,S,corte,6,17.2673,7.3515
+MANGA (oversize),4,S,corte,7,16.7637,6.9046
+MANGA (oversize),4,S,corte,8,16.2508,6.4683
+MANGA (oversize),4,S,corte,9,15.7299,6.0419
+MANGA (oversize),4,S,corte,10,15.2015,5.6245
+MANGA (oversize),4,S,corte,11,14.6664,5.2154
+MANGA (oversize),4,S,corte,12,14.1251,4.8135
+MANGA (oversize),4,S,corte,13,13.5783,4.4181
+MANGA (oversize),4,S,corte,14,13.0266,4.0281
+MANGA (oversize),4,S,corte,15,12.4707,3.6427
+MANGA (oversize),4,S,corte,16,11.9104,3.2606
+MANGA (oversize),4,S,corte,17,11.3438,2.8806
+MANGA (oversize),4,S,corte,18,10.7683,2.5040
+MANGA (oversize),4,S,corte,19,10.1828,2.1339
+MANGA (oversize),4,S,corte,20,9.5862,1.7733
+MANGA (oversize),4,S,corte,21,8.9775,1.4256
+MANGA (oversize),4,S,corte,22,8.3557,1.0940
+MANGA (oversize),4,S,corte,23,7.7196,0.7817
+MANGA (oversize),4,S,corte,24,7.0684,0.4922
+MANGA (oversize),4,S,corte,25,6.4010,0.2292
+MANGA (oversize),4,S,corte,26,5.7180,-0.0035
+MANGA (oversize),4,S,corte,27,5.0242,-0.2029
+MANGA (oversize),4,S,corte,28,4.3248,-0.3718
+MANGA (oversize),4,S,corte,29,3.6220,-0.5147
+MANGA (oversize),4,S,corte,30,2.9176,-0.6362
+MANGA (oversize),4,S,corte,31,2.2128,-0.7406
+MANGA (oversize),4,S,corte,32,1.5093,-0.8323
+MANGA (oversize),4,S,corte,33,0.8085,-0.9153
+MANGA (oversize),4,S,corte,34,0.0234,-1.0037
+MANGA (oversize),4,S,corte,35,-0.7767,-0.9513
+MANGA (oversize),4,S,corte,36,-1.4922,-0.9004
+MANGA (oversize),4,S,corte,37,-2.2107,-0.8412
+MANGA (oversize),4,S,corte,38,-2.9306,-0.7697
+MANGA (oversize),4,S,corte,39,-3.6510,-0.6815
+MANGA (oversize),4,S,corte,40,-4.3703,-0.5724
+MANGA (oversize),4,S,corte,41,-5.0873,-0.4379
+MANGA (oversize),4,S,corte,42,-5.8004,-0.2734
+MANGA (oversize),4,S,corte,43,-6.5057,-0.0750
+MANGA (oversize),4,S,corte,44,-7.1978,0.1568
+MANGA (oversize),4,S,corte,45,-7.8747,0.4181
+MANGA (oversize),4,S,corte,46,-8.5369,0.7055
+MANGA (oversize),4,S,corte,47,-9.1852,1.0158
+MANGA (oversize),4,S,corte,48,-9.8203,1.3458
+MANGA (oversize),4,S,corte,49,-10.4433,1.6923
+MANGA (oversize),4,S,corte,50,-11.0548,2.0523
+MANGA (oversize),4,S,corte,51,-11.6559,2.4228
+MANGA (oversize),4,S,corte,52,-12.2472,2.8009
+MANGA (oversize),4,S,corte,53,-12.8305,3.1843
+MANGA (oversize),4,S,corte,54,-13.4085,3.5732
+MANGA (oversize),4,S,corte,55,-13.9819,3.9706
+MANGA (oversize),4,S,corte,56,-14.5484,4.3788
+MANGA (oversize),4,S,corte,57,-15.1057,4.7997
+MANGA (oversize),4,S,corte,58,-15.6515,5.2354
+MANGA (oversize),4,S,corte,59,-16.1830,5.6880
+MANGA (oversize),4,S,corte,60,-16.6979,6.1597
+MANGA (oversize),4,S,corte,61,-17.1932,6.6526
+MANGA (oversize),4,S,corte,62,-17.6658,7.1682
+MANGA (oversize),4,S,corte,63,-18.1092,7.7029
+MANGA (oversize),4,S,corte,64,-18.5232,8.2460
+MANGA (oversize),4,S,corte,65,-18.9144,8.7893
+MANGA (oversize),4,S,corte,66,-19.5030,9.6308
+MANGA (oversize),4,S,corte,67,-14.3446,61.0000
+PUNO,5,S,costura,0,0.0000,0.8000
+PUNO,5,S,costura,1,0.0154,0.6439
+PUNO,5,S,costura,2,0.0609,0.4939
+PUNO,5,S,costura,3,0.1348,0.3555
+PUNO,5,S,costura,4,0.2343,0.2343
+PUNO,5,S,costura,5,0.3555,0.1348
+PUNO,5,S,costura,6,0.4939,0.0609
+PUNO,5,S,costura,7,0.6439,0.0154
+PUNO,5,S,costura,8,0.8000,0.0000
+PUNO,5,S,costura,9,22.2000,0.0000
+PUNO,5,S,costura,10,22.3561,0.0154
+PUNO,5,S,costura,11,22.5061,0.0609
+PUNO,5,S,costura,12,22.6445,0.1348
+PUNO,5,S,costura,13,22.7657,0.2343
+PUNO,5,S,costura,14,22.8652,0.3555
+PUNO,5,S,costura,15,22.9391,0.4939
+PUNO,5,S,costura,16,22.9846,0.6439
+PUNO,5,S,costura,17,23.0000,0.8000
+PUNO,5,S,costura,18,23.0000,11.2000
+PUNO,5,S,costura,19,22.9846,11.3561
+PUNO,5,S,costura,20,22.9391,11.5061
+PUNO,5,S,costura,21,22.8652,11.6445
+PUNO,5,S,costura,22,22.7657,11.7657
+PUNO,5,S,costura,23,22.6445,11.8652
+PUNO,5,S,costura,24,22.5061,11.9391
+PUNO,5,S,costura,25,22.3561,11.9846
+PUNO,5,S,costura,26,22.2000,12.0000
+PUNO,5,S,costura,27,0.8000,12.0000
+PUNO,5,S,costura,28,0.6439,11.9846
+PUNO,5,S,costura,29,0.4939,11.9391
+PUNO,5,S,costura,30,0.3555,11.8652
+PUNO,5,S,costura,31,0.2343,11.7657
+PUNO,5,S,costura,32,0.1348,11.6445
+PUNO,5,S,costura,33,0.0609,11.5061
+PUNO,5,S,costura,34,0.0154,11.3561
+PUNO,5,S,costura,35,0.0000,11.2000
+PUNO,5,S,corte,0,-1.0000,11.2491
+PUNO,5,S,corte,1,-0.9702,11.5521
+PUNO,5,S,corte,2,-0.8675,11.8907
+PUNO,5,S,corte,3,-0.7007,12.2027
+PUNO,5,S,corte,4,-0.4762,12.4762
+PUNO,5,S,corte,5,-0.2027,12.7007
+PUNO,5,S,corte,6,0.1093,12.8675
+PUNO,5,S,corte,7,0.4479,12.9702
+PUNO,5,S,corte,8,0.7509,13.0000
+PUNO,5,S,corte,9,22.2491,13.0000
+PUNO,5,S,corte,10,22.5521,12.9702
+PUNO,5,S,corte,11,22.8907,12.8675
+PUNO,5,S,corte,12,23.2027,12.7007
+PUNO,5,S,corte,13,23.4762,12.4762
+PUNO,5,S,corte,14,23.7007,12.2027
+PUNO,5,S,corte,15,23.8675,11.8907
+PUNO,5,S,corte,16,23.9702,11.5521
+PUNO,5,S,corte,17,24.0000,11.2491
+PUNO,5,S,corte,18,24.0000,0.7509
+PUNO,5,S,corte,19,23.9702,0.4479
+PUNO,5,S,corte,20,23.8675,0.1093
+PUNO,5,S,corte,21,23.7007,-0.2027
+PUNO,5,S,corte,22,23.4762,-0.4762
+PUNO,5,S,corte,23,23.2027,-0.7007
+PUNO,5,S,corte,24,22.8907,-0.8675
+PUNO,5,S,corte,25,22.5521,-0.9702
+PUNO,5,S,corte,26,22.2491,-1.0000
+PUNO,5,S,corte,27,0.7509,-1.0000
+PUNO,5,S,corte,28,0.4479,-0.9702
+PUNO,5,S,corte,29,0.1093,-0.8675
+PUNO,5,S,corte,30,-0.2027,-0.7007
+PUNO,5,S,corte,31,-0.4762,-0.4762
+PUNO,5,S,corte,32,-0.7007,-0.2027
+PUNO,5,S,corte,33,-0.8675,0.1093
+PUNO,5,S,corte,34,-0.9702,0.4479
+PUNO,5,S,corte,35,-1.0000,0.7509
+PUNO,5,S,corte,36,-1.0000,11.2491
+TAPETA MANGA,6,S,costura,0,0.0000,0.4000
+TAPETA MANGA,6,S,costura,1,0.0077,0.3220
+TAPETA MANGA,6,S,costura,2,0.0304,0.2469
+TAPETA MANGA,6,S,costura,3,0.0674,0.1778
+TAPETA MANGA,6,S,costura,4,0.1172,0.1172
+TAPETA MANGA,6,S,costura,5,0.1778,0.0674
+TAPETA MANGA,6,S,costura,6,0.2469,0.0304
+TAPETA MANGA,6,S,costura,7,0.3220,0.0077
+TAPETA MANGA,6,S,costura,8,0.4000,0.0000
+TAPETA MANGA,6,S,costura,9,11.6000,0.0000
+TAPETA MANGA,6,S,costura,10,11.6780,0.0077
+TAPETA MANGA,6,S,costura,11,11.7531,0.0304
+TAPETA MANGA,6,S,costura,12,11.8222,0.0674
+TAPETA MANGA,6,S,costura,13,11.8828,0.1172
+TAPETA MANGA,6,S,costura,14,11.9326,0.1778
+TAPETA MANGA,6,S,costura,15,11.9696,0.2469
+TAPETA MANGA,6,S,costura,16,11.9923,0.3220
+TAPETA MANGA,6,S,costura,17,12.0000,0.4000
+TAPETA MANGA,6,S,costura,18,12.0000,2.6000
+TAPETA MANGA,6,S,costura,19,11.9923,2.6780
+TAPETA MANGA,6,S,costura,20,11.9696,2.7531
+TAPETA MANGA,6,S,costura,21,11.9326,2.8222
+TAPETA MANGA,6,S,costura,22,11.8828,2.8828
+TAPETA MANGA,6,S,costura,23,11.8222,2.9326
+TAPETA MANGA,6,S,costura,24,11.7531,2.9696
+TAPETA MANGA,6,S,costura,25,11.6780,2.9923
+TAPETA MANGA,6,S,costura,26,11.6000,3.0000
+TAPETA MANGA,6,S,costura,27,0.4000,3.0000
+TAPETA MANGA,6,S,costura,28,0.3220,2.9923
+TAPETA MANGA,6,S,costura,29,0.2469,2.9696
+TAPETA MANGA,6,S,costura,30,0.1778,2.9326
+TAPETA MANGA,6,S,costura,31,0.1172,2.8828
+TAPETA MANGA,6,S,costura,32,0.0674,2.8222
+TAPETA MANGA,6,S,costura,33,0.0304,2.7531
+TAPETA MANGA,6,S,costura,34,0.0077,2.6780
+TAPETA MANGA,6,S,costura,35,0.0000,2.6000
+TAPETA MANGA,6,S,corte,0,-1.0000,2.6491
+TAPETA MANGA,6,S,corte,1,-0.9778,2.8741
+TAPETA MANGA,6,S,corte,2,-0.8979,3.1376
+TAPETA MANGA,6,S,corte,3,-0.7681,3.3805
+TAPETA MANGA,6,S,corte,4,-0.5934,3.5934
+TAPETA MANGA,6,S,corte,5,-0.3805,3.7681
+TAPETA MANGA,6,S,corte,6,-0.1376,3.8979
+TAPETA MANGA,6,S,corte,7,0.1259,3.9778
+TAPETA MANGA,6,S,corte,8,0.3509,4.0000
+TAPETA MANGA,6,S,corte,9,11.6491,4.0000
+TAPETA MANGA,6,S,corte,10,11.8741,3.9778
+TAPETA MANGA,6,S,corte,11,12.1376,3.8979
+TAPETA MANGA,6,S,corte,12,12.3805,3.7681
+TAPETA MANGA,6,S,corte,13,12.5934,3.5934
+TAPETA MANGA,6,S,corte,14,12.7681,3.3805
+TAPETA MANGA,6,S,corte,15,12.8979,3.1376
+TAPETA MANGA,6,S,corte,16,12.9778,2.8741
+TAPETA MANGA,6,S,corte,17,13.0000,2.6491
+TAPETA MANGA,6,S,corte,18,13.0000,0.3509
+TAPETA MANGA,6,S,corte,19,12.9778,0.1259
+TAPETA MANGA,6,S,corte,20,12.8979,-0.1376
+TAPETA MANGA,6,S,corte,21,12.7681,-0.3805
+TAPETA MANGA,6,S,corte,22,12.5934,-0.5934
+TAPETA MANGA,6,S,corte,23,12.3805,-0.7681
+TAPETA MANGA,6,S,corte,24,12.1376,-0.8979
+TAPETA MANGA,6,S,corte,25,11.8741,-0.9778
+TAPETA MANGA,6,S,corte,26,11.6491,-1.0000
+TAPETA MANGA,6,S,corte,27,0.3509,-1.0000
+TAPETA MANGA,6,S,corte,28,0.1259,-0.9778
+TAPETA MANGA,6,S,corte,29,-0.1376,-0.8979
+TAPETA MANGA,6,S,corte,30,-0.3805,-0.7681
+TAPETA MANGA,6,S,corte,31,-0.5934,-0.5934
+TAPETA MANGA,6,S,corte,32,-0.7681,-0.3805
+TAPETA MANGA,6,S,corte,33,-0.8979,-0.1376
+TAPETA MANGA,6,S,corte,34,-0.9778,0.1259
+TAPETA MANGA,6,S,corte,35,-1.0000,0.3509
+TAPETA MANGA,6,S,corte,36,-1.0000,2.6491
+CUELLO,7,S,costura,0,0.0000,0.0000
+CUELLO,7,S,costura,1,0.4816,0.0975
+CUELLO,7,S,costura,2,0.9632,0.1900
+CUELLO,7,S,costura,3,1.4448,0.2775
+CUELLO,7,S,costura,4,1.9264,0.3600
+CUELLO,7,S,costura,5,2.4080,0.4375
+CUELLO,7,S,costura,6,2.8896,0.5100
+CUELLO,7,S,costura,7,3.3712,0.5775
+CUELLO,7,S,costura,8,3.8528,0.6400
+CUELLO,7,S,costura,9,4.3344,0.6975
+CUELLO,7,S,costura,10,4.8160,0.7500
+CUELLO,7,S,costura,11,5.2976,0.7975
+CUELLO,7,S,costura,12,5.7792,0.8400
+CUELLO,7,S,costura,13,6.2608,0.8775
+CUELLO,7,S,costura,14,6.7424,0.9100
+CUELLO,7,S,costura,15,7.2240,0.9375
+CUELLO,7,S,costura,16,7.7056,0.9600
+CUELLO,7,S,costura,17,8.1872,0.9775
+CUELLO,7,S,costura,18,8.6688,0.9900
+CUELLO,7,S,costura,19,9.1504,0.9975
+CUELLO,7,S,costura,20,9.6320,1.0000
+CUELLO,7,S,costura,21,10.1136,0.9975
+CUELLO,7,S,costura,22,10.5952,0.9900
+CUELLO,7,S,costura,23,11.0768,0.9775
+CUELLO,7,S,costura,24,11.5584,0.9600
+CUELLO,7,S,costura,25,12.0401,0.9375
+CUELLO,7,S,costura,26,12.5217,0.9100
+CUELLO,7,S,costura,27,13.0033,0.8775
+CUELLO,7,S,costura,28,13.4849,0.8400
+CUELLO,7,S,costura,29,13.9665,0.7975
+CUELLO,7,S,costura,30,14.4481,0.7500
+CUELLO,7,S,costura,31,14.9297,0.6975
+CUELLO,7,S,costura,32,15.4113,0.6400
+CUELLO,7,S,costura,33,15.8929,0.5775
+CUELLO,7,S,costura,34,16.3745,0.5100
+CUELLO,7,S,costura,35,16.8561,0.4375
+CUELLO,7,S,costura,36,17.3377,0.3600
+CUELLO,7,S,costura,37,17.8193,0.2775
+CUELLO,7,S,costura,38,18.3009,0.1900
+CUELLO,7,S,costura,39,18.7825,0.0975
+CUELLO,7,S,costura,40,19.2641,0.0000
+CUELLO,7,S,costura,41,20.4641,6.5000
+CUELLO,7,S,costura,42,19.2641,4.5000
+CUELLO,7,S,costura,43,18.7825,4.5975
+CUELLO,7,S,costura,44,18.3009,4.6900
+CUELLO,7,S,costura,45,17.8193,4.7775
+CUELLO,7,S,costura,46,17.3377,4.8600
+CUELLO,7,S,costura,47,16.8561,4.9375
+CUELLO,7,S,costura,48,16.3745,5.0100
+CUELLO,7,S,costura,49,15.8929,5.0775
+CUELLO,7,S,costura,50,15.4113,5.1400
+CUELLO,7,S,costura,51,14.9297,5.1975
+CUELLO,7,S,costura,52,14.4481,5.2500
+CUELLO,7,S,costura,53,13.9665,5.2975
+CUELLO,7,S,costura,54,13.4849,5.3400
+CUELLO,7,S,costura,55,13.0033,5.3775
+CUELLO,7,S,costura,56,12.5217,5.4100
+CUELLO,7,S,costura,57,12.0401,5.4375
+CUELLO,7,S,costura,58,11.5584,5.4600
+CUELLO,7,S,costura,59,11.0768,5.4775
+CUELLO,7,S,costura,60,10.5952,5.4900
+CUELLO,7,S,costura,61,10.1136,5.4975
+CUELLO,7,S,costura,62,9.6320,5.5000
+CUELLO,7,S,costura,63,9.1504,5.4975
+CUELLO,7,S,costura,64,8.6688,5.4900
+CUELLO,7,S,costura,65,8.1872,5.4775
+CUELLO,7,S,costura,66,7.7056,5.4600
+CUELLO,7,S,costura,67,7.2240,5.4375
+CUELLO,7,S,costura,68,6.7424,5.4100
+CUELLO,7,S,costura,69,6.2608,5.3775
+CUELLO,7,S,costura,70,5.7792,5.3400
+CUELLO,7,S,costura,71,5.2976,5.2975
+CUELLO,7,S,costura,72,4.8160,5.2500
+CUELLO,7,S,costura,73,4.3344,5.1975
+CUELLO,7,S,costura,74,3.8528,5.1400
+CUELLO,7,S,costura,75,3.3712,5.0775
+CUELLO,7,S,costura,76,2.8896,5.0100
+CUELLO,7,S,costura,77,2.4080,4.9375
+CUELLO,7,S,costura,78,1.9264,4.8600
+CUELLO,7,S,costura,79,1.4448,4.7775
+CUELLO,7,S,costura,80,0.9632,4.6900
+CUELLO,7,S,costura,81,0.4816,4.5975
+CUELLO,7,S,costura,82,0.0000,4.5000
+CUELLO,7,S,corte,0,0.7795,5.6730
+CUELLO,7,S,corte,1,1.2710,5.7623
+CUELLO,7,S,corte,2,1.7625,5.8465
+CUELLO,7,S,corte,3,2.2541,5.9256
+CUELLO,7,S,corte,4,2.7458,5.9996
+CUELLO,7,S,corte,5,3.2375,6.0685
+CUELLO,7,S,corte,6,3.7292,6.1323
+CUELLO,7,S,corte,7,4.2210,6.1911
+CUELLO,7,S,corte,8,4.7128,6.2447
+CUELLO,7,S,corte,9,5.2046,6.2932
+CUELLO,7,S,corte,10,5.6965,6.3366
+CUELLO,7,S,corte,11,6.1883,6.3749
+CUELLO,7,S,corte,12,6.6803,6.4081
+CUELLO,7,S,corte,13,7.1722,6.4362
+CUELLO,7,S,corte,14,7.6641,6.4592
+CUELLO,7,S,corte,15,8.1561,6.4770
+CUELLO,7,S,corte,16,8.6481,6.4898
+CUELLO,7,S,corte,17,9.1401,6.4975
+CUELLO,7,S,corte,18,9.6320,6.5000
+CUELLO,7,S,corte,19,10.1240,6.4975
+CUELLO,7,S,corte,20,10.6160,6.4898
+CUELLO,7,S,corte,21,11.1080,6.4770
+CUELLO,7,S,corte,22,11.5999,6.4592
+CUELLO,7,S,corte,23,12.0919,6.4362
+CUELLO,7,S,corte,24,12.5838,6.4081
+CUELLO,7,S,corte,25,13.0757,6.3749
+CUELLO,7,S,corte,26,13.5676,6.3366
+CUELLO,7,S,corte,27,14.0595,6.2932
+CUELLO,7,S,corte,28,14.5513,6.2447
+CUELLO,7,S,corte,29,15.0431,6.1911
+CUELLO,7,S,corte,30,15.5349,6.1323
+CUELLO,7,S,corte,31,16.0266,6.0685
+CUELLO,7,S,corte,32,16.5183,5.9996
+CUELLO,7,S,corte,33,17.0099,5.9256
+CUELLO,7,S,corte,34,17.5015,5.8465
+CUELLO,7,S,corte,35,17.9931,5.7623
+CUELLO,7,S,corte,36,18.4846,5.6730
+CUELLO,7,S,corte,37,18.7689,5.6184
+CUELLO,7,S,corte,38,20.8206,9.0379
+CUELLO,7,S,corte,39,21.8759,8.6389
+CUELLO,7,S,corte,40,20.0628,-1.1820
+CUELLO,7,S,corte,41,18.5890,-0.8836
+CUELLO,7,S,corte,42,18.1172,-0.7930
+CUELLO,7,S,corte,43,17.6455,-0.7073
+CUELLO,7,S,corte,44,17.1738,-0.6265
+CUELLO,7,S,corte,45,16.7022,-0.5506
+CUELLO,7,S,corte,46,16.2306,-0.4796
+CUELLO,7,S,corte,47,15.7591,-0.4135
+CUELLO,7,S,corte,48,15.2876,-0.3523
+CUELLO,7,S,corte,49,14.8162,-0.2961
+CUELLO,7,S,corte,50,14.3448,-0.2447
+CUELLO,7,S,corte,51,13.8734,-0.1982
+CUELLO,7,S,corte,52,13.4021,-0.1566
+CUELLO,7,S,corte,53,12.9308,-0.1199
+CUELLO,7,S,corte,54,12.4595,-0.0881
+CUELLO,7,S,corte,55,11.9882,-0.0612
+CUELLO,7,S,corte,56,11.5170,-0.0392
+CUELLO,7,S,corte,57,11.0457,-0.0220
+CUELLO,7,S,corte,58,10.5745,-0.0098
+CUELLO,7,S,corte,59,10.1033,-0.0025
+CUELLO,7,S,corte,60,9.6320,-0.0000
+CUELLO,7,S,corte,61,9.1608,-0.0025
+CUELLO,7,S,corte,62,8.6896,-0.0098
+CUELLO,7,S,corte,63,8.2184,-0.0220
+CUELLO,7,S,corte,64,7.7471,-0.0392
+CUELLO,7,S,corte,65,7.2759,-0.0612
+CUELLO,7,S,corte,66,6.8046,-0.0881
+CUELLO,7,S,corte,67,6.3333,-0.1199
+CUELLO,7,S,corte,68,5.8620,-0.1566
+CUELLO,7,S,corte,69,5.3907,-0.1982
+CUELLO,7,S,corte,70,4.9193,-0.2447
+CUELLO,7,S,corte,71,4.4479,-0.2961
+CUELLO,7,S,corte,72,3.9764,-0.3523
+CUELLO,7,S,corte,73,3.5050,-0.4135
+CUELLO,7,S,corte,74,3.0334,-0.4796
+CUELLO,7,S,corte,75,2.5619,-0.5506
+CUELLO,7,S,corte,76,2.0903,-0.6265
+CUELLO,7,S,corte,77,1.6186,-0.7073
+CUELLO,7,S,corte,78,1.1469,-0.7930
+CUELLO,7,S,corte,79,0.6751,-0.8836
+CUELLO,7,S,corte,80,0.0000,-1.0203
+CUELLO,7,S,corte,81,0.0000,5.5203
+CUELLO,7,S,corte,82,0.2881,5.5786
+CUELLO,7,S,corte,83,0.7795,5.6730
+PIE DE CUELLO,8,S,costura,0,0.0000,0.0000
+PIE DE CUELLO,8,S,costura,1,0.5241,0.0780
+PIE DE CUELLO,8,S,costura,2,1.0482,0.1520
+PIE DE CUELLO,8,S,costura,3,1.5723,0.2220
+PIE DE CUELLO,8,S,costura,4,2.0964,0.2880
+PIE DE CUELLO,8,S,costura,5,2.6205,0.3500
+PIE DE CUELLO,8,S,costura,6,3.1446,0.4080
+PIE DE CUELLO,8,S,costura,7,3.6687,0.4620
+PIE DE CUELLO,8,S,costura,8,4.1928,0.5120
+PIE DE CUELLO,8,S,costura,9,4.7169,0.5580
+PIE DE CUELLO,8,S,costura,10,5.2410,0.6000
+PIE DE CUELLO,8,S,costura,11,5.7651,0.6380
+PIE DE CUELLO,8,S,costura,12,6.2892,0.6720
+PIE DE CUELLO,8,S,costura,13,6.8133,0.7020
+PIE DE CUELLO,8,S,costura,14,7.3374,0.7280
+PIE DE CUELLO,8,S,costura,15,7.8615,0.7500
+PIE DE CUELLO,8,S,costura,16,8.3856,0.7680
+PIE DE CUELLO,8,S,costura,17,8.9097,0.7820
+PIE DE CUELLO,8,S,costura,18,9.4338,0.7920
+PIE DE CUELLO,8,S,costura,19,9.9579,0.7980
+PIE DE CUELLO,8,S,costura,20,10.4820,0.8000
+PIE DE CUELLO,8,S,costura,21,11.0061,0.7980
+PIE DE CUELLO,8,S,costura,22,11.5302,0.7920
+PIE DE CUELLO,8,S,costura,23,12.0543,0.7820
+PIE DE CUELLO,8,S,costura,24,12.5784,0.7680
+PIE DE CUELLO,8,S,costura,25,13.1026,0.7500
+PIE DE CUELLO,8,S,costura,26,13.6267,0.7280
+PIE DE CUELLO,8,S,costura,27,14.1508,0.7020
+PIE DE CUELLO,8,S,costura,28,14.6749,0.6720
+PIE DE CUELLO,8,S,costura,29,15.1990,0.6380
+PIE DE CUELLO,8,S,costura,30,15.7231,0.6000
+PIE DE CUELLO,8,S,costura,31,16.2472,0.5580
+PIE DE CUELLO,8,S,costura,32,16.7713,0.5120
+PIE DE CUELLO,8,S,costura,33,17.2954,0.4620
+PIE DE CUELLO,8,S,costura,34,17.8195,0.4080
+PIE DE CUELLO,8,S,costura,35,18.3436,0.3500
+PIE DE CUELLO,8,S,costura,36,18.8677,0.2880
+PIE DE CUELLO,8,S,costura,37,19.3918,0.2220
+PIE DE CUELLO,8,S,costura,38,19.9159,0.1520
+PIE DE CUELLO,8,S,costura,39,20.4400,0.0780
+PIE DE CUELLO,8,S,costura,40,20.9641,0.0000
+PIE DE CUELLO,8,S,costura,41,20.9641,3.0000
+PIE DE CUELLO,8,S,costura,42,20.4400,3.0780
+PIE DE CUELLO,8,S,costura,43,19.9159,3.1520
+PIE DE CUELLO,8,S,costura,44,19.3918,3.2220
+PIE DE CUELLO,8,S,costura,45,18.8677,3.2880
+PIE DE CUELLO,8,S,costura,46,18.3436,3.3500
+PIE DE CUELLO,8,S,costura,47,17.8195,3.4080
+PIE DE CUELLO,8,S,costura,48,17.2954,3.4620
+PIE DE CUELLO,8,S,costura,49,16.7713,3.5120
+PIE DE CUELLO,8,S,costura,50,16.2472,3.5580
+PIE DE CUELLO,8,S,costura,51,15.7231,3.6000
+PIE DE CUELLO,8,S,costura,52,15.1990,3.6380
+PIE DE CUELLO,8,S,costura,53,14.6749,3.6720
+PIE DE CUELLO,8,S,costura,54,14.1508,3.7020
+PIE DE CUELLO,8,S,costura,55,13.6267,3.7280
+PIE DE CUELLO,8,S,costura,56,13.1026,3.7500
+PIE DE CUELLO,8,S,costura,57,12.5784,3.7680
+PIE DE CUELLO,8,S,costura,58,12.0543,3.7820
+PIE DE CUELLO,8,S,costura,59,11.5302,3.7920
+PIE DE CUELLO,8,S,costura,60,11.0061,3.7980
+PIE DE CUELLO,8,S,costura,61,10.4820,3.8000
+PIE DE CUELLO,8,S,costura,62,9.9579,3.7980
+PIE DE CUELLO,8,S,costura,63,9.4338,3.7920
+PIE DE CUELLO,8,S,costura,64,8.9097,3.7820
+PIE DE CUELLO,8,S,costura,65,8.3856,3.7680
+PIE DE CUELLO,8,S,costura,66,7.8615,3.7500
+PIE DE CUELLO,8,S,costura,67,7.3374,3.7280
+PIE DE CUELLO,8,S,costura,68,6.8133,3.7020
+PIE DE CUELLO,8,S,costura,69,6.2892,3.6720
+PIE DE CUELLO,8,S,costura,70,5.7651,3.6380
+PIE DE CUELLO,8,S,costura,71,5.2410,3.6000
+PIE DE CUELLO,8,S,costura,72,4.7169,3.5580
+PIE DE CUELLO,8,S,costura,73,4.1928,3.5120
+PIE DE CUELLO,8,S,costura,74,3.6687,3.4620
+PIE DE CUELLO,8,S,costura,75,3.1446,3.4080
+PIE DE CUELLO,8,S,costura,76,2.6205,3.3500
+PIE DE CUELLO,8,S,costura,77,2.0964,3.2880
+PIE DE CUELLO,8,S,costura,78,1.5723,3.2220
+PIE DE CUELLO,8,S,costura,79,1.0482,3.1520
+PIE DE CUELLO,8,S,costura,80,0.5241,3.0780
+PIE DE CUELLO,8,S,costura,81,0.0000,3.0000
+PIE DE CUELLO,8,S,corte,0,0.9121,4.1427
+PIE DE CUELLO,8,S,corte,1,1.4436,4.2137
+PIE DE CUELLO,8,S,corte,2,1.9752,4.2806
+PIE DE CUELLO,8,S,corte,3,2.5068,4.3435
+PIE DE CUELLO,8,S,corte,4,3.0384,4.4023
+PIE DE CUELLO,8,S,corte,5,3.5700,4.4571
+PIE DE CUELLO,8,S,corte,6,4.1016,4.5078
+PIE DE CUELLO,8,S,corte,7,4.6333,4.5545
+PIE DE CUELLO,8,S,corte,8,5.1649,4.5971
+PIE DE CUELLO,8,S,corte,9,5.6966,4.6357
+PIE DE CUELLO,8,S,corte,10,6.2283,4.6701
+PIE DE CUELLO,8,S,corte,11,6.7600,4.7006
+PIE DE CUELLO,8,S,corte,12,7.2917,4.7270
+PIE DE CUELLO,8,S,corte,13,7.8234,4.7493
+PIE DE CUELLO,8,S,corte,14,8.3551,4.7675
+PIE DE CUELLO,8,S,corte,15,8.8868,4.7817
+PIE DE CUELLO,8,S,corte,16,9.4186,4.7919
+PIE DE CUELLO,8,S,corte,17,9.9503,4.7980
+PIE DE CUELLO,8,S,corte,18,10.4820,4.8000
+PIE DE CUELLO,8,S,corte,19,11.0138,4.7980
+PIE DE CUELLO,8,S,corte,20,11.5455,4.7919
+PIE DE CUELLO,8,S,corte,21,12.0772,4.7817
+PIE DE CUELLO,8,S,corte,22,12.6090,4.7675
+PIE DE CUELLO,8,S,corte,23,13.1407,4.7493
+PIE DE CUELLO,8,S,corte,24,13.6724,4.7270
+PIE DE CUELLO,8,S,corte,25,14.2041,4.7006
+PIE DE CUELLO,8,S,corte,26,14.7358,4.6701
+PIE DE CUELLO,8,S,corte,27,15.2675,4.6357
+PIE DE CUELLO,8,S,corte,28,15.7992,4.5971
+PIE DE CUELLO,8,S,corte,29,16.3308,4.5545
+PIE DE CUELLO,8,S,corte,30,16.8625,4.5078
+PIE DE CUELLO,8,S,corte,31,17.3941,4.4571
+PIE DE CUELLO,8,S,corte,32,17.9257,4.4023
+PIE DE CUELLO,8,S,corte,33,18.4573,4.3435
+PIE DE CUELLO,8,S,corte,34,18.9889,4.2806
+PIE DE CUELLO,8,S,corte,35,19.5204,4.2137
+PIE DE CUELLO,8,S,corte,36,20.0520,4.1427
+PIE DE CUELLO,8,S,corte,37,20.5835,4.0677
+PIE DE CUELLO,8,S,corte,38,21.9641,3.8622
+PIE DE CUELLO,8,S,corte,39,21.9641,-1.1598
+PIE DE CUELLO,8,S,corte,40,20.2965,-0.9117
+PIE DE CUELLO,8,S,corte,41,19.7798,-0.8387
+PIE DE CUELLO,8,S,corte,42,19.2631,-0.7697
+PIE DE CUELLO,8,S,corte,43,18.7465,-0.7046
+PIE DE CUELLO,8,S,corte,44,18.2298,-0.6435
+PIE DE CUELLO,8,S,corte,45,17.7132,-0.5863
+PIE DE CUELLO,8,S,corte,46,17.1966,-0.5331
+PIE DE CUELLO,8,S,corte,47,16.6801,-0.4838
+PIE DE CUELLO,8,S,corte,48,16.1635,-0.4385
+PIE DE CUELLO,8,S,corte,49,15.6470,-0.3971
+PIE DE CUELLO,8,S,corte,50,15.1304,-0.3597
+PIE DE CUELLO,8,S,corte,51,14.6139,-0.3261
+PIE DE CUELLO,8,S,corte,52,14.0974,-0.2966
+PIE DE CUELLO,8,S,corte,53,13.5809,-0.2710
+PIE DE CUELLO,8,S,corte,54,13.0644,-0.2493
+PIE DE CUELLO,8,S,corte,55,12.5479,-0.2315
+PIE DE CUELLO,8,S,corte,56,12.0315,-0.2177
+PIE DE CUELLO,8,S,corte,57,11.5150,-0.2079
+PIE DE CUELLO,8,S,corte,58,10.9985,-0.2020
+PIE DE CUELLO,8,S,corte,59,10.4820,-0.2000
+PIE DE CUELLO,8,S,corte,60,9.9656,-0.2020
+PIE DE CUELLO,8,S,corte,61,9.4491,-0.2079
+PIE DE CUELLO,8,S,corte,62,8.9326,-0.2177
+PIE DE CUELLO,8,S,corte,63,8.4161,-0.2315
+PIE DE CUELLO,8,S,corte,64,7.8997,-0.2493
+PIE DE CUELLO,8,S,corte,65,7.3832,-0.2710
+PIE DE CUELLO,8,S,corte,66,6.8667,-0.2966
+PIE DE CUELLO,8,S,corte,67,6.3502,-0.3261
+PIE DE CUELLO,8,S,corte,68,5.8336,-0.3597
+PIE DE CUELLO,8,S,corte,69,5.3171,-0.3971
+PIE DE CUELLO,8,S,corte,70,4.8006,-0.4385
+PIE DE CUELLO,8,S,corte,71,4.2840,-0.4838
+PIE DE CUELLO,8,S,corte,72,3.7674,-0.5331
+PIE DE CUELLO,8,S,corte,73,3.2509,-0.5863
+PIE DE CUELLO,8,S,corte,74,2.7342,-0.6435
+PIE DE CUELLO,8,S,corte,75,2.2176,-0.7046
+PIE DE CUELLO,8,S,corte,76,1.7010,-0.7697
+PIE DE CUELLO,8,S,corte,77,1.1843,-0.8387
+PIE DE CUELLO,8,S,corte,78,0.6676,-0.9117
+PIE DE CUELLO,8,S,corte,79,0.0000,-1.0110
+PIE DE CUELLO,8,S,corte,80,0.0000,4.0110
+PIE DE CUELLO,8,S,corte,81,0.3806,4.0677
+PIE DE CUELLO,8,S,corte,82,0.9121,4.1427
+VISTA DELANTERA,9,S,costura,0,-1.7000,9.4000
+VISTA DELANTERA,9,S,costura,1,0.0000,9.4000
+VISTA DELANTERA,9,S,costura,2,0.2461,9.1835
+VISTA DELANTERA,9,S,costura,3,0.4911,8.9661
+VISTA DELANTERA,9,S,costura,4,0.7338,8.7468
+VISTA DELANTERA,9,S,costura,5,0.9730,8.5248
+VISTA DELANTERA,9,S,costura,6,1.2077,8.2991
+VISTA DELANTERA,9,S,costura,7,1.4365,8.0688
+VISTA DELANTERA,9,S,costura,8,1.6585,7.8329
+VISTA DELANTERA,9,S,costura,9,1.8724,7.5907
+VISTA DELANTERA,9,S,costura,10,2.0772,7.3412
+VISTA DELANTERA,9,S,costura,11,2.2732,7.0846
+VISTA DELANTERA,9,S,costura,12,2.4613,6.8218
+VISTA DELANTERA,9,S,costura,13,2.6426,6.5534
+VISTA DELANTERA,9,S,costura,14,2.8179,6.2802
+VISTA DELANTERA,9,S,costura,15,2.9884,6.0031
+VISTA DELANTERA,9,S,costura,16,3.1549,5.7227
+VISTA DELANTERA,9,S,costura,17,3.3185,5.4399
+VISTA DELANTERA,9,S,costura,18,3.4801,5.1554
+VISTA DELANTERA,9,S,costura,19,3.6408,4.8700
+VISTA DELANTERA,9,S,costura,20,3.8014,4.5845
+VISTA DELANTERA,9,S,costura,21,3.9631,4.2995
+VISTA DELANTERA,9,S,costura,22,4.1267,4.0160
+VISTA DELANTERA,9,S,costura,23,4.2932,3.7346
+VISTA DELANTERA,9,S,costura,24,4.4635,3.4560
+VISTA DELANTERA,9,S,costura,25,4.6372,3.1800
+VISTA DELANTERA,9,S,costura,26,4.8143,2.9064
+VISTA DELANTERA,9,S,costura,27,4.9943,2.6351
+VISTA DELANTERA,9,S,costura,28,5.1771,2.3658
+VISTA DELANTERA,9,S,costura,29,5.3624,2.0983
+VISTA DELANTERA,9,S,costura,30,5.5498,1.8325
+VISTA DELANTERA,9,S,costura,31,5.7391,1.5680
+VISTA DELANTERA,9,S,costura,32,5.9301,1.3048
+VISTA DELANTERA,9,S,costura,33,6.1224,1.0427
+VISTA DELANTERA,9,S,costura,34,6.3159,0.7813
+VISTA DELANTERA,9,S,costura,35,6.5101,0.5205
+VISTA DELANTERA,9,S,costura,36,6.7049,0.2602
+VISTA DELANTERA,9,S,costura,37,6.9000,0.0000
+VISTA DELANTERA,9,S,costura,38,7.9000,0.5000
+VISTA DELANTERA,9,S,costura,39,3.9000,12.4000
+VISTA DELANTERA,9,S,costura,40,4.3000,68.0000
+VISTA DELANTERA,9,S,costura,41,-1.7000,68.0000
+VISTA DELANTERA,9,S,corte,0,-2.7000,69.0000
+VISTA DELANTERA,9,S,corte,1,5.3072,69.0000
+VISTA DELANTERA,9,S,corte,2,4.9012,12.5601
+VISTA DELANTERA,9,S,corte,3,9.1249,-0.0056
+VISTA DELANTERA,9,S,corte,4,6.6007,-1.2677
+VISTA DELANTERA,9,S,corte,5,5.9045,-0.3393
+VISTA DELANTERA,9,S,corte,6,5.7088,-0.0777
+VISTA DELANTERA,9,S,corte,7,5.5130,0.1851
+VISTA DELANTERA,9,S,corte,8,5.3174,0.4495
+VISTA DELANTERA,9,S,corte,9,5.1223,0.7154
+VISTA DELANTERA,9,S,corte,10,4.9279,0.9833
+VISTA DELANTERA,9,S,corte,11,4.7346,1.2533
+VISTA DELANTERA,9,S,corte,12,4.5427,1.5255
+VISTA DELANTERA,9,S,corte,13,4.3524,1.8003
+VISTA DELANTERA,9,S,corte,14,4.1640,2.0778
+VISTA DELANTERA,9,S,corte,15,3.9779,2.3583
+VISTA DELANTERA,9,S,corte,16,3.7943,2.6419
+VISTA DELANTERA,9,S,corte,17,3.6136,2.9289
+VISTA DELANTERA,9,S,corte,18,3.4362,3.2192
+VISTA DELANTERA,9,S,corte,19,3.2633,3.5114
+VISTA DELANTERA,9,S,corte,20,3.0951,3.8029
+VISTA DELANTERA,9,S,corte,21,2.9308,4.0926
+VISTA DELANTERA,9,S,corte,22,2.7693,4.3796
+VISTA DELANTERA,9,S,corte,23,2.6097,4.6632
+VISTA DELANTERA,9,S,corte,24,2.4509,4.9426
+VISTA DELANTERA,9,S,corte,25,2.2922,5.2170
+VISTA DELANTERA,9,S,corte,26,2.1326,5.4858
+VISTA DELANTERA,9,S,corte,27,1.9712,5.7481
+VISTA DELANTERA,9,S,corte,28,1.8073,6.0034
+VISTA DELANTERA,9,S,corte,29,1.6402,6.2508
+VISTA DELANTERA,9,S,corte,30,1.4691,6.4900
+VISTA DELANTERA,9,S,corte,31,1.2932,6.7202
+VISTA DELANTERA,9,S,corte,32,1.1109,6.9423
+VISTA DELANTERA,9,S,corte,33,0.9194,7.1591
+VISTA DELANTERA,9,S,corte,34,0.7177,7.3735
+VISTA DELANTERA,9,S,corte,35,0.5063,7.5862
+VISTA DELANTERA,9,S,corte,36,0.2862,7.7979
+VISTA DELANTERA,9,S,corte,37,0.0584,8.0093
+VISTA DELANTERA,9,S,corte,38,-0.1760,8.2211
+VISTA DELANTERA,9,S,corte,39,-0.3776,8.4000
+VISTA DELANTERA,9,S,corte,40,-2.7000,8.4000
+VISTA DELANTERA,9,S,corte,41,-2.7000,69.0000
+BOLSILLO,10,S,costura,0,0.0000,0.0000
+BOLSILLO,10,S,costura,1,12.0000,0.0000
+BOLSILLO,10,S,costura,2,12.0000,9.7200
+BOLSILLO,10,S,costura,3,6.0000,13.5000
+BOLSILLO,10,S,costura,4,0.0000,9.7200
+BOLSILLO,10,S,corte,0,-1.0000,10.2719
+BOLSILLO,10,S,corte,1,6.0000,14.6819
+BOLSILLO,10,S,corte,2,13.0000,10.2719
+BOLSILLO,10,S,corte,3,13.0000,-1.0000
+BOLSILLO,10,S,corte,4,-1.0000,-1.0000
+BOLSILLO,10,S,corte,5,-1.0000,10.2719
