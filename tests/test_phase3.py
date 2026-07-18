@@ -28,6 +28,14 @@ def test_marker_no_overlap_and_within_width():
             assert sep, f"solapan {a.piece.name} y {b.piece.name}"
 
 
+def test_skyline_beats_shelf():
+    from patronaje.marker.layout import nest, nest_skyline
+    sh = build_shirt("S").layout()
+    _, l_shelf = nest(sh, 110.0)
+    _, l_sky = nest_skyline(sh, 110.0)
+    assert l_sky < l_shelf   # el encaje de contornos usa menos tela
+
+
 def test_wider_fabric_uses_less_length():
     sh = build_shirt("S").layout()
     rep = marker_report(sh)
