@@ -48,6 +48,14 @@ con las medidas de una persona (en lugar de una talla estándar). Las medidas se
 python -m patronaje.cli --measurements cliente.json --fit fitted --method mueller
 ```
 
+**Otras prendas**: `--garment skirt` genera una **falda base recta (lápiz)** de dos
+paneles con pinzas de cintura, curva de cadera y pretina — mismo motor, misma
+exportación. Ver `docs/falda.md`.
+
+```bash
+python -m patronaje.cli --garment skirt --size S --output output
+```
+
 Genera en `output/` (por talla):
 
 | Archivo                    | Formato                                            |

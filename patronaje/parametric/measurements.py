@@ -44,6 +44,8 @@ EASE = dict(
     holgura_brazo=8.0,     # ease al contorno de brazo (para copa cómoda)
     holgura_muneca=6.0,    # ease en boca de manga (pliegues al puño)
     holgura_cuello=1.0,    # ease al contorno de cuello
+    holgura_cadera=4.0,    # ease al contorno de cadera (falda)
+    holgura_cintura_falda=1.0,  # ease a la cintura de la falda
 )
 
 # Constantes de método (Aldrich) y de confección.
@@ -59,6 +61,13 @@ METODO = dict(
     ancho_bolsillo=12.0,
     margen_costura=1.0,      # margen de costura por defecto
     margen_dobladillo=2.5,   # dobladillo inferior
+    # --- constantes de falda ---
+    largo_falda=60.0,        # largo de la falda (cintura -> bajo)
+    ancho_pretina=3.5,       # alto de la pretina terminada
+    pinza_cint_del=2.5,      # intake de la pinza de cintura delantera (por panel)
+    pinza_cint_tra=3.5,      # intake de la pinza de cintura trasera (por panel)
+    largo_pinza_del=10.0,    # largo de la pinza delantera
+    largo_pinza_tra=14.0,    # largo de la pinza trasera (apunta más abajo)
 )
 
 
@@ -148,5 +157,12 @@ def build_parameters_from_measurements(
              descripcion="ancho boca de manga antes de pliegues", expr="muneca + holgura_muneca")
     p.derive("largo_puno", lambda q: q["muneca"] + 3.0,
              descripcion="largo del puño terminado (con holgura de cierre)", expr="muneca + 3.0")
+    # -------- derivados de falda -----------------------------------------
+    p.derive("cuarto_cadera", lambda q: (q["cadera"] + q["holgura_cadera"]) / 4.0,
+             descripcion="cuarto de cadera por panel", expr="(cadera + holgura_cadera)/4")
+    p.derive("cuarto_cintura_falda",
+             lambda q: (q["cintura"] + q["holgura_cintura_falda"]) / 4.0,
+             descripcion="cuarto de cintura (falda) por panel",
+             expr="(cintura + holgura_cintura_falda)/4")
 
     return p

@@ -38,12 +38,23 @@ def generate(size: str = "S", outdir: str = "output", *,
              include_seam: bool = True, force: bool = False,
              tol: float = 0.5, quiet: bool = False, method: str = "aldrich",
              style: str = "none", fit: str = "shirt", bust_dart: str = "side",
-             p=None) -> dict:
+             garment: str = "shirt", p=None) -> dict:
     os.makedirs(outdir, exist_ok=True)
     fitted = fit == "fitted"
+    is_skirt = garment == "skirt"
     from .validation.validators import ValidationReport, validate_piece_geometry
 
-    if fitted:
+    if is_skirt:
+        # falda base (recta / lápiz): prenda propia, validación geométrica
+        from .garment.skirt import build_skirt
+        shirt = build_skirt(size, method=method, p=p).layout()
+        report = ValidationReport()
+        for pc in shirt.pieces:
+            validate_piece_geometry(pc, report)
+        if not quiet:
+            print(f"[falda base | método: {method}]")
+            print(report.text())
+    elif fitted:
         # bloque base entallado (sloper) con pinzas y equilibrio
         from .garment.sloper import build_sloper
         shirt = build_sloper(size, method=method, bust_dart_pos=bust_dart, p=p).layout()
@@ -79,13 +90,16 @@ def generate(size: str = "S", outdir: str = "output", *,
         sys.exit(2)
 
     suffix = "" if method == "aldrich" else f"_{method}"
-    if fitted:
+    if is_skirt:
+        pass
+    elif fitted:
         suffix += f"_base_{bust_dart}"
         if style not in (None, "", "none"):
             suffix += f"_{style}"
     elif style not in (None, "", "none"):
         suffix += f"_{style}"
-    base = os.path.join(outdir, f"camisa_{size}{suffix}")
+    prefix = "falda" if is_skirt else "camisa"
+    base = os.path.join(outdir, f"{prefix}_{size}{suffix}")
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
     outputs["dxf_aama"] = export_dxf_aama(shirt, f"{base}_AAMA_ASTM.dxf")
@@ -96,8 +110,9 @@ def generate(size: str = "S", outdir: str = "output", *,
     outputs["json"] = export_json(shirt, f"{base}.json")
     outputs["csv"] = export_csv(shirt, f"{base}_puntos.csv")
     outputs["scr"] = export_scr(shirt, f"{base}.scr", include_seam=include_seam)
-    # Fase 3: tech pack + planos de corte
-    outputs["techpack"] = export_techpack(shirt, f"{base}_tech_pack.html")
+    # Fase 3: tech pack (específico de camisa) + planos de corte
+    if not is_skirt:
+        outputs["techpack"] = export_techpack(shirt, f"{base}_tech_pack.html")
     for W in (110, 150, 160):
         outputs[f"marker_{W}"] = export_marker_svg(shirt, float(W), f"{base}_marker_{W}.svg")
 
@@ -152,8 +167,11 @@ def main(argv=None):
                          "v_neck, boat_neck, hi_lo, cocoon, peplum, "
                          "dolman, kimono, raglan, godet, wrap, back_pleat, "
                          "off_shoulder, tie_front")
+    ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt"],
+                    help="Prenda: shirt = camisa; skirt = falda base recta")
     ap.add_argument("--fit", default="shirt", choices=["shirt", "fitted"],
-                    help="shirt = camisa holgada; fitted = bloque base entallado con pinzas")
+                    help="shirt = camisa holgada; fitted = bloque base entallado con pinzas "
+                         "(sólo con --garment shirt)")
     ap.add_argument("--bust-dart", default="side",
                     help="Posición de la pinza de busto (side, shoulder, neck, armhole, "
                          "french, waist) — sólo con --fit fitted")
@@ -173,7 +191,7 @@ def main(argv=None):
     else:
         generate(size, args.output, include_seam=not args.no_seam,
                  force=args.force, tol=args.tol, method=args.method, style=args.style,
-                 fit=args.fit, bust_dart=args.bust_dart, p=custom_p)
+                 fit=args.fit, bust_dart=args.bust_dart, garment=args.garment, p=custom_p)
 
 
 def _load_measurements(path: str, *, force: bool = False):
