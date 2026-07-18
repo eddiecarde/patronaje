@@ -57,6 +57,10 @@ Genera en `output/` (por talla):
 
 Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 
+> Los archivos de `output/` son **regenerables** por el CLI y están fuera del
+> control de versiones (`.gitignore`); el repo solo conserva una **muestra
+> talla S** + el visor como escaparate. Regenera todo con los comandos de arriba.
+
 **Visor interactivo**: `python -m patronaje.viewer --output output` genera
 `output/viewer.html`, un HTML autocontenido donde eliges método y estilo y ves
 el patrón al instante con consumo y nº de piezas.

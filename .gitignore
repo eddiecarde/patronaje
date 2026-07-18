@@ -7,3 +7,15 @@ venv/
 .DS_Store
 build/
 dist/
+
+# Artefactos generados por el CLI (regenerables). Se conserva solo una
+# muestra representativa (talla S) + el visor como escaparate del repo.
+output/*
+!output/camisa_S.dxf
+!output/camisa_S.svg
+!output/camisa_S.json
+!output/camisa_S.scr
+!output/camisa_S_puntos.csv
+!output/camisa_S_marker_150.svg
+!output/camisa_S_tech_pack.html
+!output/viewer.html
