@@ -294,6 +294,138 @@ def peplum(shirt: Shirt, waist_at: float = 0.30, peplum_len: float = 16.0,
     return shirt
 
 
+# ==========================================================================
+# Estilos avanzados (reconstruyen la relación cuerpo/manga)
+# ==========================================================================
+def _grown_on(shirt: Shirt, sleeve_len_frac: float, wrist_extra: float,
+              batwing: float, label: str) -> Shirt:
+    """Manga cortada de una pieza con el cuerpo (dolman/kimono). Se construyen
+    contornos frescos desde los landmarks del bloque y se une el canesú a la
+    espalda (sin manga separada)."""
+    from ..core.curves import smooth_curve
+    p = shirt.p
+    b = shirt.bodice
+    ext = p.extension_boton
+    fnd = p.escote_del_prof
+    largo = p.largo_camisa
+    SL = p.largo_manga * sleeve_len_frac
+    WR = p.muneca + wrist_extra
+
+    def wing(sp, us):
+        wt = (sp[0] + SL, sp[1] + SL * 0.12)
+        ww = (sp[0] + SL, sp[1] + SL * 0.12 + WR)
+        under = smooth_curve([ww, (us[0] + batwing, us[1] + SL * 0.42),
+                              (us[0] + 3, us[1] + 4), us], samples_per_span=8)
+        return [sp, wt, ww] + under[1:]
+
+    fpc = _find(shirt, "DELANTERO")
+    if fpc:
+        spF = b.points["D-SP"].as_tuple(); usF = b.points["D-US"].as_tuple()
+        fc = [(-ext, fnd), (0.0, fnd)] + list(reversed(b.front_neck))[1:]
+        fc += wing(spF, usF)
+        fc += [b.points["D-Hs"].as_tuple(), (-ext, largo)]
+        fpc.net_contour = ops.dedup(fc)
+        fpc.name = "DELANTERO " + label
+
+    bpc = _find(shirt, "ESPALDA")
+    if bpc:
+        spB = b.points["E-SP"].as_tuple(); usB = b.points["E-US"].as_tuple()
+        bc = [b.points["E-CBn"].as_tuple()] + b.back_neck[1:]
+        bc += wing(spB, usB)
+        bc += [b.points["E-Hs"].as_tuple(), b.points["E-Hc"].as_tuple()]
+        bpc.net_contour = ops.dedup(bc)
+        bpc.name = "ESPALDA " + label
+
+    shirt.pieces = [x for x in shirt.pieces if x.name != "CANESU"
+                    and not x.name.startswith("MANGA")
+                    and x.name not in ("PUNO", "TAPETA MANGA")]
+    return shirt
+
+
+def dolman(shirt: Shirt) -> Shirt:
+    """Manga dolman/murciélago (grown-on con axila profunda)."""
+    return _grown_on(shirt, sleeve_len_frac=0.68, wrist_extra=12.0,
+                     batwing=13.0, label="DOLMAN")
+
+
+def kimono(shirt: Shirt) -> Shirt:
+    """Manga kimono (grown-on más recta y corta)."""
+    return _grown_on(shirt, sleeve_len_frac=0.42, wrist_extra=8.0,
+                     batwing=7.0, label="KIMONO")
+
+
+def raglan(shirt: Shirt) -> Shirt:
+    """Manga raglán: costura del escote a la axila; el cuerpo pierde el hombro."""
+    from ..core.curves import smooth_curve
+    p = shirt.p
+    b = shirt.bodice
+    ext = p.extension_boton
+    fnd = p.escote_del_prof
+    largo = p.largo_camisa
+
+    # ---- delantero ----
+    fpc = _find(shirt, "DELANTERO")
+    if fpc:
+        fn_rev = list(reversed(b.front_neck))            # CFn -> SNP
+        rneck = ops.arclen_point(fn_rev, 0.5)
+        rarm = ops.arclen_point(b.front_armhole, 0.45)   # SP -> US
+        neck_part = ops.slice_curve(fn_rev, 0.0, 0.5)
+        arm_part = ops.slice_curve(b.front_armhole, 0.45, 1.0)
+        raglan_seam = smooth_curve([rneck, ((rneck[0] + rarm[0]) / 2 - 1,
+                                            (rneck[1] + rarm[1]) / 2), rarm], samples_per_span=6)
+        fc = [(-ext, fnd), (0.0, fnd)] + neck_part[1:] + raglan_seam[1:] + arm_part[1:]
+        fc += [b.points["D-Hs"].as_tuple(), (-ext, largo)]
+        fpc.net_contour = ops.dedup(fc)
+        fpc.name = "DELANTERO RAGLAN"
+
+    # ---- espalda (completa, sin canesú) ----
+    bpc = _find(shirt, "ESPALDA")
+    if bpc:
+        rneck = ops.arclen_point(b.back_neck, 0.5)       # CBn -> SNP
+        rarm = ops.arclen_point(b.back_armhole, 0.45)
+        neck_part = ops.slice_curve(b.back_neck, 0.0, 0.5)
+        arm_part = ops.slice_curve(b.back_armhole, 0.45, 1.0)
+        raglan_seam = smooth_curve([rneck, ((rneck[0] + rarm[0]) / 2 - 1,
+                                            (rneck[1] + rarm[1]) / 2), rarm], samples_per_span=6)
+        bc = neck_part + raglan_seam[1:] + arm_part[1:]
+        bc += [b.points["E-Hs"].as_tuple(), b.points["E-Hc"].as_tuple()]
+        bpc.net_contour = ops.dedup(bc)
+        bpc.name = "ESPALDA RAGLAN"
+
+    # ---- manga raglán: cabeza con pico de hombro ----
+    mpc = _find(shirt, "MANGA")
+    if mpc:
+        cap_h = shirt.sleeve.cap_height
+        mpc.net_contour = ops.lift(mpc.net_contour, cap_h * 0.9, cap_h, above=True)
+        mpc.name = "MANGA RAGLAN"
+
+    shirt.pieces = [x for x in shirt.pieces if x.name != "CANESU"]
+    return shirt
+
+
+def godet(shirt: Shirt, godet_width: float = 20.0, from_frac: float = 0.55) -> Shirt:
+    """Godets: piezas triangulares insertadas en los costados para dar vuelo."""
+    from ..piece import Piece
+    p = shirt.p
+    top_y = p.prof_sisa + (p.largo_camisa - p.prof_sisa) * from_frac
+    h = p.largo_camisa - top_y
+    size = shirt.pieces[0].size if shirt.pieces else "S"
+    contour = [(0.0, 0.0), (godet_width / 2, h), (-godet_width / 2, h)]
+    god = Piece(name="GODET", number=40, size=size, quantity=4,
+                cut_type="4 (en costados)", net_contour=contour,
+                seam_allowance=p.margen_costura, grain=((0.0, 1.0), (0.0, h - 1)),
+                reference_texts=[((0.0, h * 0.4), "godet")])
+    shirt.pieces.append(god)
+    # marca de abertura de godet en delantero y espalda (referencia)
+    for name in ("DELANTERO", "ESPALDA"):
+        pc = _find(shirt, name)
+        if pc:
+            xside = p.cuarto_busto
+            pc.construction_lines = list(pc.construction_lines) + [
+                ((xside, top_y), (xside, p.largo_camisa))]
+    return shirt
+
+
 STYLES = {
     "flare": flare_shirt,
     "puff": puff_sleeve,
@@ -312,6 +444,10 @@ STYLES = {
     "hi_lo": hi_lo,
     "cocoon": cocoon,
     "peplum": peplum,
+    "dolman": dolman,
+    "kimono": kimono,
+    "raglan": raglan,
+    "godet": godet,
 }
 
 

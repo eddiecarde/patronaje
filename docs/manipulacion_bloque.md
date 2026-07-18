@@ -40,7 +40,19 @@ patronaje, implementadas como operaciones geométricas en `patronaje/transform/`
 | `cocoon` | **Dobladillo entallado** (estrecha la base) | `flare` (ratio negativo) |
 | `peplum` | **Peplum** (talle + volante acampanado corto) | `clip` + `flare` |
 
-**17 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+### Estilos avanzados (reconstruyen cuerpo/manga)
+| Estilo | Prenda | Técnica |
+|--------|--------|---------|
+| `dolman` | **Manga dolman/murciélago** (cortada de una pieza con el cuerpo) | contorno fresco desde landmarks |
+| `kimono` | **Manga kimono** (grown-on más recta y corta) | contorno fresco desde landmarks |
+| `raglan` | **Manga raglán** (costura escote→axila; cuerpo sin hombro) | `slice_curve` + costura raglán |
+| `godet` | **Godets** (piezas triangulares en costados para vuelo) | pieza triangular insertada |
+
+Los avanzados construyen contornos frescos desde los puntos del bloque (más
+robusto que editar el contorno) y unen el canesú a la espalda cuando la prenda
+no lleva canesú (dolman/kimono/raglan).
+
+**21 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
 función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
 `lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 

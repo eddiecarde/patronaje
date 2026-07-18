@@ -160,6 +160,41 @@ def split_panel(contour, top_pt, bottom_pt, waist_x, n=18):
     return dedup(piece1), dedup(piece2)
 
 
+def arclen_point(poly, frac):
+    """Punto a la fracción ``frac`` (0..1) de la longitud de arco de ``poly``."""
+    pts = [tuple(p) for p in poly]
+    tot = sum(math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+              for i in range(len(pts) - 1))
+    target = tot * frac
+    acc = 0.0
+    for i in range(len(pts) - 1):
+        d = math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+        if acc + d >= target:
+            t = (target - acc) / d if d else 0.0
+            return (pts[i][0] + t * (pts[i + 1][0] - pts[i][0]),
+                    pts[i][1] + t * (pts[i + 1][1] - pts[i][1]))
+        acc += d
+    return pts[-1]
+
+
+def slice_curve(poly, f0, f1):
+    """Sub-polilínea entre las fracciones de arco ``f0`` y ``f1``."""
+    pts = [tuple(p) for p in poly]
+    tot = sum(math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+              for i in range(len(pts) - 1)) or 1.0
+    lo, hi = tot * f0, tot * f1
+    out = [arclen_point(pts, f0)]
+    acc = 0.0
+    for i in range(len(pts) - 1):
+        d = math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+        if acc + d > lo and acc < hi:
+            if lo < acc < hi:
+                out.append(pts[i])
+        acc += d
+    out.append(arclen_point(pts, f1))
+    return dedup(out)
+
+
 def lift(points, amount, y_ref, above=True):
     """Sube (resta y) los puntos por encima de ``y_ref`` de forma proporcional
     (para levantar la copa de una manga abullonada)."""
