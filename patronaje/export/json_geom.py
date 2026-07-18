@@ -11,21 +11,27 @@ import json
 
 def shirt_to_dict(shirt) -> dict:
     p = shirt.p
-    b = shirt.bodice
+    b = getattr(shirt, "bodice", None)
+    s = getattr(shirt, "sleeve", None)
     data = {
-        "prenda": "camisa_basica_femenina_ML",
-        "metodo": "Aldrich",
+        "prenda": getattr(shirt, "prenda", "camisa_basica_femenina_ML"),
+        "metodo": getattr(shirt, "method", "aldrich").capitalize(),
         "talla": p._base["talla_nombre"].descripcion.replace("talla ", ""),
         "parametros": p.as_dict(),
-        "medidas_clave": {
-            "escote_medio": b.neckline_length(),
-            "sisa": b.armhole_length(),
-            "copa_manga": shirt.sleeve.cap_length(),
-            "altura_copa": shirt.sleeve.cap_height,
-            "biceps": 2 * shirt.sleeve.biceps_half,
-        },
         "piezas": [],
     }
+    # medidas de casado (sólo prendas con cuerpo/manga)
+    if b is not None and hasattr(b, "neckline_length"):
+        data["medidas_clave"] = {
+            "escote_medio": b.neckline_length(),
+            "sisa": b.armhole_length(),
+        }
+        if s is not None:
+            data["medidas_clave"].update({
+                "copa_manga": s.cap_length(),
+                "altura_copa": s.cap_height,
+                "biceps": 2 * s.biceps_half,
+            })
     for pc in shirt.pieces:
         data["piezas"].append({
             "nombre": pc.name,
