@@ -6,8 +6,6 @@ aquí para reutilizarlos y documentar su construcción.
 """
 from __future__ import annotations
 
-import math
-
 from ...core.geometry import tangent_arc
 
 

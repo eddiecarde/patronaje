@@ -7,10 +7,8 @@
 """
 from __future__ import annotations
 
-from dataclasses import replace
-
 from ..piece import (
-    Entity, EPolyline, ELine, EText, ECircle, ENotch, ALL_LAYERS,
+    Entity, EPolyline, ELine, EText, ECircle, ENotch,
 )
 
 

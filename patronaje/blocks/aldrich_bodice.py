@@ -23,7 +23,7 @@ import math
 from dataclasses import dataclass, field
 
 from ..core.point import Point, polyline_length
-from ..core.curves import smooth_curve, NaturalCubicSpline
+from ..core.curves import smooth_curve
 from ..parametric.parameters import Parameters
 
 
@@ -86,9 +86,9 @@ class BodiceDraft:
                       ["medio_espalda", "prof_sisa"])
         us_b = self._pt("E-US", cuarto, scye, "punto de costado/axila (espalda)",
                         ["cuarto_busto", "prof_sisa"])
-        hem_b = self._pt("E-Hs", cuarto, largo, "dobladillo costado (espalda)",
+        self._pt("E-Hs", cuarto, largo, "dobladillo costado (espalda)",
                          ["cuarto_busto", "largo_camisa"])
-        hem_cb = self._pt("E-Hc", 0.0, largo, "dobladillo centro espalda",
+        self._pt("E-Hc", 0.0, largo, "dobladillo centro espalda",
                           ["largo_camisa"])
 
         # curva de escote espalda (suave, sube de CB a SNP)
@@ -113,9 +113,9 @@ class BodiceDraft:
                       ["medio_espalda", "prof_sisa"])
         us_f = self._pt("D-US", cuarto, scye, "punto de costado/axila (delantero)",
                         ["cuarto_busto", "prof_sisa"])
-        hem_f = self._pt("D-Hs", cuarto, largo, "dobladillo costado (delantero)",
+        self._pt("D-Hs", cuarto, largo, "dobladillo costado (delantero)",
                          ["cuarto_busto", "largo_camisa"])
-        hem_cf = self._pt("D-Hc", 0.0, largo, "dobladillo centro delantero",
+        self._pt("D-Hc", 0.0, largo, "dobladillo centro delantero",
                           ["largo_camisa"])
 
         # curva de escote delantero (scoop profundo), G2

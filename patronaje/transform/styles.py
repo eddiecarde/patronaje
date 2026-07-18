@@ -516,7 +516,6 @@ def fitted_princess(sloper) -> "object":
     princess_x = BP[0] - 1.0
 
     cfn = d.points["D-CFn"].as_tuple()
-    snp = d.points["D-SNP"].as_tuple()
     sp = d.points["D-SP"].as_tuple()
     arm = list(d.front_armhole)                       # SP..US
     ias = int(len(arm) * 0.5)
