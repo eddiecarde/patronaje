@@ -57,6 +57,10 @@ Genera en `output/` (por talla):
 
 Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 
+**Visor interactivo**: `python -m patronaje.viewer --output output` genera
+`output/viewer.html`, un HTML autocontenido donde eliges método y estilo y ves
+el patrón al instante con consumo y nº de piezas.
+
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
 `patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
 formatos industriales: `docs/aama_astm.md`.
