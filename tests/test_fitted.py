@@ -60,6 +60,18 @@ def test_sloper_grades_all_sizes():
         assert _geom_ok(build_sloper(size, method="mueller"))
 
 
+def test_fitted_princess_absorbs_darts():
+    from patronaje.transform.styles import apply_style
+    sl = build_sloper("S", method="aldrich")
+    assert sum(len(pc.darts) for pc in sl.pieces) == 4
+    sl = apply_style(sl, "princess")
+    # el delantero se parte en dos y sus pinzas quedan absorbidas en la costura
+    front_panels = [pc for pc in sl.pieces if "DELANTERO" in pc.name]
+    assert len(front_panels) == 2
+    assert sum(len(pc.darts) for pc in front_panels) == 0
+    assert _geom_ok(sl)
+
+
 def test_fitted_cli_exports():
     from patronaje.cli import generate
     d = tempfile.mkdtemp()

@@ -46,6 +46,9 @@ def generate(size: str = "S", outdir: str = "output", *,
         # bloque base entallado (sloper) con pinzas y equilibrio
         from .garment.sloper import build_sloper
         shirt = build_sloper(size, method=method, bust_dart_pos=bust_dart).layout()
+        if style not in (None, "", "none"):
+            from .transform.styles import apply_style
+            shirt = apply_style(shirt, style)
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
@@ -77,6 +80,8 @@ def generate(size: str = "S", outdir: str = "output", *,
     suffix = "" if method == "aldrich" else f"_{method}"
     if fitted:
         suffix += f"_base_{bust_dart}"
+        if style not in (None, "", "none"):
+            suffix += f"_{style}"
     elif style not in (None, "", "none"):
         suffix += f"_{style}"
     base = os.path.join(outdir, f"camisa_{size}{suffix}")

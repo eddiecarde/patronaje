@@ -59,8 +59,19 @@ vértice); al coser, la V se cierra y la tela se pliega. `Piece.darts` guarda
 - Supresión de cintura = diferencia busto–cintura por panel (comprobado en tests).
 - Equilibrio: el costado delantero (con la pinza de busto) casa con el trasero.
 
-## Nota de alcance
-El sloper es el **bloque base entallado** de cada escuela. Los 25 estilos de
-manipulación de bloque operan hoy sobre el bloque de camisa; integrarlos sobre el
-sloper con pinzas (p. ej. costura princesa que absorbe las pinzas de busto y
-cintura) es la extensión natural a partir de esta base.
+## Estilos sobre el sloper (dart-aware)
+
+Los estilos se pueden aplicar sobre el bloque entallado con `--fit fitted --style X`.
+Hay estilos **dart-aware** que manejan las pinzas correctamente:
+
+- **`princess`** (costura princesa entallada): parte el delantero en panel centro
+  + costado con una línea princesa que pasa por el punto de busto, **absorbiendo la
+  pinza de busto y la de cintura** en la costura (los paneles quedan sin pinzas).
+  Implementado en `transform/styles.fitted_princess` y registrado en `FITTED_STYLES`.
+
+```bash
+python -m patronaje.cli --size S --fit fitted --style princess --method aldrich
+```
+
+Los demás estilos (mangas, escotes, largos) también pueden aplicarse sobre el
+sloper; los específicos de pinza se resuelven con `FITTED_STYLES`.
