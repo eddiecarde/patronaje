@@ -48,6 +48,10 @@ class EsmodMethod(DraftingMethod):
         )
         return build_bodice_from_frame(p, frame, source_tag="ESMOD")
 
+    def dart_spec(self, p: Parameters):
+        from .fitted import DartSpec
+        return DartSpec(bust_dart=3.2, front_waist_dart=3.8, back_waist_dart=3.5, back_shoulder_dart=0.8, bust_point_x=p.busto/10, waist_ease=4.0)
+
     def build_sleeve(self, p: Parameters, target_armhole: float,
                      sleeve_ease: float = 1.0) -> SleeveDraft:
         return SleeveDraft(p=p, target_armhole=target_armhole,

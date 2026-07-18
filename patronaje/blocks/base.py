@@ -57,6 +57,12 @@ class DraftingMethod(ABC):
         """Traza la manga casando la copa con la sisa medida."""
         raise NotImplementedError
 
+    def dart_spec(self, p: Parameters):
+        """Parámetros de pinza/equilibrio para el sloper entallado. Por defecto
+        derivados genéricos; cada método puede afinarlos."""
+        from .fitted import DartSpec
+        return DartSpec(bust_point_x=p.busto / 10.0 + 0.5)
+
     # -- utilidad compartida ------------------------------------------------
     def check_measurements(self, p: Parameters) -> list[str]:
         """Devuelve las medidas requeridas que faltan en ``p`` (vacío = OK)."""

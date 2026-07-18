@@ -37,32 +37,47 @@ from .marker.layout import export_marker_svg, marker_report
 def generate(size: str = "S", outdir: str = "output", *,
              include_seam: bool = True, force: bool = False,
              tol: float = 0.5, quiet: bool = False, method: str = "aldrich",
-             style: str = "none") -> dict:
+             style: str = "none", fit: str = "shirt", bust_dart: str = "side") -> dict:
     os.makedirs(outdir, exist_ok=True)
-    shirt = build_shirt(size, method=method).layout()
+    fitted = fit == "fitted"
+    from .validation.validators import ValidationReport, validate_piece_geometry
 
-    styled = style not in (None, "", "none")
-    if styled:
-        from .transform.styles import apply_style
-        shirt = apply_style(shirt, style)
-
-    if styled:
-        # los estilos pueden alterar el casado (p. ej. manga fruncida): sólo geometría
-        from .validation.validators import ValidationReport, validate_piece_geometry
+    if fitted:
+        # bloque base entallado (sloper) con pinzas y equilibrio
+        from .garment.sloper import build_sloper
+        shirt = build_sloper(size, method=method, bust_dart_pos=bust_dart).layout()
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
+        if not quiet:
+            print(f"[base entallada | método: {method} | pinza busto: {bust_dart}]")
+            print(report.text())
+            fb = shirt.fitted
+            print(f"  supresión de cintura/panel: {fb.waist_suppression:.1f} cm  "
+                  f"(costado {fb.side_supp:.1f} + pinzas)")
     else:
-        report = validate_all(shirt, tol=tol)
-    if not quiet:
-        print(f"[método: {method}" + (f" | estilo: {style}]" if styled else "]"))
-        print(report.text())
+        shirt = build_shirt(size, method=method).layout()
+        styled = style not in (None, "", "none")
+        if styled:
+            from .transform.styles import apply_style
+            shirt = apply_style(shirt, style)
+            report = ValidationReport()
+            for pc in shirt.pieces:
+                validate_piece_geometry(pc, report)
+        else:
+            report = validate_all(shirt, tol=tol)
+        if not quiet:
+            print(f"[método: {method}" + (f" | estilo: {style}]" if styled else "]"))
+            print(report.text())
+
     if not report.ok and not force:
         print("\n[ABORTADO] Hay errores de validación. Use --force para exportar de todos modos.")
         sys.exit(2)
 
     suffix = "" if method == "aldrich" else f"_{method}"
-    if styled:
+    if fitted:
+        suffix += f"_base_{bust_dart}"
+    elif style not in (None, "", "none"):
         suffix += f"_{style}"
     base = os.path.join(outdir, f"camisa_{size}{suffix}")
     outputs = {}
@@ -131,13 +146,19 @@ def main(argv=None):
                          "v_neck, boat_neck, hi_lo, cocoon, peplum, "
                          "dolman, kimono, raglan, godet, wrap, back_pleat, "
                          "off_shoulder, tie_front")
+    ap.add_argument("--fit", default="shirt", choices=["shirt", "fitted"],
+                    help="shirt = camisa holgada; fitted = bloque base entallado con pinzas")
+    ap.add_argument("--bust-dart", default="side",
+                    help="Posición de la pinza de busto (side, shoulder, neck, armhole, "
+                         "french, waist) — sólo con --fit fitted")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,
                            force=args.force, tol=max(args.tol, 0.6), method=args.method)
     else:
         generate(args.size, args.output, include_seam=not args.no_seam,
-                 force=args.force, tol=args.tol, method=args.method, style=args.style)
+                 force=args.force, tol=args.tol, method=args.method, style=args.style,
+                 fit=args.fit, bust_dart=args.bust_dart)
 
 
 if __name__ == "__main__":
