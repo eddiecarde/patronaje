@@ -47,14 +47,20 @@ def generate(size: str = "S", outdir: str = "output", *,
     if is_skirt:
         # falda base (recta / lápiz): prenda propia, validación geométrica
         from .garment.skirt import build_skirt
-        shirt = build_skirt(size, method=method, p=p).layout()
+        shirt = build_skirt(size, method=method, p=p)
+        styled = style not in (None, "", "none")
+        if styled:
+            from .transform.styles import apply_style
+            shirt = apply_style(shirt, style)
+        else:
+            shirt = shirt.layout()
         from .validation.validators import validate_notch_matching
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
         validate_notch_matching(shirt, report)
         if not quiet:
-            print(f"[falda base | método: {method}]")
+            print(f"[falda base | método: {method}" + (f" | estilo: {style}]" if styled else "]"))
             print(report.text())
     elif fitted:
         # bloque base entallado (sloper) con pinzas y equilibrio
@@ -93,7 +99,8 @@ def generate(size: str = "S", outdir: str = "output", *,
 
     suffix = "" if method == "aldrich" else f"_{method}"
     if is_skirt:
-        pass
+        if style not in (None, "", "none"):
+            suffix += f"_{style}"
     elif fitted:
         suffix += f"_base_{bust_dart}"
         if style not in (None, "", "none"):
@@ -168,7 +175,9 @@ def main(argv=None):
                          "princess, short_sleeve, cap_sleeve, dress, oversized, empire, "
                          "v_neck, boat_neck, hi_lo, cocoon, peplum, "
                          "dolman, kimono, raglan, godet, wrap, back_pleat, "
-                         "off_shoulder, tie_front")
+                         "off_shoulder, tie_front. "
+                         "Falda (--garment skirt): evase, acampanada, circular, tubo, "
+                         "mini, maxi, fruncida, tableada, yoke, godet")
     ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt"],
                     help="Prenda: shirt = camisa; skirt = falda base recta")
     ap.add_argument("--fit", default="shirt", choices=["shirt", "fitted"],

@@ -54,3 +54,31 @@ derivados `cuarto_cadera`, `cuarto_cintura_falda`.
 - `waist_length()` = `cintura + holgura_cintura_falda` (largo de la pretina base).
 - `hip_length()` = `cadera + holgura_cadera`.
 - Piquete de cadera en el costado trasero para casar delantero↔trasero.
+
+## Estilos (manipulación del bloque)
+
+Del mismo bloque salen varias siluetas con `--garment skirt --style X`. Las
+**pinzas quedan por encima de la cadera**, así que los estilos de vuelo desde la
+cadera no las tocan; los de cintura llena reconstruyen un panel sin pinzas.
+Implementados en `transform/skirt_styles.py` (`SKIRT_STYLES`).
+
+| Estilo       | Silueta                                                        |
+|--------------|----------------------------------------------------------------|
+| `evase`      | A-line moderada (vuelo desde la cadera)                        |
+| `acampanada` | vuelo amplio                                                   |
+| `circular`   | muy amplia (semi-circular)                                     |
+| `tubo`       | lápiz ajustada: entra el bajo + abertura (vent) trasera        |
+| `mini`       | recorta el largo                                               |
+| `maxi`       | alarga bajo la cadera con algo de vuelo                        |
+| `fruncida`   | dirndl: panel recto con cintura llena, **sin pinzas**          |
+| `tableada`   | panel recto con marcas de tabla, **sin pinzas**               |
+| `yoke`       | canesú de cadera + falda inferior acampanada (corte en cadera) |
+| `godet`      | godets triangulares en los costados                            |
+
+```bash
+python -m patronaje.cli --garment skirt --style evase --size S
+python -m patronaje.cli --garment skirt --style yoke  --all-sizes
+```
+
+Cada estilo mantiene la validación geométrica y el casado de piquetes, y exporta
+en todos los formatos.
