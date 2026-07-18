@@ -682,6 +682,15 @@ STYLES = {
 def apply_style(shirt: Shirt, style: str, **kw) -> Shirt:
     if style in (None, "", "none"):
         return shirt
+    # falda: registro de estilos propio
+    if getattr(shirt, "prenda", "").startswith("falda"):
+        from .skirt_styles import SKIRT_STYLES
+        if style not in SKIRT_STYLES:
+            raise KeyError(f"Estilo de falda desconocido: '{style}'. "
+                           f"Opciones: {list(SKIRT_STYLES)}")
+        shirt = SKIRT_STYLES[style](shirt, **kw)
+        shirt.layout()
+        return shirt
     # sobre el sloper (bloque entallado) hay versiones dart-aware
     is_sloper = hasattr(shirt, "fitted")
     if is_sloper and style in FITTED_STYLES:
