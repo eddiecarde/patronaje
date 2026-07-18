@@ -124,12 +124,13 @@ def main(argv=None):
     ap.add_argument("--force", action="store_true", help="Exportar aunque falle la validación")
     ap.add_argument("--tol", type=float, default=0.5, help="Tolerancia de casado (cm)")
     ap.add_argument("--method", default="aldrich",
-                    help="Método de patronaje (aldrich, mueller, bunka, esmod)")
+                    help="Método (aldrich, mueller, bunka, esmod, marti, armstrong)")
     ap.add_argument("--style", default="none",
                     help="Estilo: none, flare, puff, bell, mandarin, sleeveless, crop, "
                          "princess, short_sleeve, cap_sleeve, dress, oversized, empire, "
                          "v_neck, boat_neck, hi_lo, cocoon, peplum, "
-                         "dolman, kimono, raglan, godet")
+                         "dolman, kimono, raglan, godet, wrap, back_pleat, "
+                         "off_shoulder, tie_front")
     args = ap.parse_args(argv)
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,

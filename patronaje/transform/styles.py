@@ -426,6 +426,69 @@ def godet(shirt: Shirt, godet_width: float = 20.0, from_frac: float = 0.55) -> S
     return shirt
 
 
+def wrap_front(shirt: Shirt, wrap_x: float = 16.0) -> Shirt:
+    """Delantero cruzado (wrap): borde interior diagonal que cruza al costado
+    opuesto; sin botonadura (se ata al costado)."""
+    p = shirt.p
+    b = shirt.bodice
+    fnd = p.escote_del_prof
+    largo = p.largo_camisa
+    pc = _find(shirt, "DELANTERO")
+    if pc:
+        fc = [(-wrap_x, largo), (0.0, fnd)] + list(reversed(b.front_neck))[1:]
+        fc += [b.points["D-SP"].as_tuple()] + list(b.front_armhole[1:])
+        fc += [b.points["D-Hs"].as_tuple()]
+        pc.net_contour = ops.dedup(fc)
+        pc.buttons = []
+        pc.buttonholes = []
+        pc.name = "DELANTERO WRAP"
+        pc.reference_texts = list(pc.reference_texts) + [((-wrap_x * 0.5, largo - 4), "cruce")]
+    return shirt
+
+
+def back_pleat(shirt: Shirt, pleat: float = 6.0) -> Shirt:
+    """Pliegue de tabla (box pleat) en el centro de la espalda."""
+    pc = _find(shirt, "ESPALDA")
+    if pc:
+        ys = [q[1] for q in pc.net_contour]
+        y_top, y_bot = min(ys), max(ys)
+        shifted = [(x + pleat, y) for x, y in pc.net_contour]
+        pc.net_contour = ops.dedup([(0.0, y_top)] + shifted + [(0.0, y_bot)])
+        pc.construction_lines = list(pc.construction_lines) + [
+            ((pleat, y_top), (pleat, y_bot)), ((0.0, y_top), (0.0, y_bot))]
+        pc.reference_texts = list(pc.reference_texts) + [((pleat * 0.5, y_top + 3), "tabla")]
+        pc.name = "ESPALDA (pliegue tabla)"
+    return shirt
+
+
+def off_shoulder(shirt: Shirt) -> Shirt:
+    """Hombros descubiertos (bardot): escote ancho y bajo + manga corta."""
+    _reshape_neck(shirt, drop=1.0, widen_neck=8.0, kind="scoop",
+                  drop_collar=True, label="(bardot)")
+    short_sleeve(shirt, at=0.30, name="MANGA (bardot)")
+    return shirt
+
+
+def tie_front(shirt: Shirt, waist_at: float = 0.45) -> Shirt:
+    """Nudo delantero: recorta a la cintura (delantero corto, espalda algo más
+    larga) y estrecha el bajo delantero hacia el centro (efecto de nudo)."""
+    p = shirt.p
+    hinge = p.prof_sisa
+    cut_f = hinge + (p.largo_camisa - hinge) * waist_at
+    cut_b = hinge + (p.largo_camisa - hinge) * (waist_at + 0.12)
+    for name, cut in (("DELANTERO", cut_f), ("VISTA DELANTERA", cut_f),
+                      ("ESPALDA", cut_b)):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.clip_below(pc.net_contour, cut)
+            pc.name = name + " (nudo)"
+    f = _find(shirt, "DELANTERO")
+    if f:
+        ratio = -6.0 / ((p.busto + p.holgura_busto) / 4.0)
+        f.net_contour = ops.flare(f.net_contour, 0.0, hinge, cut_f, ratio, side=+1)
+    return shirt
+
+
 STYLES = {
     "flare": flare_shirt,
     "puff": puff_sleeve,
@@ -448,6 +511,10 @@ STYLES = {
     "kimono": kimono,
     "raglan": raglan,
     "godet": godet,
+    "wrap": wrap_front,
+    "back_pleat": back_pleat,
+    "off_shoulder": off_shoulder,
+    "tie_front": tie_front,
 }
 
 

@@ -52,7 +52,15 @@ Los avanzados construyen contornos frescos desde los puntos del bloque (más
 robusto que editar el contorno) y unen el canesú a la espalda cuando la prenda
 no lleva canesú (dolman/kimono/raglan).
 
-**21 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+### Más estilos
+| Estilo | Prenda | Técnica |
+|--------|--------|---------|
+| `wrap` | **Cruzado** (borde diagonal que cruza; sin botonadura) | contorno fresco |
+| `back_pleat` | **Pliegue de tabla** en el centro de la espalda | extensión en CB |
+| `off_shoulder` | **Hombros descubiertos** (bardot: escote ancho/bajo + manga corta) | remodelado + recorte |
+| `tie_front` | **Nudo delantero** (corto, bajo estrechado) | recorte + vuelo negativo |
+
+**25 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
 función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
 `lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 

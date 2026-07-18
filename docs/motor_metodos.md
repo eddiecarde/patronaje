@@ -56,6 +56,8 @@ CLI/UX. Añadir un método = escribir su clase y registrarla; nada más cambia.
 | **Müller & Sohn** | ✅ disponible | `blocks/mueller_method.py` + `mueller_bodice.py` / `mueller_sleeve.py` |
 | **Bunka (文化式)** | ✅ disponible | `blocks/bunka_method.py` |
 | **ESMOD** | ✅ disponible | `blocks/esmod_method.py` |
+| **Sistema Martí** | ✅ disponible | `blocks/marti_method.py` |
+| **Joseph-Armstrong** | ✅ disponible | `blocks/armstrong_method.py` |
 
 Selección: `build_shirt(size, method="bunka")` o CLI `--method bunka`. Los tres
 métodos no-Aldrich usan el constructor genérico `blocks/_bodice_common.py`
