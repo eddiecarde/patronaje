@@ -127,6 +127,173 @@ def princess_front(shirt: Shirt) -> Shirt:
     return shirt
 
 
+def short_sleeve(shirt: Shirt, at: float = 0.42, name: str = "MANGA CORTA") -> Shirt:
+    """Manga corta: recorta la manga y elimina puño y tapeta."""
+    pc = _find(shirt, "MANGA")
+    if pc:
+        s = shirt.sleeve
+        cut = s.cap_height + (shirt.p.largo_manga - s.cap_height) * at
+        pc.net_contour = ops.clip_below(pc.net_contour, cut)
+        pc.name = name
+    shirt.pieces = [p for p in shirt.pieces if p.name not in ("PUNO", "TAPETA MANGA")]
+    return shirt
+
+
+def cap_sleeve(shirt: Shirt) -> Shirt:
+    """Manga cap (muy corta, sobre el hombro)."""
+    return short_sleeve(shirt, at=0.13, name="MANGA CAP")
+
+
+def dress(shirt: Shirt, extra_len: float = 28.0, flare_add: float = 12.0) -> Shirt:
+    """Camisa-vestido: alarga el cuerpo y le da vuelo A-line."""
+    p = shirt.p
+    hinge = p.prof_sisa
+    orig = p.largo_camisa
+    factor = (orig - hinge + extra_len) / (orig - hinge)
+    newbot = hinge + (orig - hinge) * factor
+    ratio = flare_add / ((p.busto + p.holgura_busto) / 4.0)
+    for name in ("DELANTERO", "ESPALDA", "VISTA DELANTERA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.lengthen(pc.net_contour, hinge, factor)
+            pc.net_contour = ops.flare(pc.net_contour, 0.0, hinge, newbot, ratio, side=+1)
+            pc.name = name + " (vestido)"
+    return shirt
+
+
+def oversized(shirt: Shirt, factor: float = 1.12) -> Shirt:
+    """Corte holgado/oversize: ensancha cuerpo, canesú y manga."""
+    for name in ("DELANTERO", "ESPALDA", "CANESU", "MANGA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.widen(pc.net_contour, 0.0, factor)
+            pc.name = pc.name + " (oversize)"
+    return shirt
+
+
+def empire(shirt: Shirt, at: float = 0.28, flare_add: float = 16.0) -> Shirt:
+    """Corte imperio: separa talle (arriba) y falda (abajo, con vuelo)."""
+    from ..piece import Piece
+    p = shirt.p
+    hinge = p.prof_sisa
+    emp = hinge + (p.largo_camisa - hinge) * at
+    ratio = flare_add / ((p.busto + p.holgura_busto) / 4.0)
+    for name in ("DELANTERO", "ESPALDA"):
+        pc = _find(shirt, name)
+        if pc is None:
+            continue
+        upper = ops.clip_below(pc.net_contour, emp)
+        lower = ops.clip_above(pc.net_contour, emp)
+        lower = ops.flare(lower, 0.0, emp, p.largo_camisa, ratio, side=+1)
+        pc.net_contour = upper
+        pc.name = name + " TALLE"
+        idx = shirt.pieces.index(pc)
+        skirt = Piece(name=name + " FALDA", number=pc.number + 20, size=pc.size,
+                      quantity=pc.quantity, cut_type=pc.cut_type,
+                      on_fold=pc.on_fold, fold_x=pc.fold_x,
+                      net_contour=lower, seam_allowance=p.margen_costura,
+                      grain=((2.0, emp + 2), (2.0, p.largo_camisa - 2)))
+        shirt.pieces.insert(idx + 1, skirt)
+    return shirt
+
+
+def _reshape_neck(shirt: Shirt, drop: float, widen_neck: float,
+                  kind: str, drop_collar: bool, label: str) -> Shirt:
+    """Remodela el escote del delantero (V o barco) y opcionalmente quita cuello."""
+    import math
+    from ..core.curves import smooth_curve
+    p = shirt.p
+    b = shirt.bodice
+    pc = _find(shirt, "DELANTERO")
+    if pc is None:
+        return shirt
+    ext = p.extension_boton
+    fnd = p.escote_del_prof
+    deeper = fnd + drop
+    snp = b.points["D-SNP"].as_tuple()
+    snp_new = (snp[0] + widen_neck, snp[1])
+    c = pc.net_contour
+    isn = min(range(len(c)), key=lambda i: math.hypot(c[i][0] - snp[0], c[i][1] - snp[1]))
+    head = [(-ext, deeper), (0.0, deeper)]
+    if kind == "v":
+        head += [snp_new]
+    else:  # barco / scoop
+        head += smooth_curve([(0.0, deeper), (snp_new[0] * 0.5, deeper * 0.9), snp_new],
+                             samples_per_span=8)[1:]
+    pc.net_contour = head + list(c[isn + 1:])
+    pc.buttons = [(bx, by) for (bx, by) in pc.buttons if by >= deeper]
+    pc.buttonholes = [t for t in pc.buttonholes if t[1] >= deeper]
+    pc.name = "DELANTERO " + label
+    if drop_collar:
+        shirt.pieces = [x for x in shirt.pieces if x.name not in ("CUELLO", "PIE DE CUELLO")]
+    return shirt
+
+
+def v_neck(shirt: Shirt) -> Shirt:
+    """Escote en V (sin cuello)."""
+    return _reshape_neck(shirt, drop=8.0, widen_neck=0.0, kind="v",
+                         drop_collar=True, label="(escote V)")
+
+
+def boat_neck(shirt: Shirt) -> Shirt:
+    """Escote barco (ancho y poco profundo, sin cuello)."""
+    return _reshape_neck(shirt, drop=-3.0, widen_neck=5.0, kind="scoop",
+                         drop_collar=True, label="(escote barco)")
+
+
+def hi_lo(shirt: Shirt, front_at: float = 0.62) -> Shirt:
+    """Dobladillo asimétrico: delantero más corto, espalda largo."""
+    p = shirt.p
+    cut = p.prof_sisa + (p.largo_camisa - p.prof_sisa) * front_at
+    for name in ("DELANTERO", "VISTA DELANTERA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.clip_below(pc.net_contour, cut)
+            pc.name = name + " (hi-lo)"
+    return shirt
+
+
+def cocoon(shirt: Shirt, reduce: float = 8.0) -> Shirt:
+    """Dobladillo entallado (cocoon): estrecha la base respecto de la cadera."""
+    p = shirt.p
+    ratio = -reduce / ((p.busto + p.holgura_busto) / 4.0)
+    for name in ("DELANTERO", "ESPALDA"):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.flare(pc.net_contour, 0.0, p.prof_sisa,
+                                       p.largo_camisa, ratio, side=+1)
+            pc.name = name + " (cocoon)"
+    return shirt
+
+
+def peplum(shirt: Shirt, waist_at: float = 0.30, peplum_len: float = 16.0,
+           flare_add: float = 22.0) -> Shirt:
+    """Peplum: talle hasta la cintura + volante acampanado corto."""
+    from ..piece import Piece
+    p = shirt.p
+    hinge = p.prof_sisa
+    waist = hinge + (p.largo_camisa - hinge) * waist_at
+    ratio = flare_add / ((p.busto + p.holgura_busto) / 4.0)
+    for name in ("DELANTERO", "ESPALDA"):
+        pc = _find(shirt, name)
+        if pc is None:
+            continue
+        upper = ops.clip_below(pc.net_contour, waist)
+        lower = ops.clip_above(pc.net_contour, waist)
+        lower = ops.flare(lower, 0.0, waist, p.largo_camisa, ratio, side=+1)
+        lower = ops.clip_below(lower, waist + peplum_len)
+        pc.net_contour = upper
+        pc.name = name + " TALLE"
+        idx = shirt.pieces.index(pc)
+        pep = Piece(name=name + " PEPLUM", number=pc.number + 30, size=pc.size,
+                    quantity=pc.quantity, cut_type=pc.cut_type,
+                    on_fold=pc.on_fold, fold_x=pc.fold_x,
+                    net_contour=lower, seam_allowance=p.margen_costura,
+                    grain=((2.0, waist + 2), (2.0, waist + peplum_len - 2)))
+        shirt.pieces.insert(idx + 1, pep)
+    return shirt
+
+
 STYLES = {
     "flare": flare_shirt,
     "puff": puff_sleeve,
@@ -135,6 +302,16 @@ STYLES = {
     "sleeveless": sleeveless,
     "crop": crop_top,
     "princess": princess_front,
+    "short_sleeve": short_sleeve,
+    "cap_sleeve": cap_sleeve,
+    "dress": dress,
+    "oversized": oversized,
+    "empire": empire,
+    "v_neck": v_neck,
+    "boat_neck": boat_neck,
+    "hi_lo": hi_lo,
+    "cocoon": cocoon,
+    "peplum": peplum,
 }
 
 
