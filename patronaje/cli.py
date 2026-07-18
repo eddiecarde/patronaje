@@ -37,7 +37,8 @@ from .marker.layout import export_marker_svg, marker_report
 def generate(size: str = "S", outdir: str = "output", *,
              include_seam: bool = True, force: bool = False,
              tol: float = 0.5, quiet: bool = False, method: str = "aldrich",
-             style: str = "none", fit: str = "shirt", bust_dart: str = "side") -> dict:
+             style: str = "none", fit: str = "shirt", bust_dart: str = "side",
+             p=None) -> dict:
     os.makedirs(outdir, exist_ok=True)
     fitted = fit == "fitted"
     from .validation.validators import ValidationReport, validate_piece_geometry
@@ -45,7 +46,7 @@ def generate(size: str = "S", outdir: str = "output", *,
     if fitted:
         # bloque base entallado (sloper) con pinzas y equilibrio
         from .garment.sloper import build_sloper
-        shirt = build_sloper(size, method=method, bust_dart_pos=bust_dart).layout()
+        shirt = build_sloper(size, method=method, bust_dart_pos=bust_dart, p=p).layout()
         if style not in (None, "", "none"):
             from .transform.styles import apply_style
             shirt = apply_style(shirt, style)
@@ -59,7 +60,7 @@ def generate(size: str = "S", outdir: str = "output", *,
             print(f"  supresión de cintura/panel: {fb.waist_suppression:.1f} cm  "
                   f"(costado {fb.side_supp:.1f} + pinzas)")
     else:
-        shirt = build_shirt(size, method=method).layout()
+        shirt = build_shirt(size, method=method, p=p).layout()
         styled = style not in (None, "", "none")
         if styled:
             from .transform.styles import apply_style
@@ -156,14 +157,48 @@ def main(argv=None):
     ap.add_argument("--bust-dart", default="side",
                     help="Posición de la pinza de busto (side, shoulder, neck, armhole, "
                          "french, waist) — sólo con --fit fitted")
+    ap.add_argument("--measurements", default=None, metavar="FILE.json",
+                    help="Modo a medida: JSON con las medidas del cuerpo (cm). "
+                         "Sustituye a --size; el nombre de talla sale del archivo.")
     args = ap.parse_args(argv)
+
+    custom_p = None
+    size = args.size
+    if args.measurements:
+        custom_p, size = _load_measurements(args.measurements, force=args.force)
+
     if args.all_sizes:
         generate_all_sizes(args.output, include_seam=not args.no_seam,
                            force=args.force, tol=max(args.tol, 0.6), method=args.method)
     else:
-        generate(args.size, args.output, include_seam=not args.no_seam,
+        generate(size, args.output, include_seam=not args.no_seam,
                  force=args.force, tol=args.tol, method=args.method, style=args.style,
-                 fit=args.fit, bust_dart=args.bust_dart)
+                 fit=args.fit, bust_dart=args.bust_dart, p=custom_p)
+
+
+def _load_measurements(path: str, *, force: bool = False):
+    """Carga un JSON de medidas, lo valida y devuelve (Parameters, nombre)."""
+    import json
+    from .parametric.validation import (
+        validate_measurements, format_issues, has_errors)
+    from .parametric.measurements import build_parameters_from_measurements
+
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    # admite {"nombre": ..., "medidas": {...}} o directamente {medida: valor}
+    name = data.pop("nombre", None) if isinstance(data, dict) else None
+    measurements = data.get("medidas", data) if isinstance(data, dict) else data
+    if name is None:
+        name = os.path.splitext(os.path.basename(path))[0]
+
+    issues = validate_measurements(measurements)
+    print(format_issues(issues))
+    if has_errors(issues) and not force:
+        print("\n[ABORTADO] Medidas incoherentes. Corrija el JSON o use --force.")
+        sys.exit(2)
+    p = build_parameters_from_measurements(measurements, name=name)
+    print(f"[modo a medida | {name}]")
+    return p, name
 
 
 if __name__ == "__main__":

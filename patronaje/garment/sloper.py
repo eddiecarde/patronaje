@@ -73,6 +73,6 @@ class Sloper:
 
 
 def build_sloper(size: str = "S", method: str = "aldrich",
-                 bust_dart_pos: str = "side") -> Sloper:
-    return Sloper(p=build_parameters(size), method=method,
-                 bust_dart_pos=bust_dart_pos).build()
+                 bust_dart_pos: str = "side", p: Parameters = None) -> Sloper:
+    return Sloper(p=p if p is not None else build_parameters(size),
+                 method=method, bust_dart_pos=bust_dart_pos).build()

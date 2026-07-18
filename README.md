@@ -38,6 +38,15 @@ entre métodos — ver `docs/motor_metodos.md` y `docs/metodo_{aldrich,mueller,b
 **Bloque base entallado (pinzas + equilibrio)**: `--fit fitted` genera el sloper con
 pinza de busto (trasladable con `--bust-dart shoulder|neck|armhole|french|waist`),
 pinzas de cintura y de hombro, por cada método. Ver `docs/pinzas_equilibrio.md`.
+Estilos **dart-aware** sobre el sloper: `princess`, `empire`, `peplum`.
+
+**Modo a medida (made-to-measure)**: `--measurements cliente.json` traza el patrón
+con las medidas de una persona (en lugar de una talla estándar). Las medidas se
+**validan** (proporciones coherentes) antes de trazar. Ver `docs/a_medida.md`.
+
+```bash
+python -m patronaje.cli --measurements cliente.json --fit fitted --method mueller
+```
 
 Genera en `output/` (por talla):
 
