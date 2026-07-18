@@ -25,6 +25,7 @@ class Skirt:
     prenda: str = "falda_base_recta"
     block: SkirtDraft = None
     pieces: list = field(default_factory=list)
+    seam_matching: list = field(default_factory=list)
     # atributos que algunos exportadores consultan de forma genérica
     bodice = None
     sleeve = None
@@ -70,6 +71,9 @@ class Skirt:
             reference_texts=[((wlen / 2, wh / 2 - 0.7), "DOBLEZ")],
         )
         self.pieces = [front, back, band]
+        # casado automático de piquetes (costado delantero↔trasero)
+        from .notches import add_skirt_notches
+        self.seam_matching = add_skirt_notches(self)
         return self
 
     def layout(self, gap: float = 6.0) -> "Skirt":

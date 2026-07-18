@@ -210,9 +210,19 @@ def _miny(c):
 
 
 # --------------------------------------------------------------------------
+def validate_notch_matching(garment, report: ValidationReport, tol: float = 0.8) -> None:
+    """Verifica que las costuras con piquetes casados tengan tramos de igual
+    longitud (los piquetes se colocan a la misma fracción de arco, así que si los
+    tramos casan, los piquetes coinciden al coser)."""
+    for name, la, lb in getattr(garment, "seam_matching", []):
+        report.add(f"casado {name}", abs(la - lb) <= tol,
+                   f"tramos {la:.1f} vs {lb:.1f} cm", tolerancia=tol, valor=abs(la - lb))
+
+
 def validate_all(shirt, tol: float = 0.5) -> ValidationReport:
     report = ValidationReport()
     for pc in shirt.pieces:
         validate_piece_geometry(pc, report)
     validate_matching(shirt, report, tol=tol)
+    validate_notch_matching(shirt, report, tol=max(tol, 0.8))
     return report
