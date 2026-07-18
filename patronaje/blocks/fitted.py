@@ -106,10 +106,9 @@ class FittedBodice:
         # BP y equilibrio: el delantero baja `bust_dart` para casar el costado
         BP = (s.bust_point_x, bust_y + s.bp_drop)
         self.bust_point = BP
-        bal = s.bust_dart  # largo extra de talle delantero
+        bal = s.bust_dart  # largo extra de talle delantero (equilibrio)
 
         # ---------------- DELANTERO (con pinza de busto reubicable) ----------
-        cfn = d.points["D-CFn"].as_tuple()
         snp = d.points["D-SNP"].as_tuple()
         sp = d.points["D-SP"].as_tuple()
         bd = s.bust_dart
@@ -145,7 +144,6 @@ class FittedBodice:
         elif pos == "waist":
             fwd_eff = fwd + bd                       # busto absorbido en la cintura
         else:  # side (por defecto): pinza en lo alto del costado, desde la axila
-            ap = apex_toward(us, back=bd)
             side_edge = ([us, (BP[0] + 2.0, bust_y + bd / 2.0), (quarter, bust_y + bd)]
                          + smooth_curve([(quarter, bust_y + bd),
                                          (w_side + 0.6, (bust_y + bd + fwaist_y) / 2),
@@ -177,7 +175,6 @@ class FittedBodice:
         bl1 = (bwx + bwd / 2.0, waist_y)
         bl2 = (bwx - bwd / 2.0, waist_y)
         # pinza de hombro (omóplato) en la línea de hombro
-        sh_len = polyline_length([snpB, spB])
         t = 0.5
         shd_c = (snpB[0] + (spB[0] - snpB[0]) * t, snpB[1] + (spB[1] - snpB[1]) * t)
         sd = s.back_shoulder_dart

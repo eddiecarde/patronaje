@@ -11,7 +11,6 @@ from .consumption import consumption
 
 
 def build_bom(shirt, width_ref: float = 150.0) -> dict:
-    p = shirt.p
     # botones y ojales
     n_botones = sum(len(pc.buttons) for pc in shirt.pieces)
     n_ojales = sum(len(pc.buttonholes) for pc in shirt.pieces)

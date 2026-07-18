@@ -136,8 +136,9 @@ def build_techpack_html(shirt) -> str:
     parts.append("<h2>7. Consumo de tela y desperdicio</h2>")
     parts.append(_table(["Ancho de tela", "Largo marker", "Compra (c/ merma)",
                          "Eficiencia", "Desperdicio"], cons_rows))
-    parts.append("<div class='small'>Consumo por prenda con nesting por bounding-box "
-                 "(conservador); el nesting de contornos en CAM reduce el desperdicio.</div>")
+    parts.append("<div class='small'>Consumo por prenda con nesting por skyline de "
+                 "contorno (encaje real, rotación 180°); combinar varias prendas/tallas "
+                 "en el mismo trazo reduce aún más el desperdicio.</div>")
 
     parts.append("<div class='grid2'>")
     seq = "".join(f"<li>{html.escape(s)}</li>" for s in SEWING_SEQUENCE)

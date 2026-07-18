@@ -27,6 +27,18 @@ def _find(shirt, name):
     return next((p for p in shirt.pieces if p.name.startswith(name)), None)
 
 
+def _side_x_at(contour, y):
+    """x del costado (máximo) donde el contorno cruza la altura ``y``."""
+    xs = []
+    pts = list(contour)
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
+        lo, hi = min(y0, y1), max(y0, y1)
+        if lo - 1e-9 <= y <= hi + 1e-9 and abs(y1 - y0) > 1e-12:
+            t = (y - y0) / (y1 - y0)
+            xs.append(x0 + t * (x1 - x0))
+    return max(xs) if xs else 0.0
+
+
 def flare_shirt(shirt: Shirt, added_hem: float = 10.0) -> Shirt:
     """Convierte la camisa en acampanada/túnica añadiendo ``added_hem`` cm de
     vuelo por costado en delantero y espalda (A-line por slash-and-spread)."""
@@ -138,6 +150,7 @@ def short_sleeve(shirt: Shirt, at: float = 0.42, name: str = "MANGA CORTA") -> S
         s = shirt.sleeve
         cut = s.cap_height + (shirt.p.largo_manga - s.cap_height) * at
         pc.net_contour = ops.clip_below(pc.net_contour, cut)
+        pc.hem_allowance = shirt.p.margen_dobladillo  # boca de manga acabada con dobladillo
         pc.name = name
     shirt.pieces = [p for p in shirt.pieces if p.name not in ("PUNO", "TAPETA MANGA")]
     return shirt
@@ -196,6 +209,7 @@ def empire(shirt: Shirt, at: float = 0.28, flare_add: float = 16.0) -> Shirt:
                       quantity=pc.quantity, cut_type=pc.cut_type,
                       on_fold=pc.on_fold, fold_x=pc.fold_x,
                       net_contour=lower, seam_allowance=p.margen_costura,
+                      hem_allowance=p.margen_dobladillo,
                       grain=((2.0, emp + 2), (2.0, p.largo_camisa - 2)))
         shirt.pieces.insert(idx + 1, skirt)
     return shirt
@@ -293,6 +307,7 @@ def peplum(shirt: Shirt, waist_at: float = 0.30, peplum_len: float = 16.0,
                     quantity=pc.quantity, cut_type=pc.cut_type,
                     on_fold=pc.on_fold, fold_x=pc.fold_x,
                     net_contour=lower, seam_allowance=p.margen_costura,
+                    hem_allowance=p.margen_dobladillo,
                     grain=((2.0, waist + 2), (2.0, waist + peplum_len - 2)))
         shirt.pieces.insert(idx + 1, pep)
     return shirt
@@ -417,7 +432,8 @@ def godet(shirt: Shirt, godet_width: float = 20.0, from_frac: float = 0.55) -> S
     contour = [(0.0, 0.0), (godet_width / 2, h), (-godet_width / 2, h)]
     god = Piece(name="GODET", number=40, size=size, quantity=4,
                 cut_type="4 (en costados)", net_contour=contour,
-                seam_allowance=p.margen_costura, grain=((0.0, 1.0), (0.0, h - 1)),
+                seam_allowance=p.margen_costura, hem_allowance=p.margen_dobladillo,
+                grain=((0.0, 1.0), (0.0, h - 1)),
                 reference_texts=[((0.0, h * 0.4), "godet")])
     shirt.pieces.append(god)
     # marca de abertura de godet en delantero y espalda (referencia)
@@ -516,7 +532,6 @@ def fitted_princess(sloper) -> "object":
     princess_x = BP[0] - 1.0
 
     cfn = d.points["D-CFn"].as_tuple()
-    snp = d.points["D-SNP"].as_tuple()
     sp = d.points["D-SP"].as_tuple()
     arm = list(d.front_armhole)                       # SP..US
     ias = int(len(arm) * 0.5)
@@ -551,6 +566,78 @@ def fitted_princess(sloper) -> "object":
     return sloper
 
 
+def fitted_empire(sloper, at: float = 0.55, flare_add: float = 16.0,
+                  skirt_len: float = 52.0) -> "object":
+    """Corte imperio **dart-aware** sobre el sloper: la costura imperio pasa por
+    debajo del busto; el **talle conserva la pinza de busto** (y la de hombro/
+    omóplato) mientras que la **falda libera la supresión de cintura** en su vuelo
+    (panel acampanado sin pinzas). Requiere un sloper (`--fit fitted`)."""
+    from ..piece import Piece
+    fb = getattr(sloper, "fitted", None)
+    if fb is None:
+        raise ValueError("fitted_empire requiere un sloper (--fit fitted)")
+    p = sloper.p
+    d = fb.draft
+    bust_y = d.points["D-US"].y
+    waist_y = bust_y + fb.spec.bust_to_waist
+    empire_y = bust_y + (waist_y - bust_y) * at
+    for name, released in (("DELANTERO", fb.spec.front_waist_dart),
+                           ("ESPALDA", fb.spec.back_waist_dart)):
+        pc = _find(sloper, name)
+        if pc is None:
+            continue
+        w_top = _side_x_at(pc.net_contour, empire_y)
+        pc.net_contour = ops.clip_below(pc.net_contour, empire_y)
+        # conserva sólo las pinzas cuyas bases quedan enteras en el talle
+        pc.darts = [dt for dt in pc.darts if max(dt[0][1], dt[2][1]) < empire_y - 1e-6]
+        pc.hem_allowance = None
+        pc.name = name + " TALLE (imperio)"
+        half = w_top + flare_add + released      # supresión de cintura -> vuelo
+        hem_y = empire_y + skirt_len
+        skirt_c = [(0.0, empire_y), (w_top, empire_y), (half, hem_y), (0.0, hem_y)]
+        skirt = Piece(name=name + " FALDA (imperio)", number=pc.number + 20,
+                      size=pc.size, quantity=1, cut_type="al doblez",
+                      on_fold=True, fold_x=0.0, net_contour=skirt_c,
+                      seam_allowance=p.margen_costura, hem_allowance=p.margen_dobladillo,
+                      grain=((w_top * 0.5, empire_y + 2), (w_top * 0.5, hem_y - 2)),
+                      reference_texts=[((half * 0.4, (empire_y + hem_y) / 2), "vuelo")])
+        sloper.pieces.insert(sloper.pieces.index(pc) + 1, skirt)
+    return sloper
+
+
+def fitted_peplum(sloper, peplum_len: float = 18.0, flare_add: float = 24.0) -> "object":
+    """Peplum **dart-aware** sobre el sloper: el **talle conserva todas las pinzas**
+    (busto + cintura) hasta la cintura natural; el **volante** arranca en la cintura
+    como pieza acampanada sin pinzas (la supresión se suelta en el vuelo). Requiere
+    un sloper (`--fit fitted`)."""
+    from ..piece import Piece
+    fb = getattr(sloper, "fitted", None)
+    if fb is None:
+        raise ValueError("fitted_peplum requiere un sloper (--fit fitted)")
+    p = sloper.p
+    d = fb.draft
+    bust_y = d.points["D-US"].y
+    waist_y = bust_y + fb.spec.bust_to_waist
+    for name, released in (("DELANTERO", fb.spec.front_waist_dart),
+                           ("ESPALDA", fb.spec.back_waist_dart)):
+        pc = _find(sloper, name)
+        if pc is None:
+            continue
+        w_top = _side_x_at(pc.net_contour, waist_y)
+        pc.name = name + " TALLE (peplum)"       # mantiene todas sus pinzas
+        half = w_top + flare_add + released
+        hem_y = waist_y + peplum_len
+        pep_c = [(0.0, waist_y), (w_top, waist_y), (half, hem_y), (0.0, hem_y)]
+        pep = Piece(name=name + " VOLANTE (peplum)", number=pc.number + 30,
+                    size=pc.size, quantity=1, cut_type="al doblez",
+                    on_fold=True, fold_x=0.0, net_contour=pep_c,
+                    seam_allowance=p.margen_costura, hem_allowance=p.margen_dobladillo,
+                    grain=((w_top * 0.5, waist_y + 2), (w_top * 0.5, hem_y - 2)),
+                    reference_texts=[((half * 0.4, (waist_y + hem_y) / 2), "vuelo")])
+        sloper.pieces.insert(sloper.pieces.index(pc) + 1, pep)
+    return sloper
+
+
 def _sz(garment):
     return garment.p._base["talla_nombre"].descripcion.replace("talla ", "")
 
@@ -558,6 +645,8 @@ def _sz(garment):
 # estilos que requieren/aprovechan el bloque entallado (sloper)
 FITTED_STYLES = {
     "princess": fitted_princess,
+    "empire": fitted_empire,
+    "peplum": fitted_peplum,
 }
 
 

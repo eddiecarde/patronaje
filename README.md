@@ -57,6 +57,14 @@ Genera en `output/` (por talla):
 
 Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 
+> Los archivos de `output/` son **regenerables** por el CLI y están fuera del
+> control de versiones (`.gitignore`); el repo solo conserva una **muestra
+> talla S** + el visor como escaparate. Regenera todo con los comandos de arriba.
+
+**Visor interactivo**: `python -m patronaje.viewer --output output` genera
+`output/viewer.html`, un HTML autocontenido donde eliges método y estilo y ves
+el patrón al instante con consumo y nº de piezas.
+
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
 `patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
 formatos industriales: `docs/aama_astm.md`.
@@ -69,6 +77,11 @@ Vista · Bolsillo (opcional).
 Cada pieza incluye: línea de corte, línea de costura, línea de hilo, centro,
 piquetes, perforaciones, puntos de control, nombre, número, talla, cantidad,
 tipo de corte e indicación "AL DOBLEZ".
+
+**Márgenes por borde:** el margen de costura no es uniforme — el **dobladillo**
+lleva más margen (`margen_dobladillo`, 2.5 cm), las **costuras** el estándar
+(`margen_costura`, 1.0 cm) y el **doblez** ninguno. Se añaden **piquetes de
+dobladillo** automáticos en las esquinas del bajo para marcar la línea de doblez.
 
 ## Arquitectura (modular)
 

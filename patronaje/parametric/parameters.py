@@ -13,7 +13,7 @@ método). Este módulo define el contenedor :class:`Parameters`, que:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable
 
 

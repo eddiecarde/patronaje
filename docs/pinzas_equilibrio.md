@@ -67,10 +67,26 @@ Hay estilos **dart-aware** que manejan las pinzas correctamente:
 - **`princess`** (costura princesa entallada): parte el delantero en panel centro
   + costado con una línea princesa que pasa por el punto de busto, **absorbiendo la
   pinza de busto y la de cintura** en la costura (los paneles quedan sin pinzas).
-  Implementado en `transform/styles.fitted_princess` y registrado en `FITTED_STYLES`.
+  Implementado en `transform/styles.fitted_princess`.
+
+- **`empire`** (corte imperio entallado): la costura imperio pasa **por debajo del
+  busto**. El **talle conserva la pinza de busto** (y la de hombro/omóplato) para
+  mantener el ajuste sobre el pecho, mientras que la **falda libera la supresión de
+  cintura** convirtiéndola en vuelo (panel acampanado **sin pinzas**). El intake de
+  la pinza de cintura se suma al ancho del bajo, conservando el volumen.
+  Implementado en `transform/styles.fitted_empire`.
+
+- **`peplum`** (peplum entallado): el **talle conserva todas las pinzas** (busto +
+  cintura) hasta la cintura natural; el **volante** arranca en la cintura como pieza
+  acampanada **sin pinzas**. Implementado en `transform/styles.fitted_peplum`.
+
+Todos están registrados en `FITTED_STYLES`; `apply_style` los selecciona
+automáticamente cuando la prenda es un sloper (`hasattr(garment, "fitted")`).
 
 ```bash
 python -m patronaje.cli --size S --fit fitted --style princess --method aldrich
+python -m patronaje.cli --size S --fit fitted --style empire  --method aldrich
+python -m patronaje.cli --size S --fit fitted --style peplum  --method aldrich
 ```
 
 Los demás estilos (mangas, escotes, largos) también pueden aplicarse sobre el
