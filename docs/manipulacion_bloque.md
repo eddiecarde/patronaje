@@ -34,10 +34,15 @@ patronaje, implementadas como operaciones geométricas en `patronaje/transform/`
 | `dress` | **Camisa-vestido** (alarga + vuelo) | `lengthen` + `flare` |
 | `oversized` | **Corte holgado/oversize** (ensancha cuerpo y manga) | `widen` |
 | `empire` | **Corte imperio** (talle + falda con vuelo) | `clip_below/above` + `flare` |
+| `v_neck` | **Escote en V** (remodela escote; sin cuello) | remodelado de escote |
+| `boat_neck` | **Escote barco** (ancho y poco profundo; sin cuello) | remodelado de escote |
+| `hi_lo` | **Dobladillo asimétrico** (delantero corto, espalda largo) | `clip_below` |
+| `cocoon` | **Dobladillo entallado** (estrecha la base) | `flare` (ratio negativo) |
+| `peplum` | **Peplum** (talle + volante acampanado corto) | `clip` + `flare` |
 
-`STYLES` en `styles.py` es el registro; añadir uno = una función más. Nuevas
-primitivas: `flare_symmetric`, `clip_below/clip_above`, `lengthen`,
-`insert_on_contour`, `split_panel`, `dedup`.
+**17 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
+`lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 
 ## Uso
 
