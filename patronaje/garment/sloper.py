@@ -52,6 +52,7 @@ class Sloper:
         sleeve = Piece(
             name="MANGA", number=3, size=size, quantity=2, cut_type="par",
             net_contour=self.sleeve.outline(), seam_allowance=self.p.margen_costura,
+            hem_allowance=self.p.margen_dobladillo,   # muñeca con dobladillo simple
             grain=((0.0, self.sleeve.cap_height * 0.4), (0.0, self.p.largo_manga - 2)),
         )
         self.pieces = [front, back, sleeve]

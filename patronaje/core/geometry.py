@@ -177,36 +177,6 @@ def tangent_arc(p_prev, corner, p_next, radius: float, *, segments: int = 16):
     ]
 
 
-def offset_polygon_variable(contour: Sequence, dists: Sequence[float]) -> list[Vec]:
-    """Desplaza hacia AFUERA cada segmento de un polígono cerrado por su propia
-    distancia ``dists[i]`` y reconecta las esquinas por intersección.
-
-    Permite márgenes de costura distintos por borde (dobladillo mayor, doblez
-    con margen 0, costuras estándar). ``contour`` no debe repetir el primer
-    punto al final. Devuelve el contorno de corte (mismo número de vértices).
-    """
-    pts = [_xy(p) for p in contour]
-    if len(pts) < 3:
-        return list(pts)
-    n = len(pts)
-    outward_sign = -1.0 if polygon_area(pts) > 0 else 1.0  # normal hacia afuera
-    lines = []
-    for i in range(n):
-        a = pts[i]
-        b = pts[(i + 1) % n]
-        d = sub(b, a)
-        nrm = perpendicular(d, ccw=(outward_sign > 0))
-        off = scale(unit(nrm), dists[i])
-        lines.append((add(a, off), add(b, off)))
-    out = []
-    for i in range(n):
-        p0, p1 = lines[(i - 1) % n]
-        q0, q1 = lines[i]
-        inter = line_intersection(p0, p1, q0, q1)
-        out.append(inter if inter is not None else q0)
-    return out
-
-
 def polygon_area(points: Sequence) -> float:
     """Área con signo (shoelace). Positiva si el contorno es antihorario."""
     pts = [_xy(p) for p in points]

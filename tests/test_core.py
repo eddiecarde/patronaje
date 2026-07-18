@@ -1,11 +1,9 @@
 """Tests del motor geométrico y de curvas."""
-import math
-
 from patronaje.core.geometry import (
     line_intersection, tangent_arc, offset_polyline, polygon_area, distance,
 )
 from patronaje.core.curves import (
-    CubicBezier, NaturalCubicSpline, smooth_curve, continuity_between, chord_error,
+    CubicBezier, NaturalCubicSpline, smooth_curve, chord_error,
 )
 
 

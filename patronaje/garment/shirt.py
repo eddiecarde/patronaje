@@ -280,7 +280,9 @@ class Shirt:
         return Piece(
             name="VISTA DELANTERA", number=9, size=size, quantity=2,
             cut_type="par: izq + der", on_fold=False,
-            net_contour=contour, seam_allowance=p.margen_costura, grain=grain,
+            net_contour=contour, seam_allowance=p.margen_costura,
+            hem_allowance=p.margen_dobladillo,   # dobla junto al bajo del delantero
+            grain=grain,
         )
 
     # ------------------------------------------------------------------

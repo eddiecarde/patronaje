@@ -72,6 +72,52 @@ def test_fitted_princess_absorbs_darts():
     assert _geom_ok(sl)
 
 
+def test_fitted_empire_releases_waist_dart_and_keeps_bust():
+    from patronaje.transform.styles import apply_style
+    sl = apply_style(build_sloper("S", method="aldrich"), "empire")
+    assert _geom_ok(sl)
+    front_talle = next(p for p in sl.pieces if p.name.startswith("DELANTERO TALLE"))
+    front_falda = next(p for p in sl.pieces if p.name.startswith("DELANTERO FALDA"))
+    # el talle conserva la pinza de busto; la falda no tiene pinzas
+    assert len(front_talle.darts) == 1
+    assert len(front_falda.darts) == 0
+    # la falda es una pieza con dobladillo real
+    assert front_falda.hem_allowance is not None
+    # la falda vuela: su bajo es más ancho que su cintura
+    ys = [q[1] for q in front_falda.net_contour]
+    top_x = max(x for x, y in front_falda.net_contour if abs(y - min(ys)) < 0.5)
+    bot_x = max(x for x, y in front_falda.net_contour if abs(y - max(ys)) < 0.5)
+    assert bot_x > top_x + 5
+
+
+def test_fitted_peplum_keeps_bodice_darts_flounce_dartless():
+    from patronaje.transform.styles import apply_style
+    sl = apply_style(build_sloper("S", method="aldrich"), "peplum")
+    assert _geom_ok(sl)
+    talle = next(p for p in sl.pieces if p.name.startswith("DELANTERO TALLE"))
+    volante = next(p for p in sl.pieces if p.name.startswith("DELANTERO VOLANTE"))
+    assert len(talle.darts) == 2          # busto + cintura
+    assert len(volante.darts) == 0
+    assert volante.hem_allowance is not None
+
+
+def test_hem_allowance_propagated_to_hemmed_pieces():
+    from patronaje.transform.styles import apply_style
+    from patronaje.garment.shirt import build_shirt
+    p = build_parameters("S")
+    hem = p.margen_dobladillo
+    # vista delantera: dobla con el bajo del delantero
+    facing = next(x for x in build_shirt("S").pieces if x.name == "VISTA DELANTERA")
+    assert facing.hem_allowance == hem
+    # manga del sloper: muñeca con dobladillo simple
+    sleeve = next(x for x in build_sloper("S").pieces if x.name == "MANGA")
+    assert sleeve.hem_allowance == hem
+    # manga recortada: la nueva boca lleva dobladillo
+    short = next(x for x in apply_style(build_shirt("S"), "short_sleeve").pieces
+                 if x.name.startswith("MANGA"))
+    assert short.hem_allowance == hem
+
+
 def test_fitted_cli_exports():
     from patronaje.cli import generate
     d = tempfile.mkdtemp()
