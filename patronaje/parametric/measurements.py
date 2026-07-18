@@ -62,18 +62,48 @@ METODO = dict(
 )
 
 
+def _fill_secondary(m: dict) -> dict:
+    """Completa medidas secundarias (talle de espalda, altura de cadera) por
+    estimación proporcional cuando el usuario sólo aporta las principales."""
+    m = dict(m)
+    if "talle_espalda" not in m or m["talle_espalda"] is None:
+        # ~41 cm en talla S (busto 88); +0.25 cm por cm de busto
+        m["talle_espalda"] = round(41.0 + (m["busto"] - 88.0) * 0.25, 1)
+    if "altura_cadera" not in m or m["altura_cadera"] is None:
+        m["altura_cadera"] = round(20.0 + (m["busto"] - 88.0) * 0.0625, 1)
+    return m
+
+
 def build_parameters(size: str = "S") -> Parameters:
-    """Construye el objeto :class:`Parameters` para una talla.
+    """Construye el objeto :class:`Parameters` para una talla estándar.
 
     Incluye medidas base, holguras, constantes de método y los parámetros
     *derivados* del trazo Aldrich (recalculados automáticamente).
     """
     if size not in SIZE_CHART:
         raise KeyError(f"Talla no disponible: {size}. Opciones: {list(SIZE_CHART)}")
-    m = SIZE_CHART[size]
+    return build_parameters_from_measurements(SIZE_CHART[size], name=size)
+
+
+def build_parameters_from_measurements(
+        measurements: dict, *, name: str = "custom",
+        ease: dict | None = None, metodo: dict | None = None) -> Parameters:
+    """Construye :class:`Parameters` desde un juego de medidas **a medida**.
+
+    ``measurements`` debe traer al menos las medidas de :data:`REQUIRED`
+    (patronaje.parametric.validation); las secundarias se estiman si faltan.
+    ``ease``/``metodo`` permiten sobrescribir holguras y constantes por defecto.
+    Las medidas se validan aparte con ``validate_measurements``; aquí sólo se
+    exige que estén presentes las principales.
+    """
+    from .validation import REQUIRED
+    faltan = [k for k in REQUIRED if k not in measurements or measurements[k] is None]
+    if faltan:
+        raise ValueError(f"Faltan medidas requeridas: {faltan}")
+    m = _fill_secondary(measurements)
 
     p = Parameters()
-    p.set("talla_nombre", 0, unidad="", descripcion=f"talla {size}")  # placeholder numérico
+    p.set("talla_nombre", 0, unidad="", descripcion=f"talla {name}")  # placeholder numérico
     # medidas del cuerpo
     p.set("busto", m["busto"], descripcion="contorno de busto")
     p.set("cintura", m["cintura"], descripcion="contorno de cintura")
@@ -88,11 +118,11 @@ def build_parameters(size: str = "S") -> Parameters:
     p.set("talle_espalda", m["talle_espalda"], descripcion="talle de espalda (nuca->cintura)")
     p.set("altura_cadera", m["altura_cadera"], descripcion="altura de cadera (cintura->cadera)")
 
-    # holguras
-    for k, v in EASE.items():
+    # holguras (con posibles sobrescrituras)
+    for k, v in {**EASE, **(ease or {})}.items():
         p.set(k, v, descripcion="holgura de confección")
-    # constantes de método
-    for k, v in METODO.items():
+    # constantes de método (con posibles sobrescrituras)
+    for k, v in {**METODO, **(metodo or {})}.items():
         p.set(k, v, unidad="cm", descripcion="constante de método Aldrich/confección")
 
     # -------- parámetros derivados (fórmulas Aldrich) --------------------

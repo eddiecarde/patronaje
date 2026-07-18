@@ -328,6 +328,6 @@ class Shirt:
 
 
 def build_shirt(size: str = "S", sleeve_ease: float = 1.0,
-                method: str = "aldrich") -> Shirt:
-    return Shirt(p=build_parameters(size), sleeve_ease=sleeve_ease,
-                 method=method).build()
+                method: str = "aldrich", p: Parameters = None) -> Shirt:
+    return Shirt(p=p if p is not None else build_parameters(size),
+                 sleeve_ease=sleeve_ease, method=method).build()
