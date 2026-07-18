@@ -10,6 +10,8 @@ from .aldrich_method import AldrichMethod
 from .mueller_method import MuellerMethod
 from .bunka_method import BunkaMethod
 from .esmod_method import EsmodMethod
+from .marti_method import MartiMethod
+from .armstrong_method import ArmstrongMethod
 
 _REGISTRY: dict[str, DraftingMethod] = {}
 
@@ -47,3 +49,5 @@ register(AldrichMethod())
 register(MuellerMethod())
 register(BunkaMethod())
 register(EsmodMethod())
+register(MartiMethod())
+register(ArmstrongMethod())

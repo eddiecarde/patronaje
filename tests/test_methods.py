@@ -7,7 +7,7 @@ from patronaje.garment.shirt import build_shirt
 from patronaje.validation.validators import validate_all
 
 
-ALL_METHODS = ["aldrich", "mueller", "bunka", "esmod"]
+ALL_METHODS = ["aldrich", "mueller", "bunka", "esmod", "marti", "armstrong"]
 
 
 def test_registry_lists_methods():

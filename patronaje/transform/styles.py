@@ -20,7 +20,11 @@ from . import operations as ops
 
 
 def _find(shirt, name):
-    return next((p for p in shirt.pieces if p.name == name), None)
+    # coincidencia exacta primero; si no, por prefijo (p. ej. "DELANTERO (base entallada)")
+    exact = next((p for p in shirt.pieces if p.name == name), None)
+    if exact is not None:
+        return exact
+    return next((p for p in shirt.pieces if p.name.startswith(name)), None)
 
 
 def flare_shirt(shirt: Shirt, added_hem: float = 10.0) -> Shirt:
@@ -426,6 +430,137 @@ def godet(shirt: Shirt, godet_width: float = 20.0, from_frac: float = 0.55) -> S
     return shirt
 
 
+def wrap_front(shirt: Shirt, wrap_x: float = 16.0) -> Shirt:
+    """Delantero cruzado (wrap): borde interior diagonal que cruza al costado
+    opuesto; sin botonadura (se ata al costado)."""
+    p = shirt.p
+    b = shirt.bodice
+    fnd = p.escote_del_prof
+    largo = p.largo_camisa
+    pc = _find(shirt, "DELANTERO")
+    if pc:
+        fc = [(-wrap_x, largo), (0.0, fnd)] + list(reversed(b.front_neck))[1:]
+        fc += [b.points["D-SP"].as_tuple()] + list(b.front_armhole[1:])
+        fc += [b.points["D-Hs"].as_tuple()]
+        pc.net_contour = ops.dedup(fc)
+        pc.buttons = []
+        pc.buttonholes = []
+        pc.name = "DELANTERO WRAP"
+        pc.reference_texts = list(pc.reference_texts) + [((-wrap_x * 0.5, largo - 4), "cruce")]
+    return shirt
+
+
+def back_pleat(shirt: Shirt, pleat: float = 6.0) -> Shirt:
+    """Pliegue de tabla (box pleat) en el centro de la espalda."""
+    pc = _find(shirt, "ESPALDA")
+    if pc:
+        ys = [q[1] for q in pc.net_contour]
+        y_top, y_bot = min(ys), max(ys)
+        shifted = [(x + pleat, y) for x, y in pc.net_contour]
+        pc.net_contour = ops.dedup([(0.0, y_top)] + shifted + [(0.0, y_bot)])
+        pc.construction_lines = list(pc.construction_lines) + [
+            ((pleat, y_top), (pleat, y_bot)), ((0.0, y_top), (0.0, y_bot))]
+        pc.reference_texts = list(pc.reference_texts) + [((pleat * 0.5, y_top + 3), "tabla")]
+        pc.name = "ESPALDA (pliegue tabla)"
+    return shirt
+
+
+def off_shoulder(shirt: Shirt) -> Shirt:
+    """Hombros descubiertos (bardot): escote ancho y bajo + manga corta."""
+    _reshape_neck(shirt, drop=1.0, widen_neck=8.0, kind="scoop",
+                  drop_collar=True, label="(bardot)")
+    short_sleeve(shirt, at=0.30, name="MANGA (bardot)")
+    return shirt
+
+
+def tie_front(shirt: Shirt, waist_at: float = 0.45) -> Shirt:
+    """Nudo delantero: recorta a la cintura (delantero corto, espalda algo más
+    larga) y estrecha el bajo delantero hacia el centro (efecto de nudo)."""
+    p = shirt.p
+    hinge = p.prof_sisa
+    cut_f = hinge + (p.largo_camisa - hinge) * waist_at
+    cut_b = hinge + (p.largo_camisa - hinge) * (waist_at + 0.12)
+    for name, cut in (("DELANTERO", cut_f), ("VISTA DELANTERA", cut_f),
+                      ("ESPALDA", cut_b)):
+        pc = _find(shirt, name)
+        if pc:
+            pc.net_contour = ops.clip_below(pc.net_contour, cut)
+            pc.name = name + " (nudo)"
+    f = _find(shirt, "DELANTERO")
+    if f:
+        ratio = -6.0 / ((p.busto + p.holgura_busto) / 4.0)
+        f.net_contour = ops.flare(f.net_contour, 0.0, hinge, cut_f, ratio, side=+1)
+    return shirt
+
+
+def fitted_princess(sloper) -> "object":
+    """Costura princesa sobre el bloque entallado: parte el delantero en panel
+    centro + costado, **absorbiendo la pinza de busto y la de cintura** en la
+    costura (línea princesa que pasa por el punto de busto). Requiere un sloper
+    (`--fit fitted`)."""
+    from ..core.curves import smooth_curve
+    from ..piece import Piece
+    fb = getattr(sloper, "fitted", None)
+    if fb is None:
+        raise ValueError("fitted_princess requiere un sloper (--fit fitted)")
+    p = sloper.p
+    d = fb.draft
+    BP = fb.bust_point
+    bust_y = d.points["D-US"].y
+    quarter = d.points["D-US"].x
+    waist_y = bust_y + fb.spec.bust_to_waist
+    fwaist_y = waist_y + fb.spec.bust_dart
+    side_supp = fb.side_supp
+    w_side = quarter - side_supp
+    fwd = fb.spec.front_waist_dart
+    princess_x = BP[0] - 1.0
+
+    cfn = d.points["D-CFn"].as_tuple()
+    snp = d.points["D-SNP"].as_tuple()
+    sp = d.points["D-SP"].as_tuple()
+    arm = list(d.front_armhole)                       # SP..US
+    ias = int(len(arm) * 0.5)
+    AS = arm[ias]
+
+    side_curve = smooth_curve([(quarter, bust_y),
+                               (w_side + 0.6, (bust_y + fwaist_y) / 2),
+                               (w_side, fwaist_y)], samples_per_span=6)
+    pc_center = smooth_curve([AS, (BP[0] + 1.5, BP[1]), (princess_x, fwaist_y)],
+                             samples_per_span=8)
+    pc_side = smooth_curve([(princess_x + fwd, fwaist_y), (BP[0] - 1.0, BP[1]), AS],
+                           samples_per_span=8)
+
+    center = [cfn] + list(reversed(d.front_neck))[1:] + [sp] + arm[1:ias + 1]
+    center += pc_center[1:] + [(0.0, fwaist_y)]
+    side = list(arm[ias:]) + side_curve[1:] + [(princess_x + fwd, fwaist_y)] + pc_side[1:]
+
+    from ..transform import operations as ops
+    center_pc = Piece(name="DELANTERO CENTRO (princesa)", number=1, size=_sz(sloper),
+                      quantity=2, cut_type="par: izq + der",
+                      net_contour=ops.dedup(center), seam_allowance=p.margen_costura,
+                      grain=((1.5, d.points["D-CFn"].y + 4), (1.5, fwaist_y - 3)),
+                      drills=[BP])
+    side_pc = Piece(name="DELANTERO COSTADO (princesa)", number=11, size=_sz(sloper),
+                    quantity=2, cut_type="par: izq + der",
+                    net_contour=ops.dedup(side), seam_allowance=p.margen_costura,
+                    grain=((w_side * 0.6, bust_y + 3), (w_side * 0.6, fwaist_y - 3)))
+    # reemplaza el delantero por los dos paneles (sin pinzas: absorbidas)
+    front = _find(sloper, "DELANTERO")
+    idx = sloper.pieces.index(front)
+    sloper.pieces[idx:idx + 1] = [center_pc, side_pc]
+    return sloper
+
+
+def _sz(garment):
+    return garment.p._base["talla_nombre"].descripcion.replace("talla ", "")
+
+
+# estilos que requieren/aprovechan el bloque entallado (sloper)
+FITTED_STYLES = {
+    "princess": fitted_princess,
+}
+
+
 STYLES = {
     "flare": flare_shirt,
     "puff": puff_sleeve,
@@ -448,14 +583,23 @@ STYLES = {
     "kimono": kimono,
     "raglan": raglan,
     "godet": godet,
+    "wrap": wrap_front,
+    "back_pleat": back_pleat,
+    "off_shoulder": off_shoulder,
+    "tie_front": tie_front,
 }
 
 
 def apply_style(shirt: Shirt, style: str, **kw) -> Shirt:
     if style in (None, "", "none"):
         return shirt
-    if style not in STYLES:
+    # sobre el sloper (bloque entallado) hay versiones dart-aware
+    is_sloper = hasattr(shirt, "fitted")
+    if is_sloper and style in FITTED_STYLES:
+        shirt = FITTED_STYLES[style](shirt, **kw)
+    elif style in STYLES:
+        shirt = STYLES[style](shirt, **kw)
+    else:
         raise KeyError(f"Estilo desconocido: '{style}'. Opciones: {list(STYLES)}")
-    shirt = STYLES[style](shirt, **kw)
     shirt.layout()
     return shirt

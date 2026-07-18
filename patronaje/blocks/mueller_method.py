@@ -50,6 +50,10 @@ class MuellerMethod(DraftingMethod):
     def build_bodice(self, p: Parameters) -> BodiceDraft:
         return draft_mueller_bodice(p)
 
+    def dart_spec(self, p: Parameters):
+        from .fitted import DartSpec
+        return DartSpec(bust_dart=3.5, front_waist_dart=3.0, back_waist_dart=3.5, back_shoulder_dart=1.0, bust_point_x=p.busto/10+1.0, waist_ease=3.0)
+
     def build_sleeve(self, p: Parameters, target_armhole: float,
                      sleeve_ease: float = 1.0) -> SleeveDraft:
         return draft_mueller_sleeve(p, target_armhole, sleeve_ease)

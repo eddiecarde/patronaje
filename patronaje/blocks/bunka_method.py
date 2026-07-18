@@ -47,6 +47,10 @@ class BunkaMethod(DraftingMethod):
         )
         return build_bodice_from_frame(p, frame, source_tag="Bunka")
 
+    def dart_spec(self, p: Parameters):
+        from .fitted import DartSpec
+        return DartSpec(bust_dart=4.0, front_waist_dart=3.2, back_waist_dart=3.0, back_shoulder_dart=1.2, bust_point_x=p.busto/12+2.5, waist_ease=4.0)
+
     def build_sleeve(self, p: Parameters, target_armhole: float,
                      sleeve_ease: float = 1.0) -> SleeveDraft:
         return SleeveDraft(p=p, target_armhole=target_armhole,

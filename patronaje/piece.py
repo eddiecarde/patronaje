@@ -128,6 +128,10 @@ class Piece:
     reference_texts: list[tuple[tuple[float, float], str]] = field(default_factory=list)
     buttons: list[tuple[float, float]] = field(default_factory=list)
     buttonholes: list[tuple[float, float, float, float]] = field(default_factory=list)  # x,y,ang,len
+    # pinzas: cada una (base1, apex, base2); las patas ya están en net_contour,
+    # aquí se guardan para dibujar el vértice (perforación) y las líneas de pinza.
+    darts: list[tuple[tuple[float, float], tuple[float, float], tuple[float, float]]] = \
+        field(default_factory=list)
 
     offset: tuple[float, float] = (0.0, 0.0)  # posición al colocar en el plano/lienzo
 
@@ -209,6 +213,11 @@ class Piece:
         # líneas de construcción
         for a, b in self.construction_lines:
             ents.append(ELine(Layer.CONSTRUCCION, a, b))
+        # pinzas: patas (construcción) + perforación de vértice
+        for base1, apex, base2 in self.darts:
+            ents.append(ELine(Layer.CONSTRUCCION, base1, apex))
+            ents.append(ELine(Layer.CONSTRUCCION, base2, apex))
+            ents.append(ECircle(Layer.CENTROS, center=apex, radius=0.15))
         # botones y ojales
         for bx, by in self.buttons:
             ents.append(ECircle(Layer.BOTONES, center=(bx, by), radius=0.55))
