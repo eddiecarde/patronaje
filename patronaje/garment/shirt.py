@@ -106,6 +106,7 @@ class Shirt:
             name="DELANTERO", number=1, size=size, quantity=2,
             cut_type="par: izq + der", on_fold=False,
             net_contour=contour, seam_allowance=p.margen_costura,
+            hem_allowance=p.margen_dobladillo,
             grain=grain, notches=notches, drills=drills,
             buttons=buttons, buttonholes=buttonholes,
             construction_lines=[((0.0, fnd), (0.0, largo))],  # línea CF (centro)
@@ -128,6 +129,7 @@ class Shirt:
             name="ESPALDA", number=2, size=size, quantity=1,
             cut_type="al doblez", on_fold=True, fold_x=0.0,
             net_contour=contour, seam_allowance=p.margen_costura,
+            hem_allowance=p.margen_dobladillo,
             grain=grain, notches=notches,
             reference_texts=[((0.3, (yl + p.largo_camisa) / 2), "CB")],
         )

@@ -152,15 +152,14 @@ class Piece:
         sa = self.seam_allowance
         if sa <= 0:
             return list(self.net_contour)
+        # margen uniforme robusto (shapely) + doblez sin margen
         poly = self.net_polygon()
         grown = poly.buffer(sa, join_style="mitre", mitre_limit=2.5)
         if self.on_fold and self.fold_x is not None:
             fx = self.fold_x
-            # recorta al semiplano de la pieza (lado con más área)
             from shapely.geometry import box
             minx, miny, maxx, maxy = grown.bounds
             pad = sa + 5.0
-            # decide de qué lado del doblez está la pieza
             cx = poly.centroid.x
             if cx >= fx:
                 clip = box(fx, miny - pad, maxx + pad, maxy + pad)
@@ -170,7 +169,27 @@ class Piece:
         grown = set_precision(grown, 1e-6)
         if grown.geom_type == "MultiPolygon":
             grown = max(grown.geoms, key=lambda g: g.area)
-        return [(float(x), float(y)) for x, y in grown.exterior.coords]
+        coords = [(float(x), float(y)) for x, y in grown.exterior.coords]
+
+        # margen de dobladillo mayor: empuja el borde inferior el extra
+        hem = self.hem_allowance
+        if hem is not None and hem > sa + 1e-9:
+            extra = hem - sa
+            gmaxy = max(y for _, y in coords)
+            coords = [(x, y + extra) if y >= gmaxy - 0.5 else (x, y) for x, y in coords]
+        return coords
+
+    def hem_corners(self) -> list[tuple[float, float]]:
+        """Esquinas del dobladillo (donde el borde inferior encuentra el costado),
+        para marcar el piquete de doblez del dobladillo."""
+        pts = self.net_contour
+        maxy = max(q[1] for q in pts)
+        hempts = [q for q in pts if abs(q[1] - maxy) < 1.0]
+        if not hempts:
+            return []
+        left = min(hempts, key=lambda q: q[0])
+        right = max(hempts, key=lambda q: q[0])
+        return [left, right]
 
     def centroid(self) -> tuple[float, float]:
         c = self.net_polygon().centroid
@@ -204,6 +223,11 @@ class Piece:
         for n in self.notches:
             d = self._inward_dir(n)
             ents.append(ENotch(Layer.PIQUETES, pos=n, direction=d))
+        # piquetes automáticos de dobladillo (marcan la línea de doblez del bajo)
+        if self.hem_allowance is not None and self.hem_allowance > self.seam_allowance + 1e-9:
+            for hc in self.hem_corners():
+                ents.append(ENotch(Layer.PIQUETES, pos=hc, direction=(0.0, -1.0),
+                                   depth=self.hem_allowance))
         # perforaciones
         for dpt in self.drills:
             ents.append(ECircle(Layer.CENTROS, center=dpt, radius=0.15))

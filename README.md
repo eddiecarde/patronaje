@@ -70,6 +70,11 @@ Cada pieza incluye: línea de corte, línea de costura, línea de hilo, centro,
 piquetes, perforaciones, puntos de control, nombre, número, talla, cantidad,
 tipo de corte e indicación "AL DOBLEZ".
 
+**Márgenes por borde:** el margen de costura no es uniforme — el **dobladillo**
+lleva más margen (`margen_dobladillo`, 2.5 cm), las **costuras** el estándar
+(`margen_costura`, 1.0 cm) y el **doblez** ninguno. Se añaden **piquetes de
+dobladillo** automáticos en las esquinas del bajo para marcar la línea de doblez.
+
 ## Arquitectura (modular)
 
 ```
