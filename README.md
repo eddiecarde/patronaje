@@ -129,12 +129,19 @@ sh = build_shirt("M")          # otra talla, mismo motor
 sh = build_shirt("S").layout() # posiciona las piezas
 ```
 
+## Casado automático de piquetes
+
+Las costuras que se cosen juntas reciben **piquetes coincidentes** colocados a la
+misma fracción de longitud de arco (costado delantero↔trasero, hombro↔canesú,
+costado de la falda). Así casan al coser sin fruncidos. Se validan por longitud
+de tramo. Ver `docs/casado_piquetes.md`.
+
 ## Validaciones (previas a exportar)
 
 Polígonos cerrados · sin autointersección · sin duplicados · **sisa = copa** ±
 tolerancia · costados y hombros casan · cuello = escote · canesú = espalda ·
-puño = boca de manga. El CLI imprime el reporte y **bloquea la exportación** si
-hay errores (usar `--force` para omitir).
+puño = boca de manga · **piquetes casados** (tramos de igual longitud). El CLI
+imprime el reporte y **bloquea la exportación** si hay errores (usar `--force`).
 
 ## Tests
 

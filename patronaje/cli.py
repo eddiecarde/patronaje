@@ -48,9 +48,11 @@ def generate(size: str = "S", outdir: str = "output", *,
         # falda base (recta / lápiz): prenda propia, validación geométrica
         from .garment.skirt import build_skirt
         shirt = build_skirt(size, method=method, p=p).layout()
+        from .validation.validators import validate_notch_matching
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
+        validate_notch_matching(shirt, report)
         if not quiet:
             print(f"[falda base | método: {method}]")
             print(report.text())

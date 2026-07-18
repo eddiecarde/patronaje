@@ -44,6 +44,7 @@ class Shirt:
     pieces: list[Piece] = field(default_factory=list)
     sleeve_ease: float = 1.0
     method: str = "aldrich"
+    seam_matching: list = field(default_factory=list)
 
     # ------------------------------------------------------------------
     def build(self) -> "Shirt":
@@ -67,6 +68,9 @@ class Shirt:
             self._front_facing(size),
             self._pocket(size),
         ]
+        # casado automático de piquetes en costuras que se cosen juntas
+        from .notches import add_shirt_notches
+        self.seam_matching = add_shirt_notches(self)
         return self
 
     # ------------------------------------------------------------------
