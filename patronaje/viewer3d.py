@@ -1,0 +1,247 @@
+"""Visor 3D del maniquí a medida (Opción A).
+
+Genera un HTML **autocontenido** con un maniquí paramétrico (dress form)
+construido desde las medidas, y la prenda como **cáscara** a offset del cuerpo,
+coloreada por un **mapa de ajuste** (holgura por zona: verde cómodo, ámbar
+ajustado, rojo tira, azul holgado). Se rota con el ratón y se recalcula al mover
+las medidas — sin dependencias: un pequeño renderizador 3D por software
+(proyección + painter's algorithm) dibuja sobre un Canvas.
+
+No es simulación de caída (Fase 2): la prenda es una superficie ajustada al
+cuerpo con su silueta y holgura reales, suficiente para "verla puesta" y evaluar
+la horma.
+
+Uso:
+    python -m patronaje.viewer3d --output output   # genera output/viewer_3d.html
+"""
+from __future__ import annotations
+
+import argparse
+import os
+
+_PAGE = r"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patronaje — maniquí 3D a medida</title>
+<style>
+:root{--ink:#1f2d3d;--line:#c9d4e0;}
+*{box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:var(--ink);margin:0;background:#f4f7fb}
+.wrap{max-width:1150px;margin:0 auto;padding:18px}h1{font-size:20px;margin:4px 0}
+.sub{color:#6b8199;font-size:13px;margin-bottom:12px}
+.stage{display:flex;gap:16px;flex-wrap:wrap}
+.controls{flex:1 1 280px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.view{flex:2 1 600px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px}
+canvas{width:100%;height:auto;touch-action:none;cursor:grab;background:linear-gradient(#eef4fb,#dfe8f2)}
+.row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px}
+.row label{flex:0 0 120px}.row input[type=range]{flex:1}.row b{flex:0 0 50px;text-align:right;font-variant-numeric:tabular-nums}
+select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.kv{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:4px 0;font-size:13px}
+@media(prefers-color-scheme:dark){body{background:#0f1720;color:#dfe8f2}.controls,.view{background:#16212e;border-color:#2a3a4d}}
+</style></head><body><div class="wrap">
+<h1>Patronaje — maniquí 3D a medida</h1>
+<div class="sub">Maniquí paramétrico desde tus medidas + la prenda como cáscara con
+ <b>mapa de ajuste</b> (holgura por zona). Arrastra para girar. Sin dependencias:
+ renderizador 3D por software. No es simulación de caída (eso es la Fase 2).</div>
+<div class="stage">
+ <div class="controls">
+  <div class="row"><label>Prenda</label><select id="garment"></select></div>
+  <div id="sliders"></div>
+  <div class="legend">
+   <span><i style="background:#c0392b"></i>tira (&lt;0)</span>
+   <span><i style="background:#e67e22"></i>ajustado</span>
+   <span><i style="background:#27ae60"></i>cómodo</span>
+   <span><i style="background:#2980b9"></i>holgado</span></div>
+  <div id="fit" style="margin-top:8px"></div>
+ </div>
+ <div class="view"><canvas id="cv" width="620" height="720"></canvas></div>
+</div></div>
+<script>
+// ================= parámetros =================
+const DEFS={
+ busto:["Busto",76,120,88],holgura_busto:["Holgura busto",-2,20,8],
+ cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],
+ contorno_cuello:["Contorno cuello",32,46,37],ancho_espalda:["Ancho espalda",30,48,37],
+ altura_cadera:["Altura cadera",16,26,20],talle:["Talle (nuca-cint.)",34,52,41],
+ estatura:["Estatura",150,190,168],largo:["Largo prenda",30,130,68]};
+const P={};for(const k in DEFS)P[k]=DEFS[k][3];
+
+// ================= geometría paramétrica =================
+const N=36;
+function ringC(y,C,ratio){ // anillo por circunferencia (Ramanujan) y ratio ancho/fondo
+ const r=ratio,P1=Math.PI*(3*(r+1)-Math.sqrt((3*r+1)*(r+3))),d=C/P1,a=r*d;
+ return ringAD(y,a,d);}
+function ringAD(y,a,d){const p=[];for(let k=0;k<N;k++){const t=2*Math.PI*k/N;
+ p.push([a*Math.cos(t),y,d*Math.sin(t)]);}return p;}
+
+function easeColor(e){ // holgura cm -> color de ajuste
+ if(e<0)return [192,57,43]; if(e<3)return [230,126,34]; if(e<11)return [39,174,96]; return [41,128,185];}
+
+// niveles del cuerpo (y en cm, cadera arriba del suelo por la estatura)
+function bodyLevels(){
+ const hipY=P.estatura*0.47, waistY=hipY+P.altura_cadera, bustY=waistY+P.talle*0.44,
+  chestY=bustY+5, shY=bustY+P.talle*0.30, neckY=shY+3.5, headB=neckY+4, headT=headB+P.estatura*0.13;
+ return {hipY,waistY,bustY,chestY,shY,neckY,headB,headT};}
+
+function buildBody(L){
+ const rings=[];
+ rings.push(ringC(L.hipY,P.cadera,1.42));
+ rings.push(ringC(L.waistY,P.cintura,1.34));
+ rings.push(ringC(L.bustY,P.busto,1.26));
+ rings.push(ringC(L.chestY,P.busto*0.90,1.20));
+ rings.push(ringAD(L.shY,P.ancho_espalda*0.55,P.ancho_espalda*0.30));  // hombros anchos y planos
+ rings.push(ringC(L.neckY,P.contorno_cuello,1.10));
+ // bajo la cadera: redondea hacia el pie del maniquí
+ const below=ringC(L.hipY-9,P.cadera*0.82,1.42); below.forEach(p=>p[1]=L.hipY-9);
+ return {torso:[below,...rings],levels:L};}
+
+function headRings(L){ // cabeza elipsoide
+ const cy=(L.headB+L.headT)/2, ry=(L.headT-L.headB)/2, rx=ry*0.72, rz=ry*0.82, out=[];
+ for(let i=0;i<=8;i++){const ph=(-Math.PI/2)+Math.PI*i/8, y=cy+ry*Math.sin(ph), rr=Math.cos(ph);
+  out.push(ringAD(y,rx*rr,rz*rr));}
+ return out;}
+
+function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piernas)
+ const ax=[p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]];const L=Math.hypot(ax[0],ax[1],ax[2])||1;
+ const dir=[ax[0]/L,ax[1]/L,ax[2]/L];
+ let up=[0,1,0]; if(Math.abs(dir[1])>0.9)up=[1,0,0];
+ const u=norm(cross(up,dir)),v=norm(cross(dir,u));const rings=[];
+ for(let s=0;s<=segs;s++){const t=s/segs,c=[p0[0]+ax[0]*t,p0[1]+ax[1]*t,p0[2]+ax[2]*t],r=r0+(r1-r0)*t,ring=[];
+  for(let k=0;k<N;k++){const th=2*Math.PI*k/N,cx=Math.cos(th)*r,cz=Math.sin(th)*r;
+   ring.push([c[0]+u[0]*cx+v[0]*cz,c[1]+u[1]*cx+v[1]*cz,c[2]+u[2]*cx+v[2]*cz]);}rings.push(ring);}
+ return rings;}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
+
+// prenda: cáscara a offset del cuerpo, coloreada por holgura
+function buildGarment(L,g){
+ const faces=[],fit=[];const push=(rings,cf,alpha)=>ringsToFaces(rings,cf,alpha,faces);
+ const eB=P.holgura_busto, eW=Math.max(0,eB*0.7), eH=4, hemY=L.waistY-(P.largo-P.talle*0.44);
+ function shellRings(topY,botY,botC,botR){
+  return [ringC(L.shY-1,P.contorno_cuello+6,1.15),
+   ringC(L.bustY,P.busto+eB,1.26),ringC(L.waistY,P.cintura+eW,1.34),
+   ringC(Math.min(botY,L.hipY),P.cadera+eH,1.42),ringC(botY,botC,botR)];}
+ if(g==="falda"){
+  const hem=L.waistY-(P.largo);
+  const rings=[ringC(L.waistY,P.cintura+2,1.34),ringC(L.hipY,P.cadera+4,1.42),ringC(hem,P.cadera+4+18,1.4)];
+  push(rings,(i)=>easeColor([2,4,4][i]||4),0.62);
+  fit.push(["Cintura",2],["Cadera",4]);
+ }else if(g==="pantalon"){
+  const rings=[ringC(L.waistY,P.cintura+2,1.34),ringC(L.hipY,P.cadera+5,1.42)];
+  push(rings,(i)=>easeColor([2,5][i]||5),0.62);
+  // dos piernas
+  const legTop=L.hipY, ankle=P.estatura*0.06, cx=P.cadera/7;
+  [1,-1].forEach(s=>{const t=tube([s*cx,legTop,0],[s*cx*0.7,ankle,1],P.cadera/12,7,7);
+   ringsToFaces(t,()=>easeColor(6),0.62,faces);});
+  fit.push(["Cintura",2],["Cadera",5]);
+ }else{ // camisa / vestido / blazer (torso + mangas)
+  const botY=(g==="vestido")?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
+  const botC=(g==="vestido")?P.cadera+6+ ((P.largo>90)?14:2):P.cadera+eH;
+  const rings=[ringC(L.shY-1,P.contorno_cuello+8,1.15),ringC(L.bustY,P.busto+eB,1.26),
+   ringC(L.waistY,P.cintura+eW,1.34),ringC(botY,botC,1.42)];
+  const cols=[eB*0.6,eB,eW,eH];
+  push(rings,(i)=>easeColor(cols[i]),0.6);
+  // mangas
+  const sh=P.ancho_espalda*0.55, sy=L.shY;
+  const slLen=(g==="blazer")?32:(g==="vestido"?26:30);
+  [1,-1].forEach(s=>{const t=tube([s*sh,sy,0],[s*(sh+8),sy-slLen,2],P.busto/12,P.busto/20,6);
+   ringsToFaces(t,()=>easeColor(eB*0.8),0.6,faces);});
+  fit.push(["Busto",eB],["Cintura",eW],["Cadera",eH]);
+ }
+ return {faces,fit};}
+
+function ringsToFaces(rings,colorFn,alpha,out){
+ for(let r=0;r<rings.length-1;r++){const A=rings[r],B=rings[r+1],col=colorFn(r);
+  for(let k=0;k<N;k++){const k2=(k+1)%N;
+   out.push({v:[A[k],A[k2],B[k2],B[k]],col,alpha});}}}
+
+// ================= renderizador por software =================
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let yaw=0.5,pitch=0.05,drag=null;
+let MESH=null;
+
+function rebuild(){
+ const L=bodyLevels(),body=buildBody(L),head=headRings(L),g=document.getElementById('garment').value;
+ const faces=[];
+ ringsToFaces(body.torso,()=>[210,208,205],1.0,faces);   // forma gris
+ // cuello que une el torso con la cabeza
+ ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/7.5,P.contorno_cuello/8.5,2),
+              ()=>[214,201,190],1.0,faces);
+ ringsToFaces(head,()=>[214,201,190],1.0,faces);
+ // pedestal
+ const baseY=body.torso[0][0][1]-2;
+ ringsToFaces(tube([0,baseY,0],[0,P.estatura*0.10,0],3,3,1),()=>[120,120,128],1.0,faces);
+ ringsToFaces(tube([0,P.estatura*0.10,0],[0,P.estatura*0.06,0],18,18,1),()=>[90,90,98],1.0,faces);
+ const gm=buildGarment(L,g);
+ const all=faces.concat(gm.faces);
+ let yMin=1e9,yMax=-1e9;
+ for(const fa of all)for(const v of fa.v){if(v[1]<yMin)yMin=v[1];if(v[1]>yMax)yMax=v[1];}
+ MESH={faces:all,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin)};
+ // panel de ajuste
+ document.getElementById('fit').innerHTML='<b>Holgura (ajuste)</b>'+gm.fit.map(f=>
+  '<div class="kv"><span>'+f[0]+'</span><b style="color:rgb('+easeColor(f[1]).join(',')+')">'+f[1].toFixed(1)+' cm</b></div>').join('');
+ draw();}
+
+function draw(){
+ const w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);
+ const cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+ const rot=p=>{let x=p[0]*cyaw-p[2]*syaw,z=p[0]*syaw+p[2]*cyaw,y=p[1];
+  let y2=y*cp-z*sp,z2=y*sp+z*cp;return [x,y2,z2];};
+ const cy=MESH.cy,dist=260,f=760;
+ const sc=0.76*h*dist/(f*MESH.hh);   // encuadra la figura completa
+ const proj=p=>{const zc=p[2]+dist;const k=f/(zc||1e-3)*sc;return [w/2+p[0]*k,h*0.52-(p[1]-cy)*k,zc];};
+ const light=norm([0.35,0.55,0.75]);
+ const draws=[];
+ for(const fa of MESH.faces){
+  const rv=fa.v.map(rot);
+  const n=norm(cross([rv[1][0]-rv[0][0],rv[1][1]-rv[0][1],rv[1][2]-rv[0][2]],
+                     [rv[2][0]-rv[0][0],rv[2][1]-rv[0][1],rv[2][2]-rv[0][2]]));
+  const lamb=Math.max(0,n[0]*light[0]+n[1]*light[1]+n[2]*light[2]);
+  const sh=0.35+0.75*lamb;const pv=rv.map(proj);
+  const zc=(pv[0][2]+pv[1][2]+pv[2][2]+pv[3][2])/4;
+  draws.push({pv,zc,col:fa.col,sh:Math.min(1,sh),alpha:fa.alpha});}
+ draws.sort((a,b)=>b.zc-a.zc);
+ for(const d of draws){
+  const c=d.col;ctx.beginPath();ctx.moveTo(d.pv[0][0],d.pv[0][1]);
+  for(let i=1;i<4;i++)ctx.lineTo(d.pv[i][0],d.pv[i][1]);ctx.closePath();
+  ctx.fillStyle='rgba('+Math.round(c[0]*d.sh)+','+Math.round(c[1]*d.sh)+','+Math.round(c[2]*d.sh)+','+d.alpha+')';
+  ctx.fill();}
+ window.__rendered=draws.length;}
+
+// ================= UI =================
+function buildSliders(){const c=document.getElementById('sliders');c.innerHTML='';
+ for(const k in DEFS){const[lab,mn,mx]=DEFS[k];const row=document.createElement('div');row.className='row';
+  row.innerHTML='<label>'+lab+'</label><input type="range" min="'+mn+'" max="'+mx+'" step="0.5" value="'+P[k]+'"><b>'+P[k]+'</b>';
+  const inp=row.querySelector('input'),val=row.querySelector('b');
+  inp.oninput=()=>{P[k]=parseFloat(inp.value);val.textContent=P[k];rebuild();};c.appendChild(row);}}
+const gsel=document.getElementById('garment');
+[["camisa","Camisa"],["falda","Falda"],["pantalon","Pantalón"],["vestido","Vestido"],["blazer","Blazer"]]
+ .forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;gsel.appendChild(o);});
+gsel.onchange=rebuild;
+cv.onpointerdown=e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
+cv.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*0.01;pitch+=(e.clientY-drag[1])*0.01;
+ pitch=Math.max(-0.9,Math.min(0.9,pitch));drag=[e.clientX,e.clientY];draw();};
+cv.onpointerup=()=>{drag=null;cv.style.cursor='grab';};
+buildSliders();rebuild();
+</script></body></html>"""
+
+
+def build_body_viewer(outdir: str = "output") -> str:
+    """Genera el visor 3D del maniquí a medida (HTML autocontenido)."""
+    os.makedirs(outdir, exist_ok=True)
+    path = os.path.join(outdir, "viewer_3d.html")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(_PAGE)
+    return path
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Genera el visor 3D del maniquí a medida")
+    ap.add_argument("--output", default="output")
+    args = ap.parse_args(argv)
+    path = build_body_viewer(args.output)
+    print(f"Visor 3D generado: {path} ({os.path.getsize(path)/1024:.0f} KB)")
+
+
+if __name__ == "__main__":
+    main()

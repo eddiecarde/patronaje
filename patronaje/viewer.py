@@ -450,6 +450,9 @@ def main(argv=None):
     print(f"Visor generado: {path} ({os.path.getsize(path)/1024:.0f} KB)")
     live = build_live_viewer(args.output)
     print(f"Visor en vivo:  {live} ({os.path.getsize(live)/1024:.0f} KB)")
+    from .viewer3d import build_body_viewer
+    v3 = build_body_viewer(args.output)
+    print(f"Maniquí 3D:     {v3} ({os.path.getsize(v3)/1024:.0f} KB)")
 
 
 if __name__ == "__main__":
