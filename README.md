@@ -52,7 +52,8 @@ python -m patronaje.cli --measurements cliente.json --fit fitted --method muelle
 paneles con pinzas de cintura, curva de cadera y pretina (10 estilos: evasé,
 acampanada, circular, tubo, mini, maxi, fruncida, tableada, yoke, godet).
 `--garment trouser` genera un **pantalón base** de dos paneles con curva de tiro,
-pinzas y pretina. Mismo motor, misma exportación. Ver `docs/falda.md` y
+pinzas y pretina (9 estilos: recto, pitillo, wide, palazzo, campana, capri, short,
+culotte, jogger). Mismo motor, misma exportación. Ver `docs/falda.md` y
 `docs/pantalon.md`.
 
 ```bash
