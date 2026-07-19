@@ -97,6 +97,12 @@ copa de manga por bisección) está **portado a JavaScript**, así que no necesi
 servidor ni dependencias. La fidelidad del port se verifica contra el motor
 Python (Δ < 0.0002 cm). Ver `docs/visor_vivo.md`.
 
+**Maniquí 3D a medida**: `python -m patronaje.viewer3d` genera `output/viewer_3d.html`,
+un maniquí paramétrico (dress form) construido desde las medidas, con la prenda como
+**cáscara** y un **mapa de ajuste** (holgura por zona: cómodo/ajustado/tira/holgado).
+Se gira con el ratón, autocontenido (renderizador 3D por software, sin dependencias).
+Ver `docs/visor_3d.md`.
+
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
 `patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
 formatos industriales: `docs/aama_astm.md`.

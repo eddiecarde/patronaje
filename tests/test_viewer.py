@@ -27,6 +27,17 @@ def test_live_viewer_generates_self_contained():
     assert "<script" in html
 
 
+def test_body_viewer_3d_generates_self_contained():
+    from patronaje.viewer3d import build_body_viewer
+    d = tempfile.mkdtemp()
+    path = build_body_viewer(d)
+    assert os.path.exists(path) and os.path.getsize(path) > 0
+    html = pathlib.Path(path).read_text(encoding="utf-8")
+    for marker in ("buildBody", "buildGarment", "easeColor", "getContext", "window.__rendered"):
+        assert marker in html
+    assert "src=" not in html and 'href="http' not in html and "cdn" not in html.lower()
+
+
 def _chromium():
     for pat in ("/opt/pw-browsers/chromium-*/chrome-linux/chrome",
                 "/opt/pw-browsers/chromium-*/chrome-linux/headless_shell"):
@@ -72,3 +83,27 @@ def test_live_viewer_matches_python_engine():
     assert abs(tr_js[0] - tr.inseam_length()) < 0.1
     assert abs(tr_js[1] - tr.inseam_length(True)) < 0.1
     assert dz_js == 4 and bz_js == 4     # vestido: talle+falda; blazer: cuerpo+manga 2 piezas
+
+
+@pytest.mark.skipif(_chromium() is None, reason="Chromium no disponible (CI sin navegador)")
+def test_body_viewer_3d_renders_each_garment():
+    """El maniquí 3D dibuja caras para cada prenda sin errores de consola."""
+    playwright = pytest.importorskip("playwright.sync_api")
+    from patronaje.viewer3d import build_body_viewer
+    d = tempfile.mkdtemp()
+    url = pathlib.Path(build_body_viewer(d)).resolve().as_uri()
+    errs = []
+    with playwright.sync_playwright() as pw:
+        b = pw.chromium.launch(executable_path=_chromium())
+        pg = b.new_page()
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(url)
+        pg.wait_for_function("window.__rendered !== undefined")
+        counts = {}
+        for g in ["camisa", "falda", "pantalon", "vestido", "blazer"]:
+            pg.select_option("#garment", g)
+            pg.wait_for_timeout(30)
+            counts[g] = pg.evaluate("window.__rendered")
+        b.close()
+    assert not errs, errs
+    assert all(v > 100 for v in counts.values()), counts
