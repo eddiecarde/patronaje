@@ -2,11 +2,14 @@
 
 `output/viewer_live.html` es un visor donde se **elige la prenda, se mueven las
 medidas con sliders y el patrón se recalcula al instante**, sin servidor ni
-dependencias. Cubre **camisa, falda y pantalón**:
+dependencias. Cubre las **cinco prendas**:
 
 - **Camisa**: delantero, espalda, canesú y manga + casado escote/sisa/copa.
 - **Falda**: delantera y trasera con pinzas + cintura/cadera/largo.
 - **Pantalón**: delantero y trasero con curva de tiro y pinzas + entrepierna.
+- **Vestido**: talle entallado (con pinzas) + falda + casado de talle.
+- **Blazer**: delantero con solapa + espalda + **manga de dos piezas** (mangón +
+  soplillo, cuyas costuras casan).
 
 Todo en tiempo real.
 
@@ -26,6 +29,10 @@ El núcleo geométrico está **portado a JavaScript** dentro del propio HTML:
   copia de `blocks/aldrich_sleeve`.
 - **Pinza** (`insertDart`) — copia de `blocks/fitted._insert_dart`.
 - **Bloques de falda y pantalón** — copia de `blocks/skirt` y `blocks/trouser`.
+- **Cuerpo entallado** (`fittedBodice`) — copia de `blocks/fitted` (pinza de busto
+  en el costado, pinzas de cintura y de hombro).
+- **Manga de dos piezas** (`twoPieceSleeve`, con `bow`) — copia de `blocks/blazer`
+  (costuras de igual longitud por sagita de parábola).
 
 Al no depender de shapely/numpy, el visor es **autocontenido** (un solo archivo,
 sin CDN ni red) y funciona offline o incrustado en cualquier página.

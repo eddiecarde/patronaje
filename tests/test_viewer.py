@@ -17,7 +17,8 @@ def test_live_viewer_generates_self_contained():
     html = pathlib.Path(path).read_text(encoding="utf-8")
     # núcleo portado presente
     for marker in ("class Spline", "function bodice", "function sleeve", "window.__lengths",
-                   "skirtPieces", "trouserPieces", "insertDart"):
+                   "skirtPieces", "trouserPieces", "insertDart",
+                   "fittedBodice", "dressPieces", "twoPieceSleeve", "blazerPieces"):
         assert marker in html
     # autocontenido: sin recursos externos (el xmlns del SVG no es una carga de red)
     assert "src=" not in html          # ningún <script src>/<img src> remoto
@@ -60,6 +61,9 @@ def test_live_viewer_matches_python_engine():
                             "return [parseFloat(R.metrics[0][1]),parseFloat(R.metrics[1][1])];})()")
         tr_js = pg.evaluate("(()=>{const R=trouserPieces(P);"
                             "return [plen(trouserPanel(P,false).inseam),plen(trouserPanel(P,true).inseam)];})()")
+        # vestido y blazer: nº de piezas y que no lancen excepción
+        dz_js = pg.evaluate("(()=>dressPieces(P).list.length)()")
+        bz_js = pg.evaluate("(()=>blazerPieces(P).list.length)()")
         b.close()
     for k, v in ref.items():
         assert abs(js[k] - v) < 0.05, f"{k}: JS {js[k]:.4f} vs PY {v:.4f}"
@@ -67,3 +71,4 @@ def test_live_viewer_matches_python_engine():
     assert abs(sk_js[1] - sk.hip_length()) < 0.1
     assert abs(tr_js[0] - tr.inseam_length()) < 0.1
     assert abs(tr_js[1] - tr.inseam_length(True)) < 0.1
+    assert dz_js == 4 and bz_js == 4     # vestido: talle+falda; blazer: cuerpo+manga 2 piezas

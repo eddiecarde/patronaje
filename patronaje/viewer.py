@@ -156,7 +156,8 @@ button{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radiu
 </style></head><body><div class="wrap">
 <h1>Patronaje — visor en vivo (motor paramétrico en el navegador)</h1>
 <div class="sub">Elige la prenda, mueve las medidas y el patrón se recalcula al instante
- (camisa, falda, pantalón). Sin dependencias: el núcleo (spline G2 + fórmulas de bloque) corre en JS.</div>
+ (camisa, falda, pantalón, vestido, blazer). Sin dependencias: el núcleo (spline G2 +
+ fórmulas de bloque, cuerpo entallado y manga de dos piezas) corre en JS.</div>
 <div class="stage">
  <div class="controls">
   <div class="row"><label>Prenda</label>
@@ -216,7 +217,81 @@ function bodice(P){
  const armXb=xAtY(backArm,yl);
  const yoke=[cbn].concat(backNeck.slice(1),[spB],backArm.filter(p=>p[1]<=yl),[[armXb,yl]],[[0,yl]]);
  const lower=[[0,yl],[armXb,yl]].concat(backArm.filter(p=>p[1]>=yl),[[cuarto,largo]],[[0,largo]]);
- return {front,yoke,lower,backNeck,frontNeck,backArm,frontArm,scye};}
+ return {front,yoke,lower,backNeck,frontNeck,backArm,frontArm,scye,cuarto,
+         snpF,spF,cfn,snpB,spB,cbn};}
+
+// ---- cuerpo entallado (fiel a blocks.fitted, pinza de busto en el costado) ----
+const DSPEC={bust_dart:3.0,front_waist_dart:3.5,back_waist_dart:3.5,side_supp:1.5,
+ back_shoulder_dart:0.8,bust_point_x:9.3,bp_drop:1.5,bust_to_waist:20.0,waist_ease:4.0};
+function fittedBodice(P){
+ const b=bodice(P),S=DSPEC,bust_y=b.scye,quarter=b.cuarto;
+ const waist_y=bust_y+S.bust_to_waist,qw=(P.cintura+S.waist_ease)/4,supp=quarter-qw;
+ const side=Math.min(S.side_supp,supp),fwd=Math.max(0,Math.min(S.front_waist_dart,supp-side)),
+  bwd=Math.max(0,Math.min(S.back_waist_dart,supp-side)),w_side=quarter-side;
+ const BP=[S.bust_point_x,bust_y+S.bp_drop],bd=S.bust_dart,fwaist_y=waist_y+bd;
+ const us=[quarter,bust_y];
+ const side_edge=[us,[BP[0]+2,bust_y+bd/2],[quarter,bust_y+bd]].concat(
+  smooth([[quarter,bust_y+bd],[w_side+0.6,(bust_y+bd+fwaist_y)/2],[w_side,fwaist_y]],6).slice(1));
+ const bustDart=[us,[BP[0]+2,bust_y+bd/2],[quarter,bust_y+bd]];
+ const fwx=BP[0],fwAp=[fwx,BP[1]+3],fl1=[fwx+fwd/2,fwaist_y],fl2=[fwx-fwd/2,fwaist_y];
+ const front=dedup(b.frontNeck.slice().reverse().concat([b.spF],b.frontArm.slice(1),
+  side_edge.slice(1),[fl1,fwAp,fl2,[0,fwaist_y]]));
+ const bwx=w_side*0.42,bwAp=[bwx,waist_y-12],bl1=[bwx+bwd/2,waist_y],bl2=[bwx-bwd/2,waist_y];
+ const shc=[b.snpB[0]+(b.spB[0]-b.snpB[0])*0.5,b.snpB[1]+(b.spB[1]-b.snpB[1])*0.5],sd=S.back_shoulder_dart;
+ const shd1=[shc[0]-sd/2,shc[1]],shd2=[shc[0]+sd/2,shc[1]],shAp=[bwx,shc[1]+8];
+ const back=dedup([b.cbn].concat(b.backNeck.slice(1),[b.snpB,shd1,shAp,shd2,b.spB],b.backArm.slice(1),
+  smooth([[quarter,bust_y],[w_side+0.6,(bust_y+waist_y)/2],[w_side,waist_y]],6).slice(1),[bl1,bwAp,bl2],[[0,waist_y]]));
+ return {front,back,frontDarts:[bustDart,[fl1,fwAp,fl2]],backDarts:[[bl1,bwAp,bl2],[shd1,shAp,shd2]],
+  BP,bust_y,quarter,waist_y,fwaist_y,w_side,fwd,bwd,snpF:b.spF,spF:b.spF,frontArm:b.frontArm,
+  backArm:b.backArm,backNeck:b.backNeck,cbn:b.cbn,snpB:b.snpB,spB:b.spB,cfnY:b.cfn[1],snpFx:b.snpF[0]};}
+
+// ---- vestido (cuerpo entallado + falda, fiel a garment.dress) ----
+function dressPieces(P){
+ const fb=fittedBodice(P),f=skirtPanel(P,2.5,10,0.45),b=skirtPanel(P,3.5,14,0.50);
+ const bodW=(fb.w_side)-fb.fwd, skW=((P.cadera+4)/4-((P.cadera+4)/4-(P.cintura+1)/4))+0; // approx
+ const skFin=(P.cintura+1)/4;
+ return {list:[["Vestido delantero",fb.front,fb.frontDarts],["Vestido espalda",fb.back,fb.backDarts],
+  ["Falda delantera",f.contour,[f.dart]],["Falda trasera",b.contour,[b.dart]]],
+  metrics:[["Cintura talle (term.)",bodW.toFixed(1)+" cm"],["Cintura falda",skFin.toFixed(1)+" cm"],
+           ["Casado talle",Math.abs(bodW-skFin).toFixed(2)+" cm",Math.abs(bodW-skFin)<2.0]]};}
+
+// ---- blazer: manga de dos piezas + cuerpo con solapa (fiel a blocks.blazer) ----
+function bow(p0,p1,target,sign){
+ const c=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
+ if(target<=c+1e-6||c<1e-9)return [p0,p1];
+ const sag=Math.sqrt(Math.max(0,3*c*(target-c)/8)),mx=(p0[0]+p1[0])/2,my=(p0[1]+p1[1])/2;
+ const nx=-(p1[1]-p0[1])/c,ny=(p1[0]-p0[0])/c;
+ return smooth([p0,[mx+nx*sag*sign,my+ny*sag*sign],p1],8);}
+function twoPieceSleeve(P){
+ const scye=P.busto/8+10.5+0.5,h=scye*0.55,bh=(P.contorno_brazo+10)/4,L=P.largo_manga,wristf=P.muneca+10,ft=0.60;
+ const Wt=2*bh*ft,Wu=2*bh*(1-ft),wt=wristf*ft,wu=wristf*(1-ft);
+ const ct=Math.hypot(Wt/2-wt/2,L-h),cu=Math.hypot(Wu/2-wu/2,L-h),Ls=Math.max(ct,cu)+1.2;
+ const capT=smooth([[-Wt/2,h],[-Wt*0.24,h*0.16],[0,0],[Wt*0.24,h*0.16],[Wt/2,h]],8);
+ const top=dedup(capT.concat(bow([Wt/2,h],[wt/2,L],Ls,1).slice(1),[[-wt/2,L]],bow([-wt/2,L],[-Wt/2,h],Ls,-1).slice(1)));
+ const us=h*0.34,scoop=smooth([[-Wu/2,h],[0,h+us],[Wu/2,h]],8);
+ const under=dedup(scoop.concat(bow([Wu/2,h],[wu/2,L],Ls,-1).slice(1),[[-wu/2,L]],bow([-wu/2,L],[-Wu/2,h],Ls,1).slice(1)));
+ return {top,under,seam:Ls};}
+function jacketBody(P){
+ const fb=fittedBodice(P),ext=2,lapw=8,drop=24,fnw=fb.snpFx,fnd=fb.cfnY;
+ const usx=fb.quarter,bust_y=fb.bust_y,waist_y=fb.waist_y,hem_y=waist_y+drop;
+ const w_side=fb.w_side,hip_x=Math.max(w_side+2,(P.cadera+6)/4),break_y=waist_y-6;
+ const side=smooth([[usx,bust_y],[w_side+0.5,(bust_y+waist_y)/2],[w_side,waist_y],[hip_x-0.4,(waist_y+hem_y)/2],[hip_x,hem_y]],6);
+ const LP=[-ext-lapw,break_y-(break_y-fnd)*0.5],NT=[-ext-lapw+2.6,LP[1]-3.2],gorge=[fnw*0.5,fnd*0.32],snp=[fnw,0];
+ const front=dedup([[-ext,hem_y],[-ext,break_y],LP,NT,gorge,snp,fb.spF].concat(fb.frontArm.slice(1),side.slice(1),[[-ext,hem_y]]));
+ const BP=fb.BP,intk=fb.fwd,fwx=BP[0];
+ const fdarts=[[[usx,bust_y+1.5],BP,[usx-1.5,bust_y+3.5]],
+  [[fwx+intk/2,waist_y],[fwx,BP[1]+2],[fwx-intk/2,waist_y]],
+  [[fwx+intk/2,waist_y],[fwx,waist_y+13],[fwx-intk/2,waist_y]]];
+ const w_sideB=(fb.quarter)-fb.w_side>0?fb.w_side:fb.w_side;
+ const hip_xB=hip_x,sideB=smooth([[usx,bust_y],[w_side+0.5,(bust_y+waist_y)/2],[w_side,waist_y],[hip_xB-0.4,(waist_y+hem_y)/2],[hip_xB,hem_y]],6);
+ const back=dedup([fb.cbn].concat(fb.backNeck.slice(1),[fb.spB],fb.backArm.slice(1),sideB.slice(1),[[0,hem_y]]));
+ return {front,back,fdarts,bdarts:fb.backDarts};}
+function blazerPieces(P){
+ const jb=jacketBody(P),s=twoPieceSleeve(P);
+ return {list:[["Chaqueta delantero",jb.front,jb.fdarts],["Chaqueta espalda",jb.back,jb.bdarts],
+  ["Mangón",s.top,[]],["Soplillo",s.under,[]]],
+  metrics:[["Costura manga (mangón=soplillo)",s.seam.toFixed(1)+" cm"],
+           ["Manga de dos piezas","casan ✓",true]]};}
 
 function sleeve(P,targetArm){
  const capFor=(h,bh)=>{const sh=[0,0],br=[bh,h],bl=[-bh,h];
@@ -301,7 +376,9 @@ const DEFS={
 const GARMENTS={
  camisa:{label:"Camisa",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","contorno_brazo","muneca","largo_camisa","largo_manga"],fn:shirtPieces},
  falda:{label:"Falda",keys:["cintura","cadera","altura_cadera","largo_falda"],fn:skirtPieces},
- pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon"],fn:trouserPieces}};
+ pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon"],fn:trouserPieces},
+ vestido:{label:"Vestido",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","altura_cadera","largo_falda"],fn:dressPieces},
+ blazer:{label:"Blazer",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","contorno_brazo","muneca","largo_manga"],fn:blazerPieces}};
 const P={};for(const k in DEFS)P[k]=DEFS[k][3];
 let current="camisa";
 
