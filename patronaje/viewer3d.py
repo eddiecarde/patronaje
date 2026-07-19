@@ -116,15 +116,16 @@ function buildBody(L){  // figura humana: torso + brazos + piernas
   limbs.push(tube(el,wr,fR,wR,4));
   limbs.push(ellip(wr,wR*1.3,wR*1.7,wR*1.1));            // mano
  });
- // piernas
- const tR=P.cadera*0.16, kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5;
+ // piernas (+ colisionadores cápsula para la simulación)
+ const tR=P.cadera*0.16, kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5, legs=[];
  [1,-1].forEach(s=>{
   const hip=[s*lx,L.hipY-6,0], kn=[s*lx*0.92,L.kneeY,0.3], an=[s*lx*0.9,L.ankleY,0.3];
   limbs.push(tube(hip,kn,tR,kR,5));
   limbs.push(tube(kn,an,kR,aR,4));
   limbs.push(ellip([s*lx*0.9,L.ankleY-1,aR*1.4],aR*1.0,aR*0.85,aR*2.4)); // pie
+  legs.push({a:hip,b:kn,r0:tR,r1:kR},{a:kn,b:an,r0:kR,r1:aR});
  });
- return {torso:T,limbs,levels:L};}
+ return {torso:T,limbs,legs,levels:L};}
 
 function headRings(L){ // cabeza elipsoide
  const cy=(L.headB+L.headT)/2, ry=(L.headT-L.headB)/2, rx=ry*0.70, rz=ry*0.80, out=[];
@@ -232,7 +233,14 @@ function garmentGrids(L,g,prof){
  return grids;}
 
 // ================= solver PBD =================
-function buildCloth(grids,prof){
+function capsulePush(p,seg){  // empuja la partícula fuera de una cápsula (segmento+radio)
+ const a=seg.a,b=seg.b,abx=b[0]-a[0],aby=b[1]-a[1],abz=b[2]-a[2];
+ const L2=abx*abx+aby*aby+abz*abz||1;
+ let t=((p[0]-a[0])*abx+(p[1]-a[1])*aby+(p[2]-a[2])*abz)/L2;t=Math.max(0,Math.min(1,t));
+ const cx=a[0]+abx*t,cy=a[1]+aby*t,cz=a[2]+abz*t;
+ let dx=p[0]-cx,dy=p[1]-cy,dz=p[2]-cz,dl=Math.hypot(dx,dy,dz),r=(seg.r0+(seg.r1-seg.r0)*t)+0.8;
+ if(dl<r&&dl>1e-6){const s=r/dl;p[0]=cx+dx*s;p[1]=cy+dy*s;p[2]=cz+dz*s;}}
+function buildCloth(grids,prof,legs,hipY){
  const pos=[],prev=[],pin=[],cons=[],faces=[],gridInfo=[];
  for(const rings of grids){
   const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
@@ -246,7 +254,7 @@ function buildCloth(grids,prof){
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
   gridInfo.push({base,R});}
- return {pos,prev,pin,cons,faces,prof};}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0};}
 
 function stepCloth(cl,dt){
  const g=-160*dt*dt, damp=0.985;
@@ -260,11 +268,12 @@ function stepCloth(cl,dt){
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
-  // colisión con el maniquí (elipse por altura + margen)
+  // colisión con el maniquí: torso (elipse por altura) arriba, piernas (cápsulas) abajo
   for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
-   let [a,d]=bodyAD(cl.prof,p[1]);a+=0.8;d+=0.8;
-   const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
-   if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}}
+   if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=0.8;d+=0.8;
+    const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
+    if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
+   for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);}}
 }
 function clothFaces(cl,col){const out=[];
  for(const q of cl.faces)out.push({v:[cl.pos[q[0]],cl.pos[q[1]],cl.pos[q[2]],cl.pos[q[3]]],col,alpha:0.9});
@@ -286,14 +295,14 @@ function rebuild(){
  const gm=buildGarment(L,g);
  const all=bfaces.concat(gm.faces);
  let yMin=1e9,yMax=-1e9;for(const fa of all)for(const v of fa.v){if(v[1]<yMin)yMin=v[1];if(v[1]>yMax)yMax=v[1];}
- MESH={body:bfaces,garment:gm.faces,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin),prof,L,g};
+ MESH={body:bfaces,garment:gm.faces,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin),prof,legs:body.legs,L,g};
  document.getElementById('fit').innerHTML='<b>Holgura (ajuste)</b>'+gm.fit.map(f=>
   '<div class="kv"><span>'+f[0]+'</span><b style="color:rgb('+easeColor(f[1]).join(',')+')">'+f[1].toFixed(1)+' cm</b></div>').join('');
  if(simMode){startSim();}else{if(raf)cancelAnimationFrame(raf),raf=null;draw();}}
 
 function startSim(){
  const grids=garmentGrids(MESH.L,MESH.g,MESH.prof);
- CLOTH=buildCloth(grids,MESH.prof);
+ CLOTH=buildCloth(grids,MESH.prof,MESH.legs,MESH.L.hipY);
  if(raf)cancelAnimationFrame(raf);
  let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);n++;
   draw();if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
