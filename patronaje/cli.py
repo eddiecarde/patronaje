@@ -57,7 +57,7 @@ def generate(size: str = "S", outdir: str = "output", *,
             from .garment.trouser import build_trouser
             shirt = build_trouser(size, method=method, p=p)
             label = "pantalón base"
-        styled = is_skirt and style not in (None, "", "none")
+        styled = style not in (None, "", "none")
         if styled:
             from .transform.styles import apply_style
             shirt = apply_style(shirt, style)
@@ -107,7 +107,7 @@ def generate(size: str = "S", outdir: str = "output", *,
 
     suffix = "" if method == "aldrich" else f"_{method}"
     if other:
-        if is_skirt and style not in (None, "", "none"):
+        if style not in (None, "", "none"):
             suffix += f"_{style}"
     elif fitted:
         suffix += f"_base_{bust_dart}"
@@ -185,7 +185,9 @@ def main(argv=None):
                          "dolman, kimono, raglan, godet, wrap, back_pleat, "
                          "off_shoulder, tie_front. "
                          "Falda (--garment skirt): evase, acampanada, circular, tubo, "
-                         "mini, maxi, fruncida, tableada, yoke, godet")
+                         "mini, maxi, fruncida, tableada, yoke, godet. "
+                         "Pantalón (--garment trouser): recto, pitillo, wide, palazzo, "
+                         "campana, capri, short, culotte, jogger")
     ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt", "trouser"],
                     help="Prenda: shirt = camisa; skirt = falda base recta; "
                          "trouser = pantalón base")

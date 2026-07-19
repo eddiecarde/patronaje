@@ -53,3 +53,26 @@ Marco local por panel: `x = 0` en la línea central (CF/CB), `x` hacia el costad
 
 Ambos se colocan a la misma fracción de arco y se validan por longitud de tramo
 (entrepierna del/tra casan con Δ < 0.6 cm; costado con Δ < 0.3 cm).
+
+## Estilos (manipulación del bloque)
+
+`--garment trouser --style X` modifica la **pierna** (por debajo del tiro/rodilla)
+escalando simétricamente respecto de la raya, o recortando el largo. La cadera,
+el tiro y las pinzas se conservan. Implementados en `transform/trouser_styles.py`.
+
+| Estilo    | Silueta                                             |
+|-----------|-----------------------------------------------------|
+| `recto`   | pierna recta                                        |
+| `pitillo` | skinny (estrecha de la rodilla al bajo)             |
+| `wide`    | pierna ancha desde el tiro                          |
+| `palazzo` | muy ancho y fluido                                  |
+| `campana` | bootcut (entra en la rodilla, acampana al bajo)     |
+| `capri`   | recortado a media pantorrilla                       |
+| `short`   | recortado por encima de la rodilla                  |
+| `culotte` | ancho + recortado (falda-pantalón)                  |
+| `jogger`  | estrecha el bajo + puño elástico                    |
+
+```bash
+python -m patronaje.cli --garment trouser --style palazzo --size S
+python -m patronaje.cli --garment trouser --style pitillo --all-sizes
+```
