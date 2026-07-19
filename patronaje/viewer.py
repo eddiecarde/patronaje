@@ -155,20 +155,21 @@ button{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radiu
 :root[data-theme="light"] .controls{background:#fff}
 </style></head><body><div class="wrap">
 <h1>Patronaje — visor en vivo (motor paramétrico en el navegador)</h1>
-<div class="sub">Mueve las medidas y el patrón se recalcula al instante. Camisa básica
- femenina ML (Aldrich). Sin dependencias: el núcleo (spline G2 + fórmulas Aldrich) corre en JS.</div>
+<div class="sub">Elige la prenda, mueve las medidas y el patrón se recalcula al instante
+ (camisa, falda, pantalón). Sin dependencias: el núcleo (spline G2 + fórmulas de bloque) corre en JS.</div>
 <div class="stage">
- <div class="controls" id="ctrls"></div>
+ <div class="controls">
+  <div class="row"><label>Prenda</label>
+   <select id="garment" style="flex:1;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff"></select></div>
+  <div id="ctrls"></div>
+ </div>
  <div class="svgbox">
   <div id="svg"></div>
   <div style="margin-top:10px" class="legend">
    <span><i class="dot" style="background:#22405e"></i>línea de costura</span>
-   <span><i class="dot" style="background:#ca0"></i>hilo</span></div>
-  <div class="kv"><span>Escote (medio)</span><b id="escote">—</b></div>
-  <div class="kv"><span>Sisa</span><b id="sisa">—</b></div>
-  <div class="kv"><span>Copa de manga</span><b id="copa">—</b></div>
-  <div class="kv"><span>Casado |sisa − copa|</span><b id="match">—</b></div>
-  <div style="margin-top:10px"><button id="reset">Restablecer talla S</button></div>
+   <span><i class="dot" style="background:#111"></i>pinza</span></div>
+  <div id="metrics"></div>
+  <div style="margin-top:10px"><button id="reset">Restablecer medidas</button></div>
  </div>
 </div></div>
 <script>
@@ -230,50 +231,113 @@ function sleeve(P,targetArm){
  const outline=cap.concat([[bocaHalf,P.largo_manga],[-bocaHalf,P.largo_manga]]);
  return {outline,capLen:plen(cap)};}
 
-const FIELDS=[
- ["busto","Busto",76,120,88],["holgura_busto","Holgura busto",2,16,8],
- ["contorno_cuello","Contorno cuello",32,46,37],["ancho_espalda","Ancho espalda",32,46,37],
- ["hombro","Hombro",10,16,12.5],["contorno_brazo","Contorno brazo",24,42,30],
- ["muneca","Muñeca",14,24,18],["largo_camisa","Largo camisa",50,90,68],
- ["largo_manga","Largo manga",45,74,60]];
-const P={};FIELDS.forEach(f=>P[f[0]]=f[4]);
+// pinza en un borde (fiel a blocks.fitted._insert_dart)
+function insertDart(edge,frac,intake,apex){
+ const pts=edge.map(p=>[p[0],p[1]]),seg=[];
+ for(let i=0;i<pts.length-1;i++)seg.push(Math.hypot(pts[i+1][0]-pts[i][0],pts[i+1][1]-pts[i][1]));
+ const tot=seg.reduce((a,b)=>a+b,0)||1;
+ const at=(dist)=>{let acc=0;for(let i=0;i<pts.length-1;i++){if(acc+seg[i]>=dist){const t=seg[i]?(dist-acc)/seg[i]:0;
+   return [pts[i][0]+t*(pts[i+1][0]-pts[i][0]),pts[i][1]+t*(pts[i+1][1]-pts[i][1])];}acc+=seg[i];}return pts[pts.length-1];};
+ const c=tot*frac,d1=c-intake/2,d2=c+intake/2,leg1=at(d1),leg2=at(d2),ap=[apex[0],apex[1]];
+ const cum=[0];for(const L of seg)cum.push(cum[cum.length-1]+L);
+ const out=[],e=1e-9;
+ for(let i=0;i<pts.length;i++){
+  if(cum[i]<=d1+e||cum[i]>=d2-e)out.push(pts[i]);
+  if(cum[i]<=d1+e&&(i+1===pts.length||cum[i+1]>d1))out.push(leg1,ap,leg2);}
+ return {out,dart:[leg1,ap,leg2]};}
+function dedup(poly){const out=[],tol=1e-6;
+ for(let p of poly){p=[p[0],p[1]];if(!out.length||Math.hypot(p[0]-out[out.length-1][0],p[1]-out[out.length-1][1])>tol)out.push(p);}
+ if(out.length>1&&Math.hypot(out[0][0]-out[out.length-1][0],out[0][1]-out[out.length-1][1])<=tol)out.pop();return out;}
 
-function pieces(){
- const b=bodice(P);
- const s=sleeve(P,plen(b.backArm)+plen(b.frontArm));
+// ---- camisa ----
+function shirtPieces(P){
+ const b=bodice(P),s=sleeve(P,plen(b.backArm)+plen(b.frontArm));
+ const esc=plen(b.backNeck)+plen(b.frontNeck),sisa=plen(b.backArm)+plen(b.frontArm),copa=s.capLen;
+ const d=Math.abs(sisa-copa);
  return {list:[["Delantero",b.front],["Espalda",b.lower],["Canesú",b.yoke],["Manga",s.outline]],
-  escote:plen(b.backNeck)+plen(b.frontNeck),sisa:plen(b.backArm)+plen(b.frontArm),copa:s.capLen};}
+  metrics:[["Escote (medio)",esc.toFixed(1)+" cm"],["Sisa",sisa.toFixed(1)+" cm"],["Copa de manga",copa.toFixed(1)+" cm"],
+           ["Casado |sisa − copa|",d.toFixed(2)+" cm",d<=1.5]],
+  match:{escote:esc,sisa:sisa,copa:copa}};}
+
+// ---- falda (fiel a blocks.skirt) ----
+function skirtPanel(P,dartIn,dartLen,dartFrac){
+ const qh=(P.cadera+4)/4,qw=(P.cintura+1)/4,supp=Math.max(0,qh-qw),dart=Math.min(dartIn,supp),side=supp-dart,sw=qh-side;
+ const hipY=P.altura_cadera,hemY=P.largo_falda,cx=sw*dartFrac;
+ const r=insertDart([[0,0],[sw,0]],sw?cx/sw:0,dart,[cx,dartLen]);
+ const s=smooth([[sw,0],[qh-0.3,hipY*0.55],[qh,hipY]],8);
+ return {contour:r.out.concat(s.slice(1),[[qh,hemY]],[[0,hemY]]),dart:r.dart};}
+function skirtPieces(P){
+ const f=skirtPanel(P,2.5,10,0.45),b=skirtPanel(P,3.5,14,0.50),qh=(P.cadera+4)/4,qw=(P.cintura+1)/4;
+ return {list:[["Falda delantera",f.contour,[f.dart]],["Falda trasera",b.contour,[b.dart]]],
+  metrics:[["Cintura (total)",(4*qw).toFixed(1)+" cm"],["Cadera (total)",(4*qh).toFixed(1)+" cm"],["Largo",P.largo_falda.toFixed(0)+" cm"]]};}
+
+// ---- pantalón (fiel a blocks.trouser) ----
+function trouserPanel(P,back){
+ const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,rise=P.cadera/4+4,hipY=P.altura_cadera,hemY=P.largo_pantalon;
+ const kneeY=rise+(hemY-rise)*0.47,fork=hq*(back?0.45:0.20);
+ const knH=(44/4)*(back?1.05:0.92),hmH=(42/4)*(back?1.05:0.92);
+ const dIn=back?3:2,dLen=back?13:10,tilt=back?2:0;
+ const supp=Math.max(0,hq-wq),dart=Math.min(dIn,supp),side=supp-dart,sw=hq-side;
+ const lc=(hq-fork)/2,kin=lc-knH,kout=lc+knH,hin=lc-hmH,hout=lc+hmH;
+ const cf=smooth([[tilt,0],[0,hipY*0.7],[0,hipY],[-fork*0.45,rise-2.5],[-fork,rise]],8);
+ const ins=smooth([[-fork,rise],[kin,kneeY],[hin,hemY]],8);
+ const out=smooth([[hout,hemY],[kout,kneeY],[hq,hipY],[sw,0]],8);
+ const cx=sw*(back?0.42:0.45),frac=(sw-cx)/Math.max(1e-6,sw-tilt);
+ const r=insertDart([[sw,0],[tilt,0]],frac,dart,[cx,dLen]);
+ const contour=dedup(cf.concat(ins.slice(1),[[hout,hemY]],out.slice(1),r.out.slice(1)));
+ return {contour,dart:r.dart,inseam:ins};}
+function trouserPieces(P){
+ const f=trouserPanel(P,false),b=trouserPanel(P,true);
+ return {list:[["Pantalón delantero",f.contour,[f.dart]],["Pantalón trasero",b.contour,[b.dart]]],
+  metrics:[["Entrepierna del.",plen(f.inseam).toFixed(1)+" cm"],["Entrepierna tra.",plen(b.inseam).toFixed(1)+" cm"],["Largo",P.largo_pantalon.toFixed(0)+" cm"]]};}
+
+const DEFS={
+ busto:["Busto",76,120,88],holgura_busto:["Holgura busto",2,16,8],
+ contorno_cuello:["Contorno cuello",32,46,37],ancho_espalda:["Ancho espalda",32,46,37],
+ hombro:["Hombro",10,16,12.5],contorno_brazo:["Contorno brazo",24,42,30],muneca:["Muñeca",14,24,18],
+ largo_camisa:["Largo camisa",50,90,68],largo_manga:["Largo manga",45,74,60],
+ cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],altura_cadera:["Altura cadera",16,26,20],
+ largo_falda:["Largo falda",35,95,60],largo_pantalon:["Largo pantalón",70,115,100]};
+const GARMENTS={
+ camisa:{label:"Camisa",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","contorno_brazo","muneca","largo_camisa","largo_manga"],fn:shirtPieces},
+ falda:{label:"Falda",keys:["cintura","cadera","altura_cadera","largo_falda"],fn:skirtPieces},
+ pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon"],fn:trouserPieces}};
+const P={};for(const k in DEFS)P[k]=DEFS[k][3];
+let current="camisa";
 
 function draw(){
- const R=pieces();let ox=0,gap=6,parts=[],minY=1e9,maxY=-1e9;
- R.list.forEach(([name,poly])=>{
+ const R=GARMENTS[current].fn(P);let ox=0,gap=6,parts=[],minY=1e9,maxY=-1e9;
+ R.list.forEach(([name,poly,darts])=>{
   let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
   poly.forEach(p=>{mnx=Math.min(mnx,p[0]);mxx=Math.max(mxx,p[0]);mny=Math.min(mny,p[1]);mxy=Math.max(mxy,p[1]);});
-  const dx=ox-mnx;const pts=poly.map(p=>[p[0]+dx,p[1]]);
-  parts.push({name,pts,cx:(mnx+mxx)/2+dx,top:mny});
+  const dx=ox-mnx;
+  parts.push({name,pts:poly.map(p=>[p[0]+dx,p[1]]),cx:(mnx+mxx)/2+dx,top:mny,
+   darts:(darts||[]).map(dt=>dt.map(p=>[p[0]+dx,p[1]]))});
   minY=Math.min(minY,mny);maxY=Math.max(maxY,mxy);ox+=(mxx-mnx)+gap;});
- const W=ox,pad=6;const vb=[-pad,minY-pad-4,W+2*pad,(maxY-minY)+2*pad+4];
+ const pad=6,vb=[-pad,minY-pad-4,ox+2*pad,(maxY-minY)+2*pad+4];
  let svg='<svg viewBox="'+vb.join(' ')+'" xmlns="http://www.w3.org/2000/svg">';
  parts.forEach(pt=>{const d=pt.pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' ')+' Z';
   svg+='<path d="'+d+'" fill="none" stroke="#22405e" stroke-width="0.5"/>';
+  pt.darts.forEach(dt=>{svg+='<path d="M'+dt[0][0].toFixed(2)+' '+dt[0][1].toFixed(2)+'L'+dt[1][0].toFixed(2)+' '+dt[1][1].toFixed(2)
+   +'L'+dt[2][0].toFixed(2)+' '+dt[2][1].toFixed(2)+'" fill="none" stroke="#111" stroke-width="0.35"/>';});
   svg+='<text x="'+pt.cx.toFixed(1)+'" y="'+(pt.top-1).toFixed(1)+'" font-size="3" text-anchor="middle" fill="#6b8199">'+pt.name+'</text>';});
  svg+='</svg>';
  document.getElementById('svg').innerHTML=svg;
- document.getElementById('escote').textContent=R.escote.toFixed(1)+' cm';
- document.getElementById('sisa').textContent=R.sisa.toFixed(1)+' cm';
- document.getElementById('copa').textContent=R.copa.toFixed(1)+' cm';
- const d=Math.abs(R.sisa-R.copa);const m=document.getElementById('match');
- m.textContent=d.toFixed(2)+' cm';m.className=d<=1.5?'ok':'bad';
- window.__lengths=R;}
+ document.getElementById('metrics').innerHTML=R.metrics.map(m=>
+  '<div class="kv"><span>'+m[0]+'</span><b'+(m.length>2?' class="'+(m[2]?'ok':'bad')+'"':'')+'>'+m[1]+'</b></div>').join('');
+ if(R.match)window.__lengths=R.match;}
 
 function build(){const c=document.getElementById('ctrls');c.innerHTML='';
- FIELDS.forEach(f=>{const [k,lab,mn,mx,def]=f;
+ GARMENTS[current].keys.forEach(k=>{const [lab,mn,mx]=DEFS[k];
   const row=document.createElement('div');row.className='row';
   row.innerHTML='<label>'+lab+'</label><input type="range" min="'+mn+'" max="'+mx+'" step="0.5" value="'+P[k]+'"><b>'+P[k]+'</b>';
   const inp=row.querySelector('input'),val=row.querySelector('b');
   inp.addEventListener('input',()=>{P[k]=parseFloat(inp.value);val.textContent=P[k];draw();});
   c.appendChild(row);});}
-document.getElementById('reset').addEventListener('click',()=>{FIELDS.forEach(f=>P[f[0]]=f[4]);build();draw();});
+const gsel=document.getElementById('garment');
+for(const g in GARMENTS){const o=document.createElement('option');o.value=g;o.textContent=GARMENTS[g].label;gsel.appendChild(o);}
+gsel.addEventListener('change',()=>{current=gsel.value;build();draw();});
+document.getElementById('reset').addEventListener('click',()=>{GARMENTS[current].keys.forEach(k=>P[k]=DEFS[k][3]);build();draw();});
 build();draw();
 </script></body></html>"""
 
