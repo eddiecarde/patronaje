@@ -84,8 +84,12 @@ Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 > talla S** + el visor como escaparate. Regenera todo con los comandos de arriba.
 
 **Visor interactivo**: `python -m patronaje.viewer --output output` genera
-`output/viewer.html`, un HTML autocontenido donde eliges método y estilo y ves
-el patrón al instante con consumo y nº de piezas.
+`output/viewer.html` (elige método y estilo, con consumo y nº de piezas) y
+`output/viewer_live.html`, un **visor en vivo** donde mueves las medidas y el
+patrón se **recalcula al instante**: el núcleo (spline G2 + fórmulas Aldrich +
+copa de manga por bisección) está **portado a JavaScript**, así que no necesita
+servidor ni dependencias. La fidelidad del port se verifica contra el motor
+Python (Δ < 0.0002 cm). Ver `docs/visor_vivo.md`.
 
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
 `patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
