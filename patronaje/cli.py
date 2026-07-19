@@ -149,8 +149,10 @@ def generate(size: str = "S", outdir: str = "output", *,
         rep = marker_report(shirt)
         print("\n=== CONSUMO DE TELA (marker) ===")
         for W, dd in rep["por_ancho"].items():
-            print(f"  ancho {dd['ancho_cm']:.0f} cm -> {dd['largo_m']:.2f} m  "
-                  f"(desperdicio {dd['desperdicio']*100:.1f} %)")
+            print(f"  ancho {dd['ancho_cm']:.0f} cm -> 1 prenda {dd['largo_m']:.2f} m "
+                  f"(desperd. {dd['desperdicio']*100:.0f} %)  |  bundle x{dd['bundle_prendas']}: "
+                  f"{dd['bundle_largo_por_prenda_m']:.2f} m/prenda (desperd. "
+                  f"{dd['desperdicio_bundle']*100:.0f} %)")
     if not quiet:
         print(f"\n=== ARCHIVOS GENERADOS (talla {size}) ===")
         for k, v in outputs.items():

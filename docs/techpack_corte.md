@@ -32,19 +32,25 @@ Coloca todas las piezas de tela sobre un ancho dado y calcula **largo de tela** 
   orientación de corte (como un marker real).
 - Piezas **al doblez** se cortan completas (se reflejan en el doblez → ancho
   doble); piezas en **par** generan 2 instancias (2ª espejada).
-- Empaquetado por estantes (First-Fit Decreasing por altura) usando el
-  *bounding box* de la línea de corte.
+- Dos algoritmos: `nest` (estantes por *bounding box*, conservador, sin
+  solapamiento) y `nest_skyline` (**encaje del perfil real del contorno**: las
+  piezas caen sobre la silueta y encajan en las concavidades; prueba varias
+  ordenaciones y elige el menor largo). El marker y el reporte usan `nest_skyline`.
+- **Bundle**: `nest_skyline(..., copies=N)` tiende **varias prendas** en el mismo
+  trazo; `marker_report` prueba bundles y reporta la mejor eficiencia.
 - Anchos soportados: **110 / 150 / 160 cm** (configurable).
 
-### Métricas
+### Métricas (por ancho)
 - **largo** de tela (m) y **compra recomendada** (+7 % de mermas de tendido).
-- **eficiencia** = área real de piezas / (ancho × largo) y **desperdicio** = 1 − eficiencia.
+- **eficiencia** (1 prenda) y **eficiencia_bundle** (varias prendas) = área de
+  piezas / (ancho × largo); **desperdicio** = 1 − eficiencia.
 
 ### Alcance / honestidad
-El nesting por *bounding box* es **conservador**: da un consumo seguro para
-comprar tela sin quedarse corto. El nesting de **contornos irregulares** de un
-sistema CAM (AccuMark, Diamino, Optitex) y la combinación de varias prendas en
-un mismo trazo **reducen el desperdicio** respecto de estas cifras por prenda.
+La eficiencia de **una sola prenda** es baja por naturaleza: sus pocas piezas no
+llenan el ancho de tela (p. ej. dos paneles de falda de ~50 cm en 150 cm). Por eso
+se reporta también el **bundle** (varias prendas), que es como se tiende en una
+sala de corte real y sube mucho la eficiencia. Un sistema CAM (AccuMark, Diamino,
+Optitex) con *no-fit polygon* y mezcla de tallas la mejora aún más.
 
 ## Uso
 

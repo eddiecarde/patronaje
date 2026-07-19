@@ -44,6 +44,24 @@ def test_wider_fabric_uses_less_length():
     assert l160 < l110
 
 
+def test_bundle_marker_is_at_least_as_efficient():
+    sh = build_shirt("S").layout()
+    d = marker_report(sh)["por_ancho"][150.0]
+    # el bundle (varias prendas) nunca es peor que 1 prenda, y suele mejor
+    assert d["eficiencia_bundle"] >= d["eficiencia"] - 1e-9
+    assert d["bundle_largo_por_prenda_m"] <= d["largo_m"] + 1e-6
+    assert d["bundle_prendas"] >= 1
+
+
+def test_copies_scale_and_multiorder_valid():
+    from patronaje.marker.layout import nest_skyline
+    sh = build_shirt("S").layout()
+    _, l1 = nest_skyline(sh, 150.0, copies=1)
+    _, l3 = nest_skyline(sh, 150.0, copies=3)
+    assert l3 > l1                       # 3 prendas ocupan más largo total
+    assert l3 < 3.2 * l1                 # pero no 3x (encajan entre sí)
+
+
 def test_consumption_has_purchase_margin():
     sh = build_shirt("S").layout()
     cons = consumption(sh, widths=(150.0,))

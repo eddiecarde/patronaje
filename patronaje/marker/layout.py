@@ -11,11 +11,13 @@ Algoritmos:
 * ``nest_skyline`` — **nesting por skyline con el perfil real del contorno**:
   las piezas se dejan caer sobre la silueta ya colocada y **encajan en las
   concavidades** unas de otras, con rotación 180° (respeta la línea de hilo).
-  Es el método de sala de corte; reduce el largo/desperdicio de forma notable
-  (p. ej. ~30% menos largo a 110 cm). Lo usan `marker_report` y el export.
+  Prueba **varias ordenaciones** (área/alto/ancho) y se queda con la de menor
+  largo. Con ``copies>1`` tiende **varias prendas** (bundle) para llenar el ancho.
 
-Se reportan dos métricas:
-* **eficiencia de tela** = área real de las piezas / (ancho × largo de tela).
+Se reportan, por ancho de tela:
+* **eficiencia** (1 prenda) = área de las piezas / (ancho × largo de tela).
+* **eficiencia_bundle** = la de un *bundle* de varias prendas (más realista: un
+  marker industrial rara vez tiende una sola prenda, porque no llena el ancho).
 * **desperdicio** = 1 − eficiencia.
 """
 from __future__ import annotations
@@ -74,17 +76,26 @@ def _cut_instances(piece: Piece) -> list[tuple[bool, float, float, list]]:
     return inst
 
 
-def nest(shirt, fabric_width: float, gap: float = 1.0) -> tuple[list[Placement], float]:
+def _all_instances(shirt, copies: int = 1) -> list:
+    """Todas las instancias de tela (opcionalmente ``copies`` prendas apiladas —
+    un *bundle*, como en un marker industrial que tiende varias prendas)."""
+    inst = []
+    for _ in range(max(1, copies)):
+        for piece in shirt.pieces:
+            for k, (mirror, w, h, loc) in enumerate(_cut_instances(piece)):
+                inst.append([piece, k, mirror, w, h, loc])
+    return inst
+
+
+def nest(shirt, fabric_width: float, gap: float = 1.0,
+         copies: int = 1) -> tuple[list[Placement], float]:
     """Empaqueta las piezas en estantes sobre el ancho de tela.
 
     Devuelve (placements, largo_total_cm).
     """
-    items: list[tuple[Piece, int, bool, float, float, list]] = []
-    for piece in shirt.pieces:
-        for k, (mirror, w, h, loc) in enumerate(_cut_instances(piece)):
-            items.append((piece, k, mirror, w, h, loc))
+    items = [tuple(it) for it in _all_instances(shirt, copies)]
     # First-Fit Decreasing por altura
-    items.sort(key=lambda it: it[4], reverse=True)
+    items = sorted(items, key=lambda it: it[4], reverse=True)
 
     placements: list[Placement] = []
     shelf_y = 0.0
@@ -133,28 +144,16 @@ def _flip180(contour, w, h):
     return [(w - x, h - y) for x, y in contour]
 
 
-def nest_skyline(shirt, fabric_width: float, gap: float = 1.0,
-                 step: float = 1.5) -> tuple[list[Placement], float]:
-    """Nesting por **skyline con perfil de contorno** (encaje real de piezas) y
-    rotación 180° (respeta la línea de hilo). Las piezas se dejan caer sobre la
-    silueta ya colocada, encajando en sus concavidades — como un marker real.
-    """
-    import math as _m
-    instances = []
-    for piece in shirt.pieces:
-        for k, (mirror, w, h, loc) in enumerate(_cut_instances(piece)):
-            instances.append([piece, k, mirror, w, h, loc])
-    instances.sort(key=lambda it: it[3] * it[4], reverse=True)  # área bbox desc
-
-    ncol_total = int(_m.ceil(fabric_width / step)) + 2
+def _skyline_pack(instances, fabric_width, gap, step):
+    """Coloca una lista de instancias (ya ordenada) por skyline de contorno."""
+    ncol_total = int(math.ceil(fabric_width / step)) + 2
     skyline = [0.0] * ncol_total
     placements: list[Placement] = []
-
     for piece, k, mirror, w, h, loc in instances:
-        best = None  # (place_y, c0, flip, prof, pw_cols, w, h, contour)
+        best = None
         for flip in (False, True):
             contour = _flip180(loc, w, h) if flip else loc
-            prof, pcols = _column_profile(contour, step)
+            prof, _pcols = _column_profile(contour, step)
             if not prof:
                 continue
             max_c0 = int((fabric_width - w) / step)
@@ -169,18 +168,37 @@ def nest_skyline(shirt, fabric_width: float, gap: float = 1.0,
                     place_y = max(place_y, skyline[gc] - top)
                 if not ok:
                     continue
-                cand = (place_y, c0, flip, prof, w, h, contour)
                 if best is None or place_y < best[0] - 1e-6:
-                    best = cand
+                    best = (place_y, c0, flip, prof, w, h, contour)
         if best is None:
             continue
         place_y, c0, flip, prof, w, h, contour = best
         for j, (top, bot) in prof.items():
             skyline[c0 + j] = place_y + bot + gap
         placements.append(Placement(piece, k, c0 * step, place_y, w, h, mirror or flip))
-        placements[-1].contour = contour  # guarda la orientación usada
+        placements[-1].contour = contour
     total_length = max(skyline) - gap if skyline else 0.0
     return placements, total_length
+
+
+def nest_skyline(shirt, fabric_width: float, gap: float = 1.0,
+                 step: float = 1.0, copies: int = 1) -> tuple[list[Placement], float]:
+    """Nesting por **skyline con perfil de contorno** (encaje real de piezas) y
+    rotación 180° (respeta la línea de hilo). Prueba varias ordenaciones de las
+    piezas y se queda con la de **menor largo**. Con ``copies>1`` tiende varias
+    prendas (bundle) para llenar el ancho, como un marker industrial.
+    """
+    instances = _all_instances(shirt, copies)
+    orders = (lambda it: it[3] * it[4],   # área bbox desc
+              lambda it: it[4],            # alto desc
+              lambda it: it[3])            # ancho desc
+    best = None
+    for key in orders:
+        ordered = sorted(instances, key=key, reverse=True)
+        pls, length = _skyline_pack(ordered, fabric_width, gap, step)
+        if best is None or length < best[1] - 1e-6:
+            best = (pls, length)
+    return best
 
 
 def marker_report(shirt, widths=(110.0, 150.0, 160.0), gap: float = 1.0) -> dict:
@@ -196,6 +214,14 @@ def marker_report(shirt, widths=(110.0, 150.0, 160.0), gap: float = 1.0) -> dict
         placements, length = nest_skyline(shirt, W, gap=gap)
         fabric_area = W * length
         eff = used_area / fabric_area if fabric_area else 0.0
+        # bundle: tiende varias prendas para llenar el ancho (marker industrial);
+        # se queda con la mejor eficiencia entre unos tamaños de bundle.
+        best_eff, best_c, best_len = eff, 1, length
+        for c in (2, 4, 6):
+            _, lb = nest_skyline(shirt, W, gap=gap, step=1.5, copies=c)
+            eb = (used_area * c) / (W * lb) if lb else 0.0
+            if eb > best_eff:
+                best_eff, best_c, best_len = eb, c, lb
         report["por_ancho"][W] = {
             "ancho_cm": W,
             "largo_cm": round(length, 1),
@@ -204,6 +230,11 @@ def marker_report(shirt, widths=(110.0, 150.0, 160.0), gap: float = 1.0) -> dict
             "eficiencia": round(eff, 4),
             "desperdicio": round(1 - eff, 4),
             "n_piezas": len(placements),
+            "bundle_prendas": best_c,
+            "bundle_largo_m": round(best_len / 100.0, 3),
+            "bundle_largo_por_prenda_m": round(best_len / 100.0 / best_c, 3),
+            "eficiencia_bundle": round(best_eff, 4),
+            "desperdicio_bundle": round(1 - best_eff, 4),
         }
     return report
 
