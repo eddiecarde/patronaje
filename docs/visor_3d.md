@@ -31,8 +31,9 @@ Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:
   (diagonales) y de **flexión** (salto de 2), que le dan comportamiento de tela.
 - **Gravedad** + integración de Verlet + amortiguación; el anillo superior queda
   **fijo** (la prenda cuelga de ahí).
-- **Colisión** con el maniquí: cada partícula se empuja fuera de la elipse del
-  cuerpo a su altura (+ margen), así la tela se apoya y drapea sobre la figura.
+- **Colisión** con el maniquí: el **torso** empuja cada partícula fuera de su
+  elipse a esa altura; las **piernas** empujan con **cápsulas** (segmento + radio),
+  de modo que el pantalón cae como dos perneras que se apoyan en las piernas.
 
 Es una simulación de la prenda **ya montada** cayendo sobre el cuerpo; la Fase 3
 sería coser las piezas planas por los **piquetes casados** antes de simular.
