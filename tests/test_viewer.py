@@ -33,7 +33,8 @@ def test_body_viewer_3d_generates_self_contained():
     path = build_body_viewer(d)
     assert os.path.exists(path) and os.path.getsize(path) > 0
     html = pathlib.Path(path).read_text(encoding="utf-8")
-    for marker in ("buildBody", "buildGarment", "easeColor", "getContext", "window.__rendered"):
+    for marker in ("buildBody", "buildGarment", "easeColor", "getContext", "window.__rendered",
+                   "buildCloth", "stepCloth", "garmentGrids"):
         assert marker in html
     assert "src=" not in html and 'href="http' not in html and "cdn" not in html.lower()
 
@@ -107,3 +108,32 @@ def test_body_viewer_3d_renders_each_garment():
         b.close()
     assert not errs, errs
     assert all(v > 100 for v in counts.values()), counts
+
+
+@pytest.mark.skipif(_chromium() is None, reason="Chromium no disponible (CI sin navegador)")
+def test_cloth_simulation_is_stable():
+    """La simulación de caída (PBD) converge sin explotar (sin NaN, acotada)."""
+    playwright = pytest.importorskip("playwright.sync_api")
+    from patronaje.viewer3d import build_body_viewer
+    d = tempfile.mkdtemp()
+    url = pathlib.Path(build_body_viewer(d)).resolve().as_uri()
+    with playwright.sync_playwright() as pw:
+        b = pw.chromium.launch(executable_path=_chromium())
+        pg = b.new_page()
+        pg.goto(url)
+        pg.wait_for_function("window.__rendered !== undefined")
+        stats = {}
+        for g in ["falda", "vestido", "camisa", "pantalon"]:
+            pg.select_option("#garment", g)
+            stats[g] = pg.evaluate(
+                "(()=>{simMode=true;rebuild();if(raf)cancelAnimationFrame(raf);"
+                "for(let i=0;i<400;i++)stepCloth(CLOTH,0.12);"
+                "let bad=0,ymin=1e9,ymax=-1e9;for(const p of CLOTH.pos){"
+                "if(!isFinite(p[0])||!isFinite(p[1])||!isFinite(p[2]))bad++;"
+                "ymin=Math.min(ymin,p[1]);ymax=Math.max(ymax,p[1]);}"
+                "return {bad,span:ymax-ymin,n:CLOTH.pos.length};})()")
+        b.close()
+    for g, s in stats.items():
+        assert s["bad"] == 0, f"{g}: NaN en la malla"
+        assert 5 < s["span"] < 250, f"{g}: la tela explotó/colapsó ({s['span']})"
+        assert s["n"] > 100
