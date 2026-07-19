@@ -1,7 +1,8 @@
 # Visor 3D — maniquí a medida (Opción A)
 
-`output/viewer_3d.html` muestra un **maniquí paramétrico** (dress form) construido
-desde las medidas y la prenda como **cáscara** ajustada al cuerpo, coloreada por un
+`output/viewer_3d.html` muestra una **figura humana paramétrica** (cabeza, cuello,
+torso con hombros, **brazos** y **piernas**, proporcionada por la estatura) construida
+desde las medidas, con la prenda como **cáscara** ajustada al cuerpo, coloreada por un
 **mapa de ajuste** (holgura por zona). Se **gira con el ratón** y se recalcula al
 mover las medidas — todo **autocontenido**, sin dependencias.
 
@@ -38,10 +39,11 @@ sería coser las piezas planas por los **piquetes casados** antes de simular.
 
 ## Cómo funciona (sin dependencias)
 
-- **Maniquí**: se construye por *loft* de **anillos elípticos** cuyo perímetro es la
+- **Figura**: se construye por *loft* de **anillos elípticos** cuyo perímetro es la
   medida a cada nivel (cuello, busto, cintura, cadera) — con la relación
   ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse) — más cabeza,
-  cuello y pedestal.
+  cuello, **brazos** y **piernas** (tubos cónicos desde el hombro y la cadera, con
+  alturas proporcionadas por la estatura).
 - **Prenda**: cáscara a *offset* del cuerpo por la holgura, con la silueta de cada
   tipo (torso + mangas para camisa/vestido/blazer; falda acampanada; dos piernas
   para el pantalón).

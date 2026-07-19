@@ -82,24 +82,52 @@ function easeColor(e){ // holgura cm -> color de ajuste
 
 // niveles del cuerpo (y en cm, cadera arriba del suelo por la estatura)
 function bodyLevels(){
- const hipY=P.estatura*0.47, waistY=hipY+P.altura_cadera, bustY=waistY+P.talle*0.44,
-  chestY=bustY+5, shY=bustY+P.talle*0.30, neckY=shY+3.5, headB=neckY+4, headT=headB+P.estatura*0.13;
- return {hipY,waistY,bustY,chestY,shY,neckY,headB,headT};}
+ const H=P.estatura;
+ const ankleY=H*0.045, kneeY=H*0.28, hipY=H*0.52, waistY=hipY+P.altura_cadera,
+  bustY=waistY+P.talle*0.44, chestY=bustY+H*0.03, shY=bustY+P.talle*0.34,
+  neckY=shY+H*0.02, headB=neckY+H*0.03, headT=headB+H*0.135;
+ return {ankleY,kneeY,hipY,waistY,bustY,chestY,shY,neckY,headB,headT};}
 
-function buildBody(L){
- const rings=[];
- rings.push(ringC(L.hipY,P.cadera,1.42));
- rings.push(ringC(L.waistY,P.cintura,1.34));
- rings.push(ringC(L.bustY,P.busto,1.26));
- rings.push(ringC(L.chestY,P.busto*0.90,1.20));
- rings.push(ringAD(L.shY,P.ancho_espalda*0.55,P.ancho_espalda*0.30));  // hombros anchos y planos
- rings.push(ringC(L.neckY,P.contorno_cuello,1.10));
- // bajo la cadera: redondea hacia el pie del maniquí
- const below=ringC(L.hipY-9,P.cadera*0.82,1.42); below.forEach(p=>p[1]=L.hipY-9);
- return {torso:[below,...rings],levels:L};}
+function ellip(c,rx,ry,rz){const out=[];  // elipsoide (rings) para mano/pie
+ for(let i=0;i<=6;i++){const ph=(-Math.PI/2)+Math.PI*i/6,rr=Math.cos(ph);
+  const ring=[];for(let k=0;k<N;k++){const th=2*Math.PI*k/N;
+   ring.push([c[0]+rx*rr*Math.cos(th),c[1]+ry*Math.sin(ph),c[2]+rz*rr*Math.sin(th)]);}out.push(ring);}
+ return out;}
+
+function buildBody(L){  // figura humana: torso + brazos + piernas
+ const H=P.estatura;
+ const T=[];
+ T.push(ringC(L.hipY-7,P.cadera*0.94,1.38));            // unión a las piernas
+ T.push(ringC(L.hipY,P.cadera,1.40));
+ T.push(ringC((L.hipY+L.waistY)/2,(P.cadera+P.cintura)/2,1.37));
+ T.push(ringC(L.waistY,P.cintura,1.34));
+ T.push(ringC((L.waistY+L.bustY)/2,(P.cintura+P.busto)/2,1.30));
+ T.push(ringC(L.bustY,P.busto,1.26));
+ T.push(ringC(L.chestY,P.busto*0.88,1.20));
+ T.push(ringAD(L.shY,P.ancho_espalda*0.52,P.busto*0.115));   // hombros
+ T.push(ringC(L.neckY,P.contorno_cuello*1.02,1.10));
+ const limbs=[];
+ // brazos (cuelgan a los lados, ligera separación)
+ const shX=P.ancho_espalda*0.50, armLen=H*0.44,
+  uR=P.contorno_brazo/6.0, fR=P.muneca/5.0, wR=P.muneca/7.5;
+ [1,-1].forEach(s=>{
+  const sh=[s*shX,L.shY-3,0.4], el=[s*(shX+1.5),L.shY-armLen*0.46,1.6], wr=[s*(shX+2.6),L.shY-armLen,2.6];
+  limbs.push(tube(sh,el,uR,fR,4));
+  limbs.push(tube(el,wr,fR,wR,4));
+  limbs.push(ellip(wr,wR*1.3,wR*1.7,wR*1.1));            // mano
+ });
+ // piernas
+ const tR=P.cadera*0.16, kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5;
+ [1,-1].forEach(s=>{
+  const hip=[s*lx,L.hipY-6,0], kn=[s*lx*0.92,L.kneeY,0.3], an=[s*lx*0.9,L.ankleY,0.3];
+  limbs.push(tube(hip,kn,tR,kR,5));
+  limbs.push(tube(kn,an,kR,aR,4));
+  limbs.push(ellip([s*lx*0.9,L.ankleY-1,aR*1.4],aR*1.0,aR*0.85,aR*2.4)); // pie
+ });
+ return {torso:T,limbs,levels:L};}
 
 function headRings(L){ // cabeza elipsoide
- const cy=(L.headB+L.headT)/2, ry=(L.headT-L.headB)/2, rx=ry*0.72, rz=ry*0.82, out=[];
+ const cy=(L.headB+L.headT)/2, ry=(L.headT-L.headB)/2, rx=ry*0.70, rz=ry*0.80, out=[];
  for(let i=0;i<=8;i++){const ph=(-Math.PI/2)+Math.PI*i/8, y=cy+ry*Math.sin(ph), rr=Math.cos(ph);
   out.push(ringAD(y,rx*rr,rz*rr));}
  return out;}
@@ -132,10 +160,12 @@ function buildGarment(L,g){
  }else if(g==="pantalon"){
   const rings=[ringC(L.waistY,P.cintura+2,1.34),ringC(L.hipY,P.cadera+5,1.42)];
   push(rings,(i)=>easeColor([2,5][i]||5),0.62);
-  // dos piernas
-  const legTop=L.hipY, ankle=P.estatura*0.06, cx=P.cadera/7;
-  [1,-1].forEach(s=>{const t=tube([s*cx,legTop,0],[s*cx*0.7,ankle,1],P.cadera/12,7,7);
-   ringsToFaces(t,()=>easeColor(6),0.62,faces);});
+  // dos perneras (siguen las piernas del maniquí, con holgura)
+  const legTop=L.hipY-2, ankle=L.ankleY+3, cx=P.cadera/9.5, tR=P.cadera*0.16+2.5;
+  [1,-1].forEach(s=>{
+   const t1=tube([s*cx,legTop,0],[s*cx*0.92,L.kneeY,0.3],tR,tR*0.62,5);
+   const t2=tube([s*cx*0.92,L.kneeY,0.3],[s*cx*0.9,ankle,0.3],tR*0.62,tR*0.5,4);
+   ringsToFaces(t1,()=>easeColor(5),0.62,faces);ringsToFaces(t2,()=>easeColor(5),0.62,faces);});
   fit.push(["Cintura",2],["Cadera",5]);
  }else{ // camisa / vestido / blazer (torso + mangas)
   const botY=(g==="vestido")?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
@@ -144,11 +174,11 @@ function buildGarment(L,g){
    ringC(L.waistY,P.cintura+eW,1.34),ringC(botY,botC,1.42)];
   const cols=[eB*0.6,eB,eW,eH];
   push(rings,(i)=>easeColor(cols[i]),0.6);
-  // mangas
-  const sh=P.ancho_espalda*0.55, sy=L.shY;
-  const slLen=(g==="blazer")?32:(g==="vestido"?26:30);
-  [1,-1].forEach(s=>{const t=tube([s*sh,sy,0],[s*(sh+8),sy-slLen,2],P.busto/12,P.busto/20,6);
-   ringsToFaces(t,()=>easeColor(eB*0.8),0.6,faces);});
+  // mangas (cuelgan sobre los brazos)
+  const sh=P.ancho_espalda*0.50, sy=L.shY-2, armLen=P.estatura*0.44;
+  const slLen=(g==="blazer")?armLen*0.62:(g==="vestido"?armLen*0.42:armLen*0.55);
+  [1,-1].forEach(s=>{const t=tube([s*sh,sy,0.3],[s*(sh+1.5),sy-slLen,1.6],P.contorno_brazo/5.2,P.contorno_brazo/6.0,6);
+   ringsToFaces(t,()=>easeColor(eB*0.8),0.72,faces);});
   fit.push(["Busto",eB],["Cintura",eW],["Cadera",eH]);
  }
  return {faces,fit};}
@@ -188,10 +218,10 @@ function garmentGrids(L,g,prof){
    rings.push(shellRing(y,3,flare));}
   grids.push(rings);
  }else if(g==="pantalon"){
-  const topY=L.hipY,ankle=P.estatura*0.06,cx=P.cadera/7,rr=P.cadera/12;
+  const topY=L.hipY-2,ankle=L.ankleY+3,cx=P.cadera/9.5,tR=P.cadera*0.16+2.5;
   [1,-1].forEach(s=>{const rings=[];for(let i=0;i<=M;i++){const t=i/M,y=topY+(ankle-topY)*t,ring=[];
-   const cxx=s*cx*(1-0.2*t);for(let k=0;k<N;k++){const th=2*Math.PI*k/N;ring.push([cxx+Math.cos(th)*rr,y,Math.sin(th)*rr]);}
-   rings.push(ring);}grids.push(rings);});
+   const cxx=s*cx*(1-0.08*t),rr=tR*(1-0.42*t);for(let k=0;k<N;k++){const th=2*Math.PI*k/N;
+    ring.push([cxx+Math.cos(th)*rr,y,Math.sin(th)*rr]);}rings.push(ring);}grids.push(rings);});
  }else{
   const topY=L.shY-1,hemY=(g==="vestido")?L.waistY-(P.largo-P.talle*0.44):L.hipY-2,rings=[];
   for(let i=0;i<=M;i++){const t=i/M,y=topY+(hemY-topY)*t;
@@ -246,13 +276,12 @@ let yaw=0.5,pitch=0.05,drag=null,MESH=null,CLOTH=null,simMode=false,raf=null;
 
 function rebuild(){
  const L=bodyLevels(),body=buildBody(L),head=headRings(L),g=document.getElementById('garment').value;
+ const SKIN=[228,199,178];
  const bfaces=[];
- ringsToFaces(body.torso,()=>[210,208,205],1.0,bfaces);
- ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/7.5,P.contorno_cuello/8.5,2),()=>[214,201,190],1.0,bfaces);
- ringsToFaces(head,()=>[214,201,190],1.0,bfaces);
- const baseY=body.torso[0][0][1]-2;
- ringsToFaces(tube([0,baseY,0],[0,P.estatura*0.10,0],3,3,1),()=>[120,120,128],1.0,bfaces);
- ringsToFaces(tube([0,P.estatura*0.10,0],[0,P.estatura*0.06,0],18,18,1),()=>[90,90,98],1.0,bfaces);
+ ringsToFaces(body.torso,()=>SKIN,1.0,bfaces);
+ for(const limb of body.limbs)ringsToFaces(limb,()=>SKIN,1.0,bfaces);
+ ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/6.8,P.contorno_cuello/7.5,2),()=>SKIN,1.0,bfaces);
+ ringsToFaces(head,()=>SKIN,1.0,bfaces);
  const prof=bodyProfileFrom(body.torso);
  const gm=buildGarment(L,g);
  const all=bfaces.concat(gm.faces);
@@ -274,7 +303,7 @@ function render(faces){
  const cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
  const rot=p=>{let x=p[0]*cyaw-p[2]*syaw,z=p[0]*syaw+p[2]*cyaw,y=p[1];
   return [x,y*cp-z*sp,y*sp+z*cp];};
- const cy=MESH.cy,dist=260,f=760,sc=0.76*h*dist/(f*MESH.hh);
+ const cy=MESH.cy,dist=260,f=760,sc=0.72*h*dist/(f*MESH.hh);
  const proj=p=>{const zc=p[2]+dist,k=f/(zc||1e-3)*sc;return [w/2+p[0]*k,h*0.52-(p[1]-cy)*k,zc];};
  const light=norm([0.35,0.55,0.75]),draws=[];
  for(const fa of faces){const rv=fa.v.map(rot);
