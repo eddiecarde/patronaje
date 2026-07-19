@@ -10,14 +10,31 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
 # (también se genera al correr `python -m patronaje.viewer`)
 ```
 
-## Qué es (y qué no)
+## Dos modos
 
-- **Es**: un maniquí a medida + la prenda "puesta" como superficie con su silueta y
-  su **holgura real**, para evaluar la **horma** y las proporciones. El mapa de
-  ajuste colorea cada zona por la holgura: 🔴 tira (&lt;0), 🟠 ajustado (&lt;3 cm),
-  🟢 cómodo, 🔵 holgado (&gt;11 cm).
-- **No es** (todavía): simulación de **caída** de la tela. Eso es la Fase 2 (mallar
-  las piezas, coserlas por los piquetes casados y simular la caída con colisión).
+1. **Cáscara + mapa de ajuste** (por defecto): la prenda como superficie ajustada
+   al cuerpo con su silueta y **holgura real**, para evaluar la **horma**. El mapa
+   de ajuste colorea cada zona por la holgura: 🔴 tira (&lt;0), 🟠 ajustado (&lt;3 cm),
+   🟢 cómodo, 🔵 holgado (&gt;11 cm).
+2. **Caída (simulación)** — casilla *«Caída (sim)»*: la prenda pasa a ser una
+   **malla de tela** que **cae por gravedad**, se sujeta por arriba (hombros o
+   cintura) y **colisiona con el maniquí**, formando pliegues reales. Botón
+   *«Re-drapear»* para volver a simular.
+
+## Simulación de caída (Fase 2)
+
+Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:
+
+- La prenda se malla como rejilla de partículas (anillos × segmentos).
+- **Restricciones** de distancia: estructurales (anillo/columna), de **cizalla**
+  (diagonales) y de **flexión** (salto de 2), que le dan comportamiento de tela.
+- **Gravedad** + integración de Verlet + amortiguación; el anillo superior queda
+  **fijo** (la prenda cuelga de ahí).
+- **Colisión** con el maniquí: cada partícula se empuja fuera de la elipse del
+  cuerpo a su altura (+ margen), así la tela se apoya y drapea sobre la figura.
+
+Es una simulación de la prenda **ya montada** cayendo sobre el cuerpo; la Fase 3
+sería coser las piezas planas por los **piquetes casados** antes de simular.
 
 ## Cómo funciona (sin dependencias)
 

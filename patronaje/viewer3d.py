@@ -46,6 +46,9 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
 <div class="stage">
  <div class="controls">
   <div class="row"><label>Prenda</label><select id="garment"></select></div>
+  <div class="row"><label>Caída (sim)</label>
+   <span style="flex:1"><input type="checkbox" id="sim"> <span style="font-size:12px;color:#6b8199">simula la caída de la tela (PBD)</span></span>
+   <button id="redrape" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer">Re-drapear</button></div>
   <div id="sliders"></div>
   <div class="legend">
    <span><i style="background:#c0392b"></i>tira (&lt;0)</span>
@@ -155,58 +158,142 @@ function ringsToFaces(rings,colorFn,alpha,out){
   for(let k=0;k<N;k++){const k2=(k+1)%N;
    out.push({v:[A[k],A[k2],B[k2],B[k]],col,alpha});}}}
 
-// ================= renderizador por software =================
+// ================= perfil del cuerpo (para colisión) =================
+function perim(a,d){return Math.PI*(3*(a+d)-Math.sqrt((3*a+d)*(a+3*d)));}
+function bodyProfileFrom(rings){
+ return rings.map(r=>{let a=0,d=0;for(const p of r){a=Math.max(a,Math.abs(p[0]));d=Math.max(d,Math.abs(p[2]));}
+  return {y:r[0][1],a,d};}).sort((u,v)=>u.y-v.y);}
+function bodyAD(prof,y){
+ if(y<=prof[0].y)return [prof[0].a,prof[0].d];
+ if(y>=prof[prof.length-1].y)return [prof[prof.length-1].a,prof[prof.length-1].d];
+ for(let i=0;i<prof.length-1;i++){if(y>=prof[i].y&&y<=prof[i+1].y){
+  const t=(y-prof[i].y)/(prof[i+1].y-prof[i].y||1);
+  return [prof[i].a+(prof[i+1].a-prof[i].a)*t,prof[i].d+(prof[i+1].d-prof[i].d)*t];}}
+ return [prof[0].a,prof[0].d];}
+function easeAtY(L,y){const pts=[[L.bustY,P.holgura_busto],[L.waistY,Math.max(1,P.holgura_busto*0.7)],[L.hipY,4]];
+ if(y>=pts[0][0])return pts[0][1]; if(y<=pts[2][0])return pts[2][1];
+ for(let i=0;i<2;i++){if(y<=pts[i][0]&&y>=pts[i+1][0]){const t=(pts[i][0]-y)/(pts[i][0]-pts[i+1][0]);
+  return pts[i][1]+(pts[i+1][1]-pts[i][1])*t;}}return 4;}
+
+// mallas de tela (rings x N) para simular; ring 0 se fija (cuelga de ahí)
+function garmentGrids(L,g,prof){
+ const grids=[]; const M=13;
+ const shellRing=(y,ease,flare)=>{let a,d;
+  if(y>=prof[0].y-40){[a,d]=bodyAD(prof,Math.max(y,prof[0].y));}else{[a,d]=[prof[0].a,prof[0].d];}
+  const bc=perim(a,d),sc=(bc+ease)/bc,fl=1+(flare||0);return ringAD(y,a*sc*fl,d*sc*fl);};
+ if(g==="falda"){
+  const topY=L.waistY,hemY=L.waistY-P.largo,rings=[];
+  for(let i=0;i<=M;i++){const t=i/M,y=topY+(hemY-topY)*t;
+   const flare=Math.max(0,(y<L.hipY)?(L.hipY-y)/(L.hipY-hemY)*0.5:0);
+   rings.push(shellRing(y,3,flare));}
+  grids.push(rings);
+ }else if(g==="pantalon"){
+  const topY=L.hipY,ankle=P.estatura*0.06,cx=P.cadera/7,rr=P.cadera/12;
+  [1,-1].forEach(s=>{const rings=[];for(let i=0;i<=M;i++){const t=i/M,y=topY+(ankle-topY)*t,ring=[];
+   const cxx=s*cx*(1-0.2*t);for(let k=0;k<N;k++){const th=2*Math.PI*k/N;ring.push([cxx+Math.cos(th)*rr,y,Math.sin(th)*rr]);}
+   rings.push(ring);}grids.push(rings);});
+ }else{
+  const topY=L.shY-1,hemY=(g==="vestido")?L.waistY-(P.largo-P.talle*0.44):L.hipY-2,rings=[];
+  for(let i=0;i<=M;i++){const t=i/M,y=topY+(hemY-topY)*t;
+   const flare=(g==="vestido"&&y<L.hipY)?(L.hipY-y)/(L.hipY-hemY)*0.35:0;
+   rings.push(shellRing(y,(y>=L.bustY?P.holgura_busto:P.holgura_busto*0.8),flare));}
+  grids.push(rings);
+ }
+ return grids;}
+
+// ================= solver PBD =================
+function buildCloth(grids,prof){
+ const pos=[],prev=[],pin=[],cons=[],faces=[],gridInfo=[];
+ for(const rings of grids){
+  const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());pin.push(r===0?1:0);}
+  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   add(idx(r,k),idx(r,k2));                                   // anillo
+   if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}  // columna + cizalla
+   if(r<R-2)add(idx(r,k),idx(r+2,k));}                        // flexión
+  for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
+  gridInfo.push({base,R});}
+ return {pos,prev,pin,cons,faces,prof};}
+
+function stepCloth(cl,dt){
+ const g=-160*dt*dt, damp=0.985;
+ for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i],q=cl.prev[i];
+  const vx=(p[0]-q[0])*damp,vy=(p[1]-q[1])*damp,vz=(p[2]-q[2])*damp;
+  q[0]=p[0];q[1]=p[1];q[2]=p[2];p[0]+=vx;p[1]+=vy+g;p[2]+=vz;}
+ for(let it=0;it<6;it++){
+  for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
+   let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6;
+   const diff=(d-c[2])/d*0.5,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
+   dx*=diff;dy*=diff;dz*=diff;
+   if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
+   if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
+  // colisión con el maniquí (elipse por altura + margen)
+  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+   let [a,d]=bodyAD(cl.prof,p[1]);a+=0.8;d+=0.8;
+   const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
+   if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}}
+}
+function clothFaces(cl,col){const out=[];
+ for(const q of cl.faces)out.push({v:[cl.pos[q[0]],cl.pos[q[1]],cl.pos[q[2]],cl.pos[q[3]]],col,alpha:0.9});
+ return out;}
+
+// ================= render =================
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-let yaw=0.5,pitch=0.05,drag=null;
-let MESH=null;
+let yaw=0.5,pitch=0.05,drag=null,MESH=null,CLOTH=null,simMode=false,raf=null;
 
 function rebuild(){
  const L=bodyLevels(),body=buildBody(L),head=headRings(L),g=document.getElementById('garment').value;
- const faces=[];
- ringsToFaces(body.torso,()=>[210,208,205],1.0,faces);   // forma gris
- // cuello que une el torso con la cabeza
- ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/7.5,P.contorno_cuello/8.5,2),
-              ()=>[214,201,190],1.0,faces);
- ringsToFaces(head,()=>[214,201,190],1.0,faces);
- // pedestal
+ const bfaces=[];
+ ringsToFaces(body.torso,()=>[210,208,205],1.0,bfaces);
+ ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/7.5,P.contorno_cuello/8.5,2),()=>[214,201,190],1.0,bfaces);
+ ringsToFaces(head,()=>[214,201,190],1.0,bfaces);
  const baseY=body.torso[0][0][1]-2;
- ringsToFaces(tube([0,baseY,0],[0,P.estatura*0.10,0],3,3,1),()=>[120,120,128],1.0,faces);
- ringsToFaces(tube([0,P.estatura*0.10,0],[0,P.estatura*0.06,0],18,18,1),()=>[90,90,98],1.0,faces);
+ ringsToFaces(tube([0,baseY,0],[0,P.estatura*0.10,0],3,3,1),()=>[120,120,128],1.0,bfaces);
+ ringsToFaces(tube([0,P.estatura*0.10,0],[0,P.estatura*0.06,0],18,18,1),()=>[90,90,98],1.0,bfaces);
+ const prof=bodyProfileFrom(body.torso);
  const gm=buildGarment(L,g);
- const all=faces.concat(gm.faces);
- let yMin=1e9,yMax=-1e9;
- for(const fa of all)for(const v of fa.v){if(v[1]<yMin)yMin=v[1];if(v[1]>yMax)yMax=v[1];}
- MESH={faces:all,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin)};
- // panel de ajuste
+ const all=bfaces.concat(gm.faces);
+ let yMin=1e9,yMax=-1e9;for(const fa of all)for(const v of fa.v){if(v[1]<yMin)yMin=v[1];if(v[1]>yMax)yMax=v[1];}
+ MESH={body:bfaces,garment:gm.faces,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin),prof,L,g};
  document.getElementById('fit').innerHTML='<b>Holgura (ajuste)</b>'+gm.fit.map(f=>
   '<div class="kv"><span>'+f[0]+'</span><b style="color:rgb('+easeColor(f[1]).join(',')+')">'+f[1].toFixed(1)+' cm</b></div>').join('');
- draw();}
+ if(simMode){startSim();}else{if(raf)cancelAnimationFrame(raf),raf=null;draw();}}
 
-function draw(){
+function startSim(){
+ const grids=garmentGrids(MESH.L,MESH.g,MESH.prof);
+ CLOTH=buildCloth(grids,MESH.prof);
+ if(raf)cancelAnimationFrame(raf);
+ let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);n++;
+  draw();if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
+
+function render(faces){
  const w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);
  const cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
  const rot=p=>{let x=p[0]*cyaw-p[2]*syaw,z=p[0]*syaw+p[2]*cyaw,y=p[1];
-  let y2=y*cp-z*sp,z2=y*sp+z*cp;return [x,y2,z2];};
- const cy=MESH.cy,dist=260,f=760;
- const sc=0.76*h*dist/(f*MESH.hh);   // encuadra la figura completa
- const proj=p=>{const zc=p[2]+dist;const k=f/(zc||1e-3)*sc;return [w/2+p[0]*k,h*0.52-(p[1]-cy)*k,zc];};
- const light=norm([0.35,0.55,0.75]);
- const draws=[];
- for(const fa of MESH.faces){
-  const rv=fa.v.map(rot);
+  return [x,y*cp-z*sp,y*sp+z*cp];};
+ const cy=MESH.cy,dist=260,f=760,sc=0.76*h*dist/(f*MESH.hh);
+ const proj=p=>{const zc=p[2]+dist,k=f/(zc||1e-3)*sc;return [w/2+p[0]*k,h*0.52-(p[1]-cy)*k,zc];};
+ const light=norm([0.35,0.55,0.75]),draws=[];
+ for(const fa of faces){const rv=fa.v.map(rot);
   const n=norm(cross([rv[1][0]-rv[0][0],rv[1][1]-rv[0][1],rv[1][2]-rv[0][2]],
                      [rv[2][0]-rv[0][0],rv[2][1]-rv[0][1],rv[2][2]-rv[0][2]]));
-  const lamb=Math.max(0,n[0]*light[0]+n[1]*light[1]+n[2]*light[2]);
-  const sh=0.35+0.75*lamb;const pv=rv.map(proj);
-  const zc=(pv[0][2]+pv[1][2]+pv[2][2]+pv[3][2])/4;
-  draws.push({pv,zc,col:fa.col,sh:Math.min(1,sh),alpha:fa.alpha});}
+  const lamb=Math.abs(n[0]*light[0]+n[1]*light[1]+n[2]*light[2]);
+  const pv=rv.map(proj),zc=(pv[0][2]+pv[1][2]+pv[2][2]+pv[3][2])/4;
+  draws.push({pv,zc,col:fa.col,sh:Math.min(1,0.35+0.75*lamb),alpha:fa.alpha});}
  draws.sort((a,b)=>b.zc-a.zc);
- for(const d of draws){
-  const c=d.col;ctx.beginPath();ctx.moveTo(d.pv[0][0],d.pv[0][1]);
+ for(const d of draws){const c=d.col;ctx.beginPath();ctx.moveTo(d.pv[0][0],d.pv[0][1]);
   for(let i=1;i<4;i++)ctx.lineTo(d.pv[i][0],d.pv[i][1]);ctx.closePath();
-  ctx.fillStyle='rgba('+Math.round(c[0]*d.sh)+','+Math.round(c[1]*d.sh)+','+Math.round(c[2]*d.sh)+','+d.alpha+')';
-  ctx.fill();}
+  ctx.fillStyle='rgba('+Math.round(c[0]*d.sh)+','+Math.round(c[1]*d.sh)+','+Math.round(c[2]*d.sh)+','+d.alpha+')';ctx.fill();}
  window.__rendered=draws.length;}
+
+function draw(){
+ let faces=MESH.body.slice();
+ if(simMode&&CLOTH)faces=faces.concat(clothFaces(CLOTH,[57,110,158]));
+ else faces=faces.concat(MESH.garment);
+ render(faces);}
 
 // ================= UI =================
 function buildSliders(){const c=document.getElementById('sliders');c.innerHTML='';
@@ -218,6 +305,8 @@ const gsel=document.getElementById('garment');
 [["camisa","Camisa"],["falda","Falda"],["pantalon","Pantalón"],["vestido","Vestido"],["blazer","Blazer"]]
  .forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;gsel.appendChild(o);});
 gsel.onchange=rebuild;
+document.getElementById('sim').onchange=e=>{simMode=e.target.checked;rebuild();};
+document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
 cv.onpointerdown=e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
 cv.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*0.01;pitch+=(e.clientY-drag[1])*0.01;
  pitch=Math.max(-0.9,Math.min(0.9,pitch));drag=[e.clientX,e.clientY];draw();};
