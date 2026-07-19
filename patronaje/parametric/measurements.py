@@ -46,6 +46,8 @@ EASE = dict(
     holgura_cuello=1.0,    # ease al contorno de cuello
     holgura_cadera=4.0,    # ease al contorno de cadera (falda)
     holgura_cintura_falda=1.0,  # ease a la cintura de la falda
+    holgura_cadera_pant=5.0,    # ease a la cadera (pantalón)
+    holgura_cintura_pant=2.0,   # ease a la cintura (pantalón)
 )
 
 # Constantes de método (Aldrich) y de confección.
@@ -68,6 +70,14 @@ METODO = dict(
     pinza_cint_tra=3.5,      # intake de la pinza de cintura trasera (por panel)
     largo_pinza_del=10.0,    # largo de la pinza delantera
     largo_pinza_tra=14.0,    # largo de la pinza trasera (apunta más abajo)
+    # --- constantes de pantalón ---
+    largo_pantalon=100.0,    # largo del pantalón (cintura -> bajo)
+    ancho_rodilla_pant=44.0, # contorno de rodilla (holgado)
+    boca_pantalon=42.0,      # contorno de boca de pierna
+    pinza_pant_del=2.0,      # pinza de cintura delantera (pantalón)
+    pinza_pant_tra=3.0,      # pinza de cintura trasera (pantalón)
+    largo_pinza_pant_del=10.0,
+    largo_pinza_pant_tra=13.0,
 )
 
 
@@ -164,5 +174,12 @@ def build_parameters_from_measurements(
              lambda q: (q["cintura"] + q["holgura_cintura_falda"]) / 4.0,
              descripcion="cuarto de cintura (falda) por panel",
              expr="(cintura + holgura_cintura_falda)/4")
+    # -------- derivados de pantalón --------------------------------------
+    p.derive("tiro", lambda q: q["cadera"] / 4.0 + 4.0,
+             descripcion="altura de tiro (crotch depth)", expr="cadera/4 + 4")
+    p.derive("cuarto_cadera_pant", lambda q: (q["cadera"] + q["holgura_cadera_pant"]) / 4.0,
+             descripcion="cuarto de cadera (pantalón)", expr="(cadera + holgura_cadera_pant)/4")
+    p.derive("cuarto_cintura_pant", lambda q: (q["cintura"] + q["holgura_cintura_pant"]) / 4.0,
+             descripcion="cuarto de cintura (pantalón)", expr="(cintura + holgura_cintura_pant)/4")
 
     return p

@@ -49,11 +49,15 @@ python -m patronaje.cli --measurements cliente.json --fit fitted --method muelle
 ```
 
 **Otras prendas**: `--garment skirt` genera una **falda base recta (lápiz)** de dos
-paneles con pinzas de cintura, curva de cadera y pretina — mismo motor, misma
-exportación. Ver `docs/falda.md`.
+paneles con pinzas de cintura, curva de cadera y pretina (10 estilos: evasé,
+acampanada, circular, tubo, mini, maxi, fruncida, tableada, yoke, godet).
+`--garment trouser` genera un **pantalón base** de dos paneles con curva de tiro,
+pinzas y pretina. Mismo motor, misma exportación. Ver `docs/falda.md` y
+`docs/pantalon.md`.
 
 ```bash
-python -m patronaje.cli --garment skirt --size S --output output
+python -m patronaje.cli --garment skirt   --style evase --size S
+python -m patronaje.cli --garment trouser --size S --output output
 ```
 
 Genera en `output/` (por talla):

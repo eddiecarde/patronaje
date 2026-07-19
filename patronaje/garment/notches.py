@@ -98,3 +98,27 @@ def add_skirt_notches(skirt) -> list[tuple[str, float, float]]:
     hem = (p.cuarto_cadera, skirt.block.hem_y)
     la, lb = match_seam(front, hip, hem, back, hip, hem, fractions=(0.5,))
     return [("costado falda", la, lb)]
+
+
+def add_trouser_notches(trouser) -> list[tuple[str, float, float]]:
+    """Casa entrepierna y costado (delantero↔trasero) del pantalón."""
+    b = trouser.block
+    front, back = _find(trouser.pieces, "PANTALON DELANTERO"), _find(trouser.pieces, "PANTALON TRASERO")
+    if front is None or back is None:
+        return []
+    report = []
+    # entrepierna: del gancho (crotch) a la boca interior
+    fin, bin_ = b.front_inseam, b.back_inseam
+    la, lb = match_seam(front, fin[0], fin[-1], back, bin_[0], bin_[-1], fractions=(0.5,))
+    report.append(("entrepierna del/tra", la, lb))
+    # costado: de la cintura al bajo, por el lado exterior (camino largo)
+    fhem_out = max((pt for pt in front.net_contour if abs(pt[1] - b.hem_y) < 0.5),
+                   key=lambda q: q[0])
+    bhem_out = max((pt for pt in back.net_contour if abs(pt[1] - b.hem_y) < 0.5),
+                   key=lambda q: q[0])
+    fwaist_side = max((pt for pt in front.net_contour if pt[1] < 0.5), key=lambda q: q[0])
+    bwaist_side = max((pt for pt in back.net_contour if pt[1] < 0.5), key=lambda q: q[0])
+    la, lb = match_seam(front, fwaist_side, fhem_out, back, bwaist_side, bhem_out,
+                        fractions=(0.55,), prefer="short")
+    report.append(("costado del/tra", la, lb))
+    return report

@@ -42,25 +42,33 @@ def generate(size: str = "S", outdir: str = "output", *,
     os.makedirs(outdir, exist_ok=True)
     fitted = fit == "fitted"
     is_skirt = garment == "skirt"
+    is_trouser = garment == "trouser"
+    other = is_skirt or is_trouser
     from .validation.validators import ValidationReport, validate_piece_geometry
 
-    if is_skirt:
-        # falda base (recta / lápiz): prenda propia, validación geométrica
-        from .garment.skirt import build_skirt
-        shirt = build_skirt(size, method=method, p=p)
-        styled = style not in (None, "", "none")
+    if other:
+        # prendas propias (falda / pantalón): validación geométrica + casado
+        from .validation.validators import validate_notch_matching
+        if is_skirt:
+            from .garment.skirt import build_skirt
+            shirt = build_skirt(size, method=method, p=p)
+            label = "falda base"
+        else:
+            from .garment.trouser import build_trouser
+            shirt = build_trouser(size, method=method, p=p)
+            label = "pantalón base"
+        styled = is_skirt and style not in (None, "", "none")
         if styled:
             from .transform.styles import apply_style
             shirt = apply_style(shirt, style)
         else:
             shirt = shirt.layout()
-        from .validation.validators import validate_notch_matching
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
         validate_notch_matching(shirt, report)
         if not quiet:
-            print(f"[falda base | método: {method}" + (f" | estilo: {style}]" if styled else "]"))
+            print(f"[{label} | método: {method}" + (f" | estilo: {style}]" if styled else "]"))
             print(report.text())
     elif fitted:
         # bloque base entallado (sloper) con pinzas y equilibrio
@@ -98,8 +106,8 @@ def generate(size: str = "S", outdir: str = "output", *,
         sys.exit(2)
 
     suffix = "" if method == "aldrich" else f"_{method}"
-    if is_skirt:
-        if style not in (None, "", "none"):
+    if other:
+        if is_skirt and style not in (None, "", "none"):
             suffix += f"_{style}"
     elif fitted:
         suffix += f"_base_{bust_dart}"
@@ -107,7 +115,7 @@ def generate(size: str = "S", outdir: str = "output", *,
             suffix += f"_{style}"
     elif style not in (None, "", "none"):
         suffix += f"_{style}"
-    prefix = "falda" if is_skirt else "camisa"
+    prefix = {"skirt": "falda", "trouser": "pantalon"}.get(garment, "camisa")
     base = os.path.join(outdir, f"{prefix}_{size}{suffix}")
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
@@ -120,7 +128,7 @@ def generate(size: str = "S", outdir: str = "output", *,
     outputs["csv"] = export_csv(shirt, f"{base}_puntos.csv")
     outputs["scr"] = export_scr(shirt, f"{base}.scr", include_seam=include_seam)
     # Fase 3: tech pack (específico de camisa) + planos de corte
-    if not is_skirt:
+    if not other:
         outputs["techpack"] = export_techpack(shirt, f"{base}_tech_pack.html")
     for W in (110, 150, 160):
         outputs[f"marker_{W}"] = export_marker_svg(shirt, float(W), f"{base}_marker_{W}.svg")
@@ -178,8 +186,9 @@ def main(argv=None):
                          "off_shoulder, tie_front. "
                          "Falda (--garment skirt): evase, acampanada, circular, tubo, "
                          "mini, maxi, fruncida, tableada, yoke, godet")
-    ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt"],
-                    help="Prenda: shirt = camisa; skirt = falda base recta")
+    ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt", "trouser"],
+                    help="Prenda: shirt = camisa; skirt = falda base recta; "
+                         "trouser = pantalón base")
     ap.add_argument("--fit", default="shirt", choices=["shirt", "fitted"],
                     help="shirt = camisa holgada; fitted = bloque base entallado con pinzas "
                          "(sólo con --garment shirt)")
