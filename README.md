@@ -55,8 +55,12 @@ acampanada, circular, tubo, mini, maxi, fruncida, tableada, yoke, godet).
 pinzas y pretina (9 estilos: recto, pitillo, wide, palazzo, campana, capri, short,
 culotte, jogger). `--garment dress` genera un **vestido** = cuerpo entallado
 (**por método**, con pinzas) + falda unidos en la costura de talle (7 estilos:
-recto, evase, acampanada, sin_mangas, mini, maxi, godet). Mismo motor, misma
-exportación. Ver `docs/falda.md`, `docs/pantalon.md` y `docs/vestido.md`.
+recto, evase, acampanada, sin_mangas, mini, maxi, godet). `--garment blazer`
+genera una **chaqueta sastre** (**por método**) con **manga de dos piezas**
+(mangón + soplillo con costuras que casan), **solapa** con pico, cuello sastre,
+vista y **forro** (6 estilos: clasica, crop, longline, cruzada, un_boton,
+sin_forro). Mismo motor, misma exportación. Ver `docs/falda.md`,
+`docs/pantalon.md`, `docs/vestido.md` y `docs/blazer.md`.
 
 ```bash
 python -m patronaje.cli --garment skirt   --style evase --size S
