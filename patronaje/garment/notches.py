@@ -144,6 +144,40 @@ def add_dress_notches(dress) -> list[tuple[str, float, float]]:
     return report
 
 
+def add_blazer_notches(blazer) -> list[tuple[str, float, float]]:
+    """Casa el costado (delantero↔espalda) y las costuras de la manga de dos
+    piezas (mangón↔soplillo, delantera y trasera)."""
+    body, slv = blazer.body, blazer.sleeve
+    report = []
+    front = _find(blazer.pieces, "CHAQUETA DELANTERO")
+    back = _find(blazer.pieces, "CHAQUETA ESPALDA")
+
+    def corner(pc, y, want_max=True):
+        band = [p for p in pc.net_contour if abs(p[1] - y) < 2.0]
+        if not band:
+            return None
+        return (max if want_max else min)(band, key=lambda q: q[0])
+
+    if front and back:
+        fU, fH = corner(front, body.bust_y), corner(front, body.hem_y)
+        bU, bH = corner(back, body.bust_y), corner(back, body.hem_y)
+        if None not in (fU, fH, bU, bH):
+            la, lb = match_seam(front, fU, fH, back, bU, bH, fractions=(0.45, 0.75))
+            report.append(("costado del/esp", la, lb))
+
+    top = _find(blazer.pieces, "MANGA SUPERIOR")
+    und = _find(blazer.pieces, "MANGA INFERIOR")
+    if top and und:
+        by, wy = slv.biceps_y, slv.wrist_y
+        for label, want_max in [("costura delantera manga", True), ("costura trasera manga", False)]:
+            tB, tW = corner(top, by, want_max), corner(top, wy, want_max)
+            uB, uW = corner(und, by, want_max), corner(und, wy, want_max)
+            if None not in (tB, tW, uB, uW):
+                la, lb = match_seam(top, tB, tW, und, uB, uW, fractions=(0.5,))
+                report.append((label, la, lb))
+    return report
+
+
 def add_trouser_notches(trouser) -> list[tuple[str, float, float]]:
     """Casa entrepierna y costado (delantero↔trasero) del pantalón."""
     b = trouser.block
