@@ -16,7 +16,8 @@ def test_live_viewer_generates_self_contained():
     assert os.path.exists(path) and os.path.getsize(path) > 0
     html = pathlib.Path(path).read_text(encoding="utf-8")
     # núcleo portado presente
-    for marker in ("class Spline", "function bodice", "function sleeve", "window.__lengths"):
+    for marker in ("class Spline", "function bodice", "function sleeve", "window.__lengths",
+                   "skirtPieces", "trouserPieces", "insertDart"):
         assert marker in html
     # autocontenido: sin recursos externos (el xmlns del SVG no es una carga de red)
     assert "src=" not in html          # ningún <script src>/<img src> remoto
@@ -44,12 +45,25 @@ def test_live_viewer_matches_python_engine():
     ref = {"escote": sh.bodice.neckline_length(),
            "sisa": sh.bodice.armhole_length(),
            "copa": sh.sleeve.cap_length()}
+    from patronaje.blocks.skirt import build_skirt_block
+    from patronaje.blocks.trouser import build_trouser_block
+    from patronaje.parametric.measurements import build_parameters
+    sk = build_skirt_block(build_parameters("S"))
+    tr = build_trouser_block(build_parameters("S"))
     with playwright.sync_playwright() as pw:
         b = pw.chromium.launch(executable_path=_chromium())
         pg = b.new_page()
         pg.goto(url)
         pg.wait_for_function("window.__lengths !== undefined")
-        js = pg.evaluate("window.__lengths")
+        js = pg.evaluate("window.__lengths")               # camisa (por defecto)
+        sk_js = pg.evaluate("(()=>{const R=skirtPieces(P);"
+                            "return [parseFloat(R.metrics[0][1]),parseFloat(R.metrics[1][1])];})()")
+        tr_js = pg.evaluate("(()=>{const R=trouserPieces(P);"
+                            "return [plen(trouserPanel(P,false).inseam),plen(trouserPanel(P,true).inseam)];})()")
         b.close()
     for k, v in ref.items():
         assert abs(js[k] - v) < 0.05, f"{k}: JS {js[k]:.4f} vs PY {v:.4f}"
+    assert abs(sk_js[0] - sk.waist_length()) < 0.1
+    assert abs(sk_js[1] - sk.hip_length()) < 0.1
+    assert abs(tr_js[0] - tr.inseam_length()) < 0.1
+    assert abs(tr_js[1] - tr.inseam_length(True)) < 0.1

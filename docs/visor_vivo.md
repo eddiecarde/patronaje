@@ -1,9 +1,14 @@
 # Visor en vivo (motor paramétrico en el navegador)
 
-`output/viewer_live.html` es un visor donde se **mueven las medidas con sliders y
-el patrón se recalcula al instante**, sin servidor ni dependencias. Muestra las
-piezas principales de la camisa (delantero, espalda, canesú, manga) y las
-longitudes de casado (escote, sisa, copa) en tiempo real.
+`output/viewer_live.html` es un visor donde se **elige la prenda, se mueven las
+medidas con sliders y el patrón se recalcula al instante**, sin servidor ni
+dependencias. Cubre **camisa, falda y pantalón**:
+
+- **Camisa**: delantero, espalda, canesú y manga + casado escote/sisa/copa.
+- **Falda**: delantera y trasera con pinzas + cintura/cadera/largo.
+- **Pantalón**: delantero y trasero con curva de tiro y pinzas + entrepierna.
+
+Todo en tiempo real.
 
 ```bash
 python -m patronaje.viewer --output output   # genera viewer.html y viewer_live.html
@@ -19,6 +24,8 @@ El núcleo geométrico está **portado a JavaScript** dentro del propio HTML:
   `blocks/aldrich_bodice`.
 - **Copa de manga** resuelta por **bisección** para que copa = sisa + holgura —
   copia de `blocks/aldrich_sleeve`.
+- **Pinza** (`insertDart`) — copia de `blocks/fitted._insert_dart`.
+- **Bloques de falda y pantalón** — copia de `blocks/skirt` y `blocks/trouser`.
 
 Al no depender de shapely/numpy, el visor es **autocontenido** (un solo archivo,
 sin CDN ni red) y funciona offline o incrustado en cualquier página.
