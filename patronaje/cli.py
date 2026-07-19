@@ -43,20 +43,25 @@ def generate(size: str = "S", outdir: str = "output", *,
     fitted = fit == "fitted"
     is_skirt = garment == "skirt"
     is_trouser = garment == "trouser"
-    other = is_skirt or is_trouser
+    is_dress = garment == "dress"
+    other = is_skirt or is_trouser or is_dress
     from .validation.validators import ValidationReport, validate_piece_geometry
 
     if other:
-        # prendas propias (falda / pantalón): validación geométrica + casado
+        # prendas propias (falda / pantalón / vestido): validación geométrica + casado
         from .validation.validators import validate_notch_matching
         if is_skirt:
             from .garment.skirt import build_skirt
             shirt = build_skirt(size, method=method, p=p)
             label = "falda base"
-        else:
+        elif is_trouser:
             from .garment.trouser import build_trouser
             shirt = build_trouser(size, method=method, p=p)
             label = "pantalón base"
+        else:
+            from .garment.dress import build_dress
+            shirt = build_dress(size, method=method, bust_dart_pos=bust_dart, p=p)
+            label = "vestido base"
         styled = style not in (None, "", "none")
         if styled:
             from .transform.styles import apply_style
@@ -66,9 +71,10 @@ def generate(size: str = "S", outdir: str = "output", *,
         report = ValidationReport()
         for pc in shirt.pieces:
             validate_piece_geometry(pc, report)
-        validate_notch_matching(shirt, report)
+        validate_notch_matching(shirt, report, tol=2.0 if is_dress else 0.8)
         if not quiet:
-            print(f"[{label} | método: {method}" + (f" | estilo: {style}]" if styled else "]"))
+            extra = f" | pinza busto: {bust_dart}" if is_dress else ""
+            print(f"[{label} | método: {method}{extra}" + (f" | estilo: {style}]" if styled else "]"))
             print(report.text())
     elif fitted:
         # bloque base entallado (sloper) con pinzas y equilibrio
@@ -115,7 +121,7 @@ def generate(size: str = "S", outdir: str = "output", *,
             suffix += f"_{style}"
     elif style not in (None, "", "none"):
         suffix += f"_{style}"
-    prefix = {"skirt": "falda", "trouser": "pantalon"}.get(garment, "camisa")
+    prefix = {"skirt": "falda", "trouser": "pantalon", "dress": "vestido"}.get(garment, "camisa")
     base = os.path.join(outdir, f"{prefix}_{size}{suffix}")
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
@@ -187,10 +193,12 @@ def main(argv=None):
                          "Falda (--garment skirt): evase, acampanada, circular, tubo, "
                          "mini, maxi, fruncida, tableada, yoke, godet. "
                          "Pantalón (--garment trouser): recto, pitillo, wide, palazzo, "
-                         "campana, capri, short, culotte, jogger")
-    ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt", "trouser"],
+                         "campana, capri, short, culotte, jogger. "
+                         "Vestido (--garment dress): recto, evase, acampanada, sin_mangas, "
+                         "mini, maxi, godet")
+    ap.add_argument("--garment", default="shirt", choices=["shirt", "skirt", "trouser", "dress"],
                     help="Prenda: shirt = camisa; skirt = falda base recta; "
-                         "trouser = pantalón base")
+                         "trouser = pantalón base; dress = vestido (talle+falda, por método)")
     ap.add_argument("--fit", default="shirt", choices=["shirt", "fitted"],
                     help="shirt = camisa holgada; fitted = bloque base entallado con pinzas "
                          "(sólo con --garment shirt)")

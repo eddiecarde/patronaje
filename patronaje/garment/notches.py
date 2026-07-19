@@ -100,6 +100,50 @@ def add_skirt_notches(skirt) -> list[tuple[str, float, float]]:
     return [("costado falda", la, lb)]
 
 
+def _finished_waist(pc, y):
+    """Ancho de cintura *terminado* (con las pinzas cerradas) y sus esquinas
+    (CF y costado) a la altura ``y`` del borde de talle de una pieza."""
+    wpts = [p for p in pc.net_contour if abs(p[1] - y) < 1.0]
+    if len(wpts) < 2:
+        return None, None, None
+    cf = min(wpts, key=lambda q: q[0])
+    side = max(wpts, key=lambda q: q[0])
+    span = side[0] - cf[0]
+    intake = 0.0
+    for b1, apex, b2 in pc.darts:
+        if abs(b1[1] - y) < 1.0 and abs(b2[1] - y) < 1.0:
+            intake += abs(b1[0] - b2[0])
+    return span - intake, cf, side
+
+
+def add_dress_notches(dress) -> list[tuple[str, float, float]]:
+    """Casa la costura de talle (cuerpo↔falda) del vestido, delante y detrás.
+
+    La costura de talle casa cuando el **ancho de cintura terminado** (cerradas
+    las pinzas) coincide; la diferencia restante se reparte como holgura al montar.
+    Coloca piquetes en las esquinas de talle (CF y costado) de ambas piezas.
+    """
+    fb = dress.fitted
+    bust_y = fb.draft.points["D-US"].y
+    fwaist_y = bust_y + fb.spec.bust_to_waist + fb.spec.bust_dart
+    bwaist_y = bust_y + fb.spec.bust_to_waist
+    report = []
+    pairs = [("talle delantero", "VESTIDO DELANTERO", fwaist_y, "VESTIDO FALDA DELANTERA"),
+             ("talle espalda", "VESTIDO ESPALDA", bwaist_y, "VESTIDO FALDA TRASERA")]
+    for label, bod_name, wy, sk_name in pairs:
+        bod, sk = _find(dress.pieces, bod_name), _find(dress.pieces, sk_name)
+        if bod is None or sk is None:
+            continue
+        bw, b_cf, b_side = _finished_waist(bod, wy)
+        sw, s_cf, s_side = _finished_waist(sk, 0.0)
+        if None in (bw, sw):
+            continue
+        bod.notches = list(bod.notches) + [b_cf, b_side]
+        sk.notches = list(sk.notches) + [s_cf, s_side]
+        report.append((label, bw, sw))
+    return report
+
+
 def add_trouser_notches(trouser) -> list[tuple[str, float, float]]:
     """Casa entrepierna y costado (delantero↔trasero) del pantalón."""
     b = trouser.block

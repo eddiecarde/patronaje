@@ -53,8 +53,10 @@ paneles con pinzas de cintura, curva de cadera y pretina (10 estilos: evasé,
 acampanada, circular, tubo, mini, maxi, fruncida, tableada, yoke, godet).
 `--garment trouser` genera un **pantalón base** de dos paneles con curva de tiro,
 pinzas y pretina (9 estilos: recto, pitillo, wide, palazzo, campana, capri, short,
-culotte, jogger). Mismo motor, misma exportación. Ver `docs/falda.md` y
-`docs/pantalon.md`.
+culotte, jogger). `--garment dress` genera un **vestido** = cuerpo entallado
+(**por método**, con pinzas) + falda unidos en la costura de talle (7 estilos:
+recto, evase, acampanada, sin_mangas, mini, maxi, godet). Mismo motor, misma
+exportación. Ver `docs/falda.md`, `docs/pantalon.md` y `docs/vestido.md`.
 
 ```bash
 python -m patronaje.cli --garment skirt   --style evase --size S
