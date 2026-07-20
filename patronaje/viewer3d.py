@@ -137,6 +137,14 @@ function blendRings(rA,rB,steps){const out=[];
    rA[k][1]+(rB[k][1]-rA[k][1])*s,rA[k][2]+(rB[k][2]-rA[k][2])*s]);
   out.push(ring);}return out;}
 
+// dome de cierre hacia el CENTROIDE del anillo (sirve para extremos fuera del eje:
+// manos, pies). Encoge el anillo hacia su centro y lo desplaza en Y.
+function capEnd(ring,dyv,steps){
+ let cx=0,cz=0;const n=ring.length;for(const p of ring){cx+=p[0];cz+=p[2];}cx/=n;cz/=n;
+ const out=[];for(let i=1;i<=steps;i++){const t=i/steps,s=Math.cos(t*Math.PI/2),yo=dyv*Math.sin(t*Math.PI/2);
+  out.push(ring.map(p=>[cx+(p[0]-cx)*s,p[1]+yo,cz+(p[2]-cz)*s]));}
+ return out;}
+
 // dome de cierre desde un anillo hacia un punto central (para tapar la malla)
 function capFrom(ring,dy,steps){
  let a=0,d=0,y=ring[0][1];for(const p of ring){a=Math.max(a,Math.abs(p[0]));d=Math.max(d,Math.abs(p[2]));}
@@ -170,15 +178,35 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  const hipLow=ringC(L.hipY-4,hipC*0.965,hRat-0.02);
  // malla cerrada: tapa de cuello + trapecio + cuerpo + cadera + fondo redondeado
  const topCap=capFrom(neck,H*0.03,4).reverse();     // cúpula sobre el cuello (redondea hombros)
- const botCap=capFrom(hipLow,-H*0.07,5);            // fondo redondeado del maniquí
+ const botCap=capFrom(hipLow,-H*0.05,4);            // pelvis redondeada (las piernas emergen de aquí)
  const torso=topCap.concat([neck],T,[hipLow],botCap);
- // colisionadores de pierna (cápsula) para que el pantalón caiga sobre ellas en la sim
- const tR=P.cadera*(male?0.108:0.10), kR=tR*0.70, aR=tR*0.5, lx=P.cadera/10, legs=[];
+ const mainRings=[neck].concat(T,[hipLow]);         // perfil limpio cuello->cadera (para costuras)
+ // ---- brazos: cápsula cónica hombro->codo->muñeca, cerrada en ambos extremos ----
+ const aR=P.contorno_brazo/(2*Math.PI)*0.95, wR=P.muneca/(2*Math.PI)*1.1; // radios (perímetro/2π)
+ const arms=[];
  [1,-1].forEach(s=>{
-  const hip=[s*lx,L.hipY-2,0], kn=[s*lx*0.95,L.kneeY,0.3], an=[s*lx*0.92,L.ankleY,0.3];
-  legs.push({a:hip,b:kn,r0:tR,r1:kR},{a:kn,b:an,r0:kR,r1:aR});
+  const sh=[s*shW*0.82,L.shY-5,0.3];               // arranca bajo el hombro (axila), oculto
+  const el=[s*shW*0.95,(L.shY+L.hipY)/2,2.6];      // codo, algo adelante y afuera
+  const wr=[s*shW*0.9,L.hipY-8,4.0];               // muñeca, mano adelante
+  const t1=tube(sh,el,aR*1.1,aR*0.9,4), t2=tube(el,wr,aR*0.9,wR,4);
+  const rings=t1.concat(t2.slice(1));              // brazo continuo (codo = pliegue natural)
+  const top=capEnd(rings[0],aR*0.6,2).reverse();   // hombro redondeado (cierra arriba, bajo el hombro)
+  const hand=capEnd(rings[rings.length-1],-wR*2.2,3); // mano redondeada
+  arms.push(top.concat(rings,hand));
  });
- return {torso,legs,levels:L};}
+ // ---- piernas: muslo->rodilla->tobillo (sin pies), rellenan la cadera ----
+ const thR=P.cadera*(male?0.12:0.115), knR=thR*0.62, ankR=thR*0.46, cx=thR*0.72;
+ const legMeshes=[],legs=[];
+ [1,-1].forEach(s=>{
+  const hip=[s*cx,L.hipY,0], kn=[s*cx*0.95,L.kneeY,0.5], an=[s*cx*0.92,L.ankleY,0.5];
+  const t1=tube(hip,kn,thR,knR,5), t2=tube(kn,an,knR,ankR,4);
+  const rings=t1.concat(t2.slice(1));
+  const top=capEnd(rings[0],thR*0.4,2).reverse();  // muslo redondeado hacia la cadera (oculto)
+  const foot=capEnd(rings[rings.length-1],-ankR*0.8,2); // tobillo cerrado
+  legMeshes.push(top.concat(rings,foot));
+  legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
+ });
+ return {torso,mainRings,arms,legMeshes,legs,levels:L};}
 
 // prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
 function fillEase(rings,v){return rings.map(()=>v);}
@@ -333,6 +361,7 @@ function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
  side:THREE.DoubleSide});}
 const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.85,metalness:0.02,side:THREE.DoubleSide});
+const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opacity:0.72,dashSize:1.4,gapSize:0.9});
 
 // helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
 function ringGroupsGeom(groups){
@@ -370,6 +399,30 @@ function clothGeom(cl){
  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
  g.setIndex(idx);g.computeVertexNormals();g.__tris=idx.length/3;return g;}
 
+// costuras marcadas del maniquí (centro, princesa, costados, línea de busto/cintura,
+// hombro, brazo, pierna) como líneas discontinuas, al estilo de una horma de atelier
+function seamLines(body,L){
+ const seg=[],OUT=1.012;                                   // empuje hacia afuera (evita z-fighting)
+ const off=p=>[p[0]*OUT,p[1],p[2]*OUT];                    // desplaza radialmente desde el eje
+ const link=(rings,k)=>{for(let r=0;r<rings.length-1;r++){const a=off(rings[r][k]),b=off(rings[r+1][k]);
+  seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);}};
+ const loop=(ring)=>{for(let k=0;k<N;k++){const a=off(ring[k]),b=off(ring[(k+1)%N]);
+  seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);}};
+ const M=body.mainRings;
+ // verticales del torso: centro delantero/trasero, costados, princesa delantera
+ [16,48,0,32,10,22].forEach(k=>link(M,k));
+ // horizontales: línea de busto/pecho y de cintura
+ loop(ringC(L.bustY,P.busto,SEX==='M'?1.32:1.24));
+ loop(ringC(L.waistY,SEX==='M'?P.cintura+(P.busto-P.cintura)*0.28:P.cintura,SEX==='M'?1.30:1.35));
+ // hombro (cuello->punta) y costura exterior del brazo
+ [0,32].forEach(k=>{const a=off(M[0][k]),b=off(M[4][k]);seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);});
+ body.arms.forEach(rings=>link(rings,0));
+ // costura delantera de cada pierna
+ body.legMeshes.forEach(rings=>link(rings,16));
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(seg,3));
+ const line=new THREE.LineSegments(g,MAT_SEAM);line.computeLineDistances();return line;}
+
 // ================= estado / rebuild =================
 const ROOT=new THREE.Group();scene.add(ROOT);
 let MESH=null,CLOTH=null,simMode=false,showG=true,raf=null;
@@ -392,9 +445,11 @@ function rebuild(){
  const H=P.estatura;
  clearRoot();
  let tris=0;
- // cuerpo: torso cerrado (dress form) — lino/lona
- const bodyGeom=ringGroupsGeom([body.torso]);
+ // cuerpo: torso + brazos + piernas + manos (dress form de cuerpo entero) — lino/lona
+ const bodyGeom=ringGroupsGeom([body.torso].concat(body.arms,body.legMeshes));
  addMesh(bodyGeom,MAT_BODY,true);tris+=bodyGeom.__tris;
+ // costuras marcadas (centro, princesa, costados, busto/cintura, hombro, brazo, pierna)
+ ROOT.add(seamLines(body,L));
  // pomo negro sobre poste metálico (remate del dress form)
  const postGeom=ringGroupsGeom([tube([0,L.neckY-1,0],[0,L.neckY+H*0.045,0],P.contorno_cuello/10,P.contorno_cuello/13,3)]);
  addMesh(postGeom,MAT_POST,true);tris+=postGeom.__tris;

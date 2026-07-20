@@ -1,12 +1,16 @@
 # Visor 3D — maniquí a medida (WebGL / PBR)
 
-`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico**
-renderizado con **WebGL** (Three.js), al estilo de una horma profesional de
-atelier: **torso cerrado y suave** (cuello → hombros → busto → cintura → cadera,
-con fondo redondeado), **pomo negro** sobre **poste** metálico y **base rodante
-de 5 patas** negra. Hay maniquí de **Mujer** y de **Hombre** (selector
-*«Cuerpo»*), con siluetas distintas (mujer en reloj de arena; hombre de hombros
-anchos y torso recto) y **medidas por defecto** propias de cada uno.
+`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico
+de cuerpo entero** renderizado con **WebGL** (Three.js), al estilo de una horma
+profesional de atelier: **torso cerrado y suave** (cuello → hombros → busto →
+cintura → cadera), **brazos** con mano redondeada que cuelgan a los costados,
+**piernas** completas hasta el tobillo (sin pies) que emergen de la pelvis, y
+**líneas de costura marcadas** (centro delantero/trasero, princesa, línea de
+busto/pecho, cintura, hombro, costura de brazo y de pierna) dibujadas en
+discontinuo sobre la lona. Remata con **pomo negro** sobre **poste** metálico y
+**base rodante de 5 patas** negra. Hay maniquí de **Mujer** y de **Hombre**
+(selector *«Cuerpo»*), con siluetas distintas (mujer en reloj de arena; hombre de
+hombros anchos y torso recto) y **medidas por defecto** propias de cada uno.
 
 A diferencia de la versión anterior (renderizador por software, aspecto
 facetado), ahora se usan **materiales PBR** (lino/lona para el cuerpo, metal para
@@ -48,6 +52,15 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
   0 en los extremos) entre el trapecio del cuello, la línea de hombro y el pecho,
   de modo que la transición de anchura queda **redondeada** en vez de formar una
   arista/cresta marcada.
+- **Brazos y piernas**: cápsulas cónicas (perímetro de brazo/muñeca y de cadera)
+  cerradas en ambos extremos con un domo hacia el centroide del anillo (`capEnd`,
+  válido para extremos fuera del eje) — mano y tobillo redondeados; el extremo
+  superior queda hundido en el hombro/pelvis para que la unión no muestre bocas
+  abiertas.
+- **Costuras**: `LineSegments` con material discontinuo (`LineDashedMaterial`),
+  siguiendo los anillos del cuerpo (verticales de centro/princesa/costado y
+  horizontales de busto y cintura) y una costura por brazo y por pierna,
+  desplazadas ligeramente hacia afuera para que se vean sobre la superficie.
 - **Materiales (PBR)**: `MeshStandardMaterial` — cuerpo lino (rugosidad alta, sin
   metalicidad), poste metálico, pomo/pedestal negros. La prenda usa **colores por
   vértice** (el mapa de ajuste) sobre material semitransparente.
