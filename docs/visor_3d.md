@@ -1,10 +1,13 @@
 # Visor 3D — maniquí a medida (Opción A)
 
-`output/viewer_3d.html` muestra una **figura humana paramétrica** (cabeza, cuello,
-torso con hombros, **brazos** y **piernas**, proporcionada por la estatura) construida
-desde las medidas, con la prenda como **cáscara** ajustada al cuerpo, coloreada por un
-**mapa de ajuste** (holgura por zona). Se **gira con el ratón** y se recalcula al
-mover las medidas — todo **autocontenido**, sin dependencias.
+`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico** al
+estilo profesional: cuerpo completo con **brazos** y **piernas**, **pomo negro sobre
+poste** metálico (en vez de cabeza) y **base rodante de 5 patas**. Hay maniquí de
+**Mujer** y de **Hombre** (selector *«Cuerpo»*), con siluetas distintas (mujer en reloj
+de arena; hombre de hombros anchos y torso recto) y **medidas por defecto** propias de
+cada uno. La prenda se muestra como **cáscara** con **mapa de ajuste** (holgura por
+zona). Se **gira con el ratón** y se recalcula al mover las medidas — todo
+**autocontenido**, sin dependencias.
 
 ```bash
 python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html

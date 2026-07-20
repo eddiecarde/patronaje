@@ -45,6 +45,7 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
  renderizador 3D por software. No es simulación de caída (eso es la Fase 2).</div>
 <div class="stage">
  <div class="controls">
+  <div class="row"><label>Cuerpo</label><select id="sexo"><option value="F">Mujer</option><option value="M">Hombre</option></select></div>
   <div class="row"><label>Prenda</label><select id="garment"></select></div>
   <div class="row"><label>Caída (sim)</label>
    <span style="flex:1"><input type="checkbox" id="sim"> <span style="font-size:12px;color:#6b8199">simula la caída de la tela (PBD)</span></span>
@@ -62,12 +63,16 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
 <script>
 // ================= parámetros =================
 const DEFS={
- busto:["Busto",76,120,88],holgura_busto:["Holgura busto",-2,20,8],
+ busto:["Busto/Pecho",76,124,88],holgura_busto:["Holgura busto",-2,20,8],
  cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],
  contorno_cuello:["Contorno cuello",32,46,37],ancho_espalda:["Ancho espalda",30,48,37],
  altura_cadera:["Altura cadera",16,26,20],talle:["Talle (nuca-cint.)",34,52,41],
  estatura:["Estatura",150,190,168],largo:["Largo prenda",30,130,68]};
 const P={};for(const k in DEFS)P[k]=DEFS[k][3];
+let SEX='F';
+const PRESETS={
+ F:{busto:88,cintura:70,cadera:94,contorno_cuello:37,ancho_espalda:37,contorno_brazo:30,muneca:18,altura_cadera:20,talle:41,estatura:168,largo:68},
+ M:{busto:100,cintura:87,cadera:100,contorno_cuello:40,ancho_espalda:45,contorno_brazo:34,muneca:19,altura_cadera:22,talle:47,estatura:178,largo:74}};
 
 // ================= geometría paramétrica =================
 const N=36;
@@ -94,22 +99,27 @@ function ellip(c,rx,ry,rz){const out=[];  // elipsoide (rings) para mano/pie
    ring.push([c[0]+rx*rr*Math.cos(th),c[1]+ry*Math.sin(ph),c[2]+rz*rr*Math.sin(th)]);}out.push(ring);}
  return out;}
 
-function buildBody(L){  // figura humana: torso + brazos + piernas
- const H=P.estatura;
+function buildBody(L){  // figura humana (dress form): torso + brazos + piernas
+ const H=P.estatura, male=SEX==='M';
+ // silueta por sexo: hombre más recto (menos cintura, cadera estrecha, hombros anchos);
+ // mujer reloj de arena (busto, cintura marcada, cadera ancha)
+ const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
+ const hipC=male?P.cadera*0.93:P.cadera;
+ const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.60:0.52);
  const T=[];
- T.push(ringC(L.hipY-7,P.cadera*0.94,1.38));            // unión a las piernas
- T.push(ringC(L.hipY,P.cadera,1.40));
- T.push(ringC((L.hipY+L.waistY)/2,(P.cadera+P.cintura)/2,1.37));
- T.push(ringC(L.waistY,P.cintura,1.34));
- T.push(ringC((L.waistY+L.bustY)/2,(P.cintura+P.busto)/2,1.30));
- T.push(ringC(L.bustY,P.busto,1.26));
- T.push(ringC(L.chestY,P.busto*0.88,1.20));
- T.push(ringAD(L.shY,P.ancho_espalda*0.52,P.busto*0.115));   // hombros
- T.push(ringC(L.neckY,P.contorno_cuello*1.02,1.10));
+ T.push(ringC(L.hipY-7,hipC*0.95,hRat-0.04));           // unión a las piernas
+ T.push(ringC(L.hipY,hipC,hRat));
+ T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
+ T.push(ringC(L.waistY,waistC,wRat));
+ T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
+ T.push(ringC(L.bustY,P.busto,bRat));
+ T.push(ringC(L.chestY,P.busto*(male?0.95:0.88),bRat-0.06));
+ T.push(ringAD(L.shY,shW,P.busto*(male?0.135:0.115)));   // hombros
+ T.push(ringC(L.neckY,P.contorno_cuello*(male?1.05:1.02),1.10));
  const limbs=[];
  // brazos (cuelgan a los lados, ligera separación)
- const shX=P.ancho_espalda*0.50, armLen=H*0.44,
-  uR=P.contorno_brazo/6.0, fR=P.muneca/5.0, wR=P.muneca/7.5;
+ const shX=shW, armLen=H*0.44,
+  uR=P.contorno_brazo/(male?5.4:6.0), fR=P.muneca/(male?4.6:5.0), wR=P.muneca/7.5;
  [1,-1].forEach(s=>{
   const sh=[s*shX,L.shY-3,0.4], el=[s*(shX+1.5),L.shY-armLen*0.46,1.6], wr=[s*(shX+2.6),L.shY-armLen,2.6];
   limbs.push(tube(sh,el,uR,fR,4));
@@ -117,7 +127,7 @@ function buildBody(L){  // figura humana: torso + brazos + piernas
   limbs.push(ellip(wr,wR*1.3,wR*1.7,wR*1.1));            // mano
  });
  // piernas (+ colisionadores cápsula para la simulación)
- const tR=P.cadera*0.16, kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5, legs=[];
+ const tR=P.cadera*(male?0.17:0.16), kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5, legs=[];
  [1,-1].forEach(s=>{
   const hip=[s*lx,L.hipY-6,0], kn=[s*lx*0.92,L.kneeY,0.3], an=[s*lx*0.9,L.ankleY,0.3];
   limbs.push(tube(hip,kn,tR,kR,5));
@@ -284,13 +294,19 @@ const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 let yaw=0.5,pitch=0.05,drag=null,MESH=null,CLOTH=null,simMode=false,raf=null;
 
 function rebuild(){
- const L=bodyLevels(),body=buildBody(L),head=headRings(L),g=document.getElementById('garment').value;
- const SKIN=[228,199,178];
+ const L=bodyLevels(),body=buildBody(L),g=document.getElementById('garment').value;
+ const H=P.estatura, SKIN=[226,214,192], POST=[95,98,104], BLACK=[32,32,38];
  const bfaces=[];
  ringsToFaces(body.torso,()=>SKIN,1.0,bfaces);
  for(const limb of body.limbs)ringsToFaces(limb,()=>SKIN,1.0,bfaces);
- ringsToFaces(tube([0,L.neckY,0],[0,L.headB+1,0],P.contorno_cuello/6.8,P.contorno_cuello/7.5,2),()=>SKIN,1.0,bfaces);
- ringsToFaces(head,()=>SKIN,1.0,bfaces);
+ // pomo negro sobre poste metálico (remate de dress form, en vez de cabeza)
+ ringsToFaces(tube([0,L.neckY-1,0],[0,L.neckY+H*0.045,0],P.contorno_cuello/10,P.contorno_cuello/13,2),()=>POST,1.0,bfaces);
+ ringsToFaces(ellip([0,L.neckY+H*0.075,0],H*0.019,H*0.032,H*0.019),()=>BLACK,1.0,bfaces);
+ // pedestal: poste central negro + base de 5 patas con ruedas
+ ringsToFaces(tube([0,2,0],[0,L.hipY-4,0],2.3,2.3,2),()=>BLACK,1.0,bfaces);
+ for(let i=0;i<5;i++){const a=2*Math.PI*i/5+0.35,R=H*0.12;
+  ringsToFaces(tube([0,2.5,0],[Math.cos(a)*R,1.0,Math.sin(a)*R],1.7,1.0,1),()=>BLACK,1.0,bfaces);
+  ringsToFaces(ellip([Math.cos(a)*R,0.2,Math.sin(a)*R],1.5,1.3,1.5),()=>[16,16,20],1.0,bfaces);}
  const prof=bodyProfileFrom(body.torso);
  const gm=buildGarment(L,g);
  const all=bfaces.concat(gm.faces);
@@ -343,6 +359,8 @@ const gsel=document.getElementById('garment');
 [["camisa","Camisa"],["falda","Falda"],["pantalon","Pantalón"],["vestido","Vestido"],["blazer","Blazer"]]
  .forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;gsel.appendChild(o);});
 gsel.onchange=rebuild;
+document.getElementById('sexo').onchange=e=>{SEX=e.target.value;
+ for(const k in PRESETS[SEX])P[k]=PRESETS[SEX][k];buildSliders();rebuild();};
 document.getElementById('sim').onchange=e=>{simMode=e.target.checked;rebuild();};
 document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
 cv.onpointerdown=e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
