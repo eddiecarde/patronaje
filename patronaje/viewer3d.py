@@ -152,63 +152,126 @@ function capFrom(ring,dy,steps){
   out.push(ringAD(y+dy*Math.sin(t*Math.PI/2),Math.max(a*s,1e-3),Math.max(d*s,1e-3)));}
  return out;}
 
-function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuello→cadera)
- const H=P.estatura, male=SEX==='M';
+// perfil (a,d) del torso por circunferencia y ratio a esa altura
+function adC(C,r){const P1=Math.PI*(3*(r+1)-Math.sqrt((3*r+1)*(r+3)));const d=C/P1;return {a:r*d,d};}
+
+function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cápsulas fundidas)
+ const male=SEX==='M';
  const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
  const hipC=male?P.cadera*0.93:P.cadera;
  const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.44:0.39);
- // anillos del torso, de arriba (cuello) hacia abajo (cadera baja)
- const neck=ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08);
- const T=[];
- // hombro suave: trapecio -> hombro -> pecho con anillos intermedios (coseno)
- // para redondear la cresta del hombro en vez de una arista/tienda.
- const trapU=ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085); // trapecio bajo el cuello
- const shoulder=ringAD(L.shY,shW,P.busto*(male?0.14:0.13));    // línea de hombro (algo más de fondo)
- const chest=ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05);
- T.push(trapU);
- T.push(...blendRings(trapU,shoulder,3));                      // sube redondeando hasta el hombro
- T.push(shoulder);
- T.push(...blendRings(shoulder,chest,4));                      // baja redondeando hacia el pecho
- T.push(chest);
- T.push(ringC(L.bustY,P.busto,bRat));
- T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
- T.push(ringC(L.waistY,waistC,wRat));
- T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
- T.push(ringC(L.hipY,hipC,hRat));
- const hipLow=ringC(L.hipY-4,hipC*0.965,hRat-0.02);
- // malla cerrada: tapa de cuello + trapecio + cuerpo + cadera + fondo redondeado
- const topCap=capFrom(neck,H*0.03,4).reverse();     // cúpula sobre el cuello (redondea hombros)
- const botCap=capFrom(hipLow,-H*0.038,4);           // pelvis redondeada (las piernas emergen de aquí)
- const torso=topCap.concat([neck],T,[hipLow],botCap);
- const mainRings=[neck].concat(T,[hipLow]);         // perfil limpio cuello->cadera (para costuras)
- // ---- brazos: cápsula cónica hombro->codo->muñeca, afinada y colgando recta ----
- const aR=P.contorno_brazo/(2*Math.PI)*0.80, wR=P.muneca/(2*Math.PI)*1.0; // radios (perímetro/2π)
- const eaR=aR*0.74;                                 // codo/antebrazo, más afinado
- const arms=[];
+ // ---- perfil del torso (a,d) por altura: cadera baja -> cuello ----
+ const prof=[],pAD=(y,a,d)=>prof.push({y,a,d});let t;
+ t=adC(hipC*0.93,hRat-0.03); pAD(L.hipY-6,t.a,t.d);        // pelvis baja
+ t=adC(hipC,hRat);           pAD(L.hipY,t.a,t.d);
+ t=adC((hipC+waistC)/2,(hRat+wRat)/2); pAD((L.hipY+L.waistY)/2,t.a,t.d);
+ t=adC(waistC,wRat);         pAD(L.waistY,t.a,t.d);
+ t=adC((waistC+P.busto)/2,(wRat+bRat)/2); pAD((L.waistY+L.bustY)/2,t.a,t.d);
+ t=adC(P.busto,bRat);        pAD(L.bustY,t.a,t.d);
+ t=adC(P.busto*(male?0.95:0.90),bRat-0.05); pAD(L.chestY,t.a,t.d);
+ pAD(L.shY, shW*0.82, P.busto*(male?0.14:0.13));           // hombro: torso estrecho (el brazo pone el deltoides)
+ pAD((L.shY+L.neckY)/2, shW*0.5, P.busto*0.09);            // trapecio
+ t=adC(P.contorno_cuello*(male?1.05:1.0),1.06); pAD(L.neckY,t.a,t.d); // cuello
+ prof.sort((u,v)=>u.y-v.y);
+ let maxA=0;for(const q of prof)maxA=Math.max(maxA,q.a);  // punto más ancho del torso (cadera)
+ const yTop=L.neckY, yBot=L.hipY-6;
+ // ---- primitivas (round cones) que se FUNDEN con el torso: brazos, piernas ----
+ const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*1.0, eaR=aR*0.76;
+ const armX=maxA+aR*0.35;                                 // brazos cuelgan por FUERA del punto más ancho
+ const thR=P.cadera*(male?0.115:0.12), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.42, cx=thR*(male?0.78:0.72);
+ const limbs=[],legs=[],armAxis=[],legAxis=[];
  [1,-1].forEach(s=>{
-  const sh=[s*shW*0.98,L.shY-2,0.2];               // pegado a la punta del hombro (poco hueco de axila)
-  const el=[s*shW*0.9,(L.shY+L.hipY)/2,1.8];       // codo, cae casi recto (poco hacia afuera)
-  const wr=[s*shW*0.82,L.hipY-9,3.4];              // muñeca afinada, mano algo adelante
-  const t1=tube(sh,el,aR,eaR,4), t2=tube(el,wr,eaR,wR,4);
-  const rings=t1.concat(t2.slice(1));              // brazo continuo (codo = pliegue natural)
-  const top=capEnd(rings[0],aR*0.75,2).reverse();  // deltoides redondeado
-  const hand=capEnd(rings[rings.length-1],-wR*2.4,3); // mano redondeada
-  arms.push(top.concat(rings,hand));
- });
- // ---- piernas: muslo->rodilla->pantorrilla->tobillo (sin pies), rellenan la cadera ----
- const thR=P.cadera*(male?0.113:0.118), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.40, cx=thR*(male?0.74:0.66);
- const legMeshes=[],legs=[];
- [1,-1].forEach(s=>{
-  const hip=[s*cx,L.hipY-1,0], kn=[s*cx*0.96,L.kneeY,0.5];
-  const ca=[s*cx*0.95,(L.kneeY+L.ankleY)*0.5,0.8], an=[s*cx*0.93,L.ankleY,0.5];
-  const t1=tube(hip,kn,thR,knR,5), t2=tube(kn,ca,knR,caR,3), t3=tube(ca,an,caR,ankR,3);
-  const rings=t1.concat(t2.slice(1),t3.slice(1));  // muslo->rodilla->pantorrilla->tobillo
-  const top=capEnd(rings[0],thR*0.5,2).reverse();  // muslo redondeado hacia la cadera (oculto)
-  const foot=capEnd(rings[rings.length-1],-ankR*0.8,2); // tobillo cerrado
-  legMeshes.push(top.concat(rings,foot));
+  const sh=[s*shW*1.02,L.shY-1,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
+  const ht=[wr[0],L.hipY-4-wR*2.6,wr[2]+0.5];             // punta de la mano
+  limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});             // brazo alto (funde en el hombro)
+  limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});             // antebrazo
+  limbs.push({a:wr,b:ht,r1:wR,r2:wR*0.72,k:1.2});         // mano
+  armAxis.push([sh,wr,s]);
+  const hip=[s*cx,L.hipY+1,0], kn=[s*cx*0.96,L.kneeY,0.5],
+        ca=[s*cx*0.95,(L.kneeY+L.ankleY)/2,0.8], an=[s*cx*0.93,L.ankleY,0.5];
+  limbs.push({a:hip,b:kn,r1:thR,r2:knR,k:5.5});           // muslo (funde en la pelvis)
+  limbs.push({a:kn,b:ca,r1:knR,r2:caR,k:2.2});            // pantorrilla
+  limbs.push({a:ca,b:an,r1:caR,r2:ankR,k:1.6});           // tobillo
+  legAxis.push([hip,an]);
   legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
  });
- return {torso,mainRings,arms,legMeshes,legs,levels:L};}
+ return {prof,yTop,yBot,limbs,legs,armAxis,legAxis,shW,levels:L};}
+
+// ---- SDF del cuerpo y poligonización por Surface Nets ----
+function smin(a,b,k){const h=Math.max(0,Math.min(1,0.5+0.5*(b-a)/k));return b+h*(a-b)-k*h*(1-h);}
+function sdRoundCone(p,a,b,r1,r2){ // cono con extremos esféricos (iq)
+ const bax=b[0]-a[0],bay=b[1]-a[1],baz=b[2]-a[2];
+ const l2=bax*bax+bay*bay+baz*baz,rr=r1-r2,a2=l2-rr*rr,il2=1/l2;
+ const pax=p[0]-a[0],pay=p[1]-a[1],paz=p[2]-a[2];
+ const y=pax*bax+pay*bay+paz*baz,z=y-l2;
+ const wx=pax*l2-bax*y,wy=pay*l2-bay*y,wz=paz*l2-baz*y,x2=wx*wx+wy*wy+wz*wz;
+ const y2=y*y*l2,z2=z*z*l2;
+ const kk=(rr<0?-1:1)*rr*rr*x2;                     // sign(rr) sólo en k
+ if((z<0?-1:1)*a2*z2>kk)return Math.sqrt(x2+z2)*il2-r2;  // sign(z)
+ if((y<0?-1:1)*a2*y2<kk)return Math.sqrt(x2+y2)*il2-r1;  // sign(y)
+ return (Math.sqrt(x2*a2*il2)+y*rr)*il2-r1;}
+function torsoAD(prof,y){ // (a,d) interpolado del torso
+ if(y<=prof[0].y)return prof[0];
+ const n=prof.length;if(y>=prof[n-1].y)return prof[n-1];
+ for(let i=0;i<n-1;i++)if(y>=prof[i].y&&y<=prof[i+1].y){
+  const tt=(y-prof[i].y)/(prof[i+1].y-prof[i].y||1);
+  return {a:prof[i].a+(prof[i+1].a-prof[i].a)*tt,d:prof[i].d+(prof[i+1].d-prof[i].d)*tt};}
+ return prof[0];}
+function sdTorso(p,B){ // cilindro generalizado de sección elíptica, con tapas redondeadas
+ const yc=Math.max(B.yBot,Math.min(B.yTop,p[1])),ad=torsoAD(B.prof,yc),a=ad.a,d=ad.d;
+ const ql=Math.hypot(p[0]/a,p[2]/d),radial=(ql-1)*Math.min(a,d);
+ const dyv=(p[1]>B.yTop)?p[1]-B.yTop:(p[1]<B.yBot?B.yBot-p[1]:0);
+ return dyv>0?Math.hypot(Math.max(radial,0),dyv):radial;}
+function bodyField(p,B){let d=sdTorso(p,B);
+ for(let i=0;i<B.limbs.length;i++){const s=B.limbs[i];d=smin(d,sdRoundCone(p,s.a,s.b,s.r1,s.r2),s.k);}
+ return d;}
+function fieldNormal(B,x,y,z){const e=0.35;
+ const nx=bodyField([x+e,y,z],B)-bodyField([x-e,y,z],B),
+       ny=bodyField([x,y+e,z],B)-bodyField([x,y-e,z],B),
+       nz=bodyField([x,y,z+e],B)-bodyField([x,y,z-e],B),l=Math.hypot(nx,ny,nz)||1;
+ return [nx/l,ny/l,nz/l];}
+const _CORN=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]];
+const _EDG=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry suave
+ let maxA=0,maxD=0;for(const q of B.prof){maxA=Math.max(maxA,q.a);maxD=Math.max(maxD,q.d);}
+ const aR=P.contorno_brazo/(2*Math.PI);
+ const xh=Math.max(maxA,B.shW*0.9+aR)+4, zh=Math.max(maxD,6)+5, cs=1.05;
+ const x0=-xh,y0=B.levels.ankleY-2,z0=-zh;
+ const nx=Math.ceil(2*xh/cs),ny=Math.ceil((B.yTop+2-y0)/cs),nz=Math.ceil(2*zh/cs);
+ const NX=nx+1,NY=ny+1,NZ=nz+1,gi=(i,j,k)=>(i*NY+j)*NZ+k;
+ const F=new Float32Array(NX*NY*NZ);
+ for(let i=0;i<NX;i++)for(let j=0;j<NY;j++)for(let k=0;k<NZ;k++)
+  F[gi(i,j,k)]=bodyField([x0+i*cs,y0+j*cs,z0+k*cs],B);
+ const ci=(i,j,k)=>(i*ny+j)*nz+k,cellV=new Int32Array(nx*ny*nz).fill(-1);
+ const pos=[],nor=[],uv=[];
+ for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)for(let k=0;k<nz;k++){
+  const v=[];let mask=0;
+  for(let c=0;c<8;c++){const o=_CORN[c],val=F[gi(i+o[0],j+o[1],k+o[2])];v.push(val);if(val<0)mask|=1<<c;}
+  if(mask===0||mask===255)continue;
+  let sx=0,sy=0,sz=0,cnt=0;
+  for(const e of _EDG){const c0=e[0],c1=e[1];if((v[c0]<0)!==(v[c1]<0)){
+   const tt=v[c0]/(v[c0]-v[c1]),o0=_CORN[c0],o1=_CORN[c1];
+   sx+=o0[0]+(o1[0]-o0[0])*tt;sy+=o0[1]+(o1[1]-o0[1])*tt;sz+=o0[2]+(o1[2]-o0[2])*tt;cnt++;}}
+  const px=x0+(i+sx/cnt)*cs,py=y0+(j+sy/cnt)*cs,pz=z0+(k+sz/cnt)*cs;
+  cellV[ci(i,j,k)]=pos.length/3;pos.push(px,py,pz);
+  const nn=fieldNormal(B,px,py,pz);nor.push(nn[0],nn[1],nn[2]);
+  uv.push(Math.atan2(px,pz)/(2*Math.PI)+0.5,py*0.5);}  // costura UV atrás (oculta)
+ const idx=[];
+ // quad con winding coherente (flip): normal saliente consistente en toda la malla
+ const quad=(a,b,c,d,flip)=>{if(a<0||b<0||c<0||d<0)return;
+  if(flip)idx.push(a,c,b,a,d,c);else idx.push(a,b,c,a,c,d);};
+ const S=(i,j,k)=>F[gi(i,j,k)]<0;
+ for(let i=0;i<nx;i++)for(let j=1;j<ny;j++)for(let k=1;k<nz;k++)
+  if(S(i,j,k)!==S(i+1,j,k))quad(cellV[ci(i,j,k)],cellV[ci(i,j-1,k)],cellV[ci(i,j-1,k-1)],cellV[ci(i,j,k-1)],S(i,j,k));
+ for(let i=1;i<nx;i++)for(let j=0;j<ny;j++)for(let k=1;k<nz;k++)
+  if(S(i,j,k)!==S(i,j+1,k))quad(cellV[ci(i,j,k)],cellV[ci(i,j,k-1)],cellV[ci(i-1,j,k-1)],cellV[ci(i-1,j,k)],S(i,j,k));
+ for(let i=1;i<nx;i++)for(let j=1;j<ny;j++)for(let k=0;k<nz;k++)
+  if(S(i,j,k)!==S(i,j,k+1))quad(cellV[ci(i,j,k)],cellV[ci(i-1,j,k)],cellV[ci(i-1,j-1,k)],cellV[ci(i,j-1,k)],S(i,j,k));
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+ g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.setIndex(idx);g.__tris=idx.length/3;return g;}
 
 // prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
 function fillEase(rings,v){return rings.map(()=>v);}
@@ -342,7 +405,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.85));
 const key=new THREE.DirectionalLight(0xffffff,2.4);
 key.position.set(90,230,150);key.castShadow=true;
-key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0006;
+key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0009;key.shadow.normalBias=1.6;
 const sc=key.shadow.camera;sc.left=-100;sc.right=100;sc.top=240;sc.bottom=-30;sc.near=1;sc.far=700;
 scene.add(key);
 const fill=new THREE.DirectionalLight(0xdfe8ff,0.6);fill.position.set(-110,90,60);scene.add(fill);
@@ -381,7 +444,25 @@ LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
 
 // materiales PBR
 const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
- bumpMap:LIN_BUMP,bumpScale:0.5,roughness:0.9,metalness:0.02});
+ roughness:0.9,metalness:0.02,side:THREE.DoubleSide});
+// relieve de lona por TRIPLANAR en el shader (sin depender de UVs de la malla implícita):
+// perturba la normal con el gradiente de la trama muestreada por posición mundial.
+MAT_BODY.onBeforeCompile=sh=>{
+ sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:0.42};sh.uniforms.uLinAmt={value:0.9};
+ sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
+  '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
+  +sh.fragmentShader.replace('#include <normal_fragment_maps>',
+  ['#include <normal_fragment_maps>','{',
+   ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
+   ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
+   ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
+   ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
+   ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
+   ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
+   ' normal=normalize(abs(fDet)*normal - vGrad);',
+   '}'].join('\n'));};
+MAT_BODY.needsUpdate=true;
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -432,24 +513,30 @@ function clothGeom(cl){
 
 // costuras marcadas del maniquí (centro, princesa, costados, línea de busto/cintura,
 // hombro, brazo, pierna) como líneas discontinuas, al estilo de una horma de atelier
-function seamLines(body,L){
- const seg=[],OUT=1.012;                                   // empuje hacia afuera (evita z-fighting)
- const off=p=>[p[0]*OUT,p[1],p[2]*OUT];                    // desplaza radialmente desde el eje
- const link=(rings,k)=>{for(let r=0;r<rings.length-1;r++){const a=off(rings[r][k]),b=off(rings[r+1][k]);
-  seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);}};
- const loop=(ring)=>{for(let k=0;k<N;k++){const a=off(ring[k]),b=off(ring[(k+1)%N]);
-  seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);}};
- const M=body.mainRings;
- // verticales del torso: centro delantero/trasero, costados, princesa delantera
- [16,48,0,32,10,22].forEach(k=>link(M,k));
- // horizontales: línea de busto/pecho y de cintura
- loop(ringC(L.bustY,P.busto,SEX==='M'?1.32:1.24));
- loop(ringC(L.waistY,SEX==='M'?P.cintura+(P.busto-P.cintura)*0.28:P.cintura,SEX==='M'?1.30:1.35));
- // hombro (cuello->punta) y costura exterior del brazo
- [0,32].forEach(k=>{const a=off(M[0][k]),b=off(M[4][k]);seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);});
- body.arms.forEach(rings=>link(rings,0));
- // costura delantera de cada pierna
- body.legMeshes.forEach(rings=>link(rings,16));
+function seamLines(B,L){
+ const seg=[],push=(a,b)=>seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);
+ // marcha desde un punto interior 'o' en dirección 'd' hasta la superficie del campo
+ const surfFrom=(o,d)=>{const dl=Math.hypot(d[0],d[1],d[2])||1,u=[d[0]/dl,d[1]/dl,d[2]/dl];
+  let tt=0;for(let it=0;it<64;it++){const x=o[0]+u[0]*tt,y=o[1]+u[1]*tt,z=o[2]+u[2]*tt;
+   const f=bodyField([x,y,z],B);if(f>-0.35)return [x+u[0]*0.3,y+u[1]*0.3,z+u[2]*0.3];
+   tt+=Math.max(0.4,-f*0.9);}return [o[0]+u[0]*tt,o[1]+u[1]*tt,o[2]+u[2]*tt];};
+ const surf=(y,dx,dz)=>surfFrom([0,y,0],[dx,0,dz]);
+ const polyY=(dx,dz,yA,yB,n)=>{let prev=null;for(let i=0;i<=n;i++){const p=surf(yA+(yB-yA)*i/n,dx,dz);
+  if(prev)push(prev,p);prev=p;}};
+ // verticales del torso: centro delantero/trasero, costados, princesa delantera ±
+ const yA=L.hipY-3,yB=L.shY-2,ang=0.62;
+ polyY(0,1,yA,yB,18); polyY(0,-1,yA,yB,18); polyY(1,0,yA,yB,18); polyY(-1,0,yA,yB,18);
+ polyY(Math.sin(ang),Math.cos(ang),yA,yB,18); polyY(-Math.sin(ang),Math.cos(ang),yA,yB,18);
+ // horizontales: busto/pecho y cintura (marcha radial alrededor)
+ [L.bustY,L.waistY].forEach(y=>{let prev=null;for(let k=0;k<=N;k++){const th=2*Math.PI*k/N;
+  const p=surf(y,Math.cos(th),Math.sin(th));if(prev)push(prev,p);prev=p;}});
+ // costura exterior de cada brazo y delantera de cada pierna (marcha desde el eje del miembro)
+ B.armAxis.forEach(ax=>{const p0=ax[0],p1=ax[1],s=ax[2];let prev=null;
+  for(let i=0;i<=12;i++){const tt=i/12,c=[p0[0]+(p1[0]-p0[0])*tt,p0[1]+(p1[1]-p0[1])*tt,p0[2]+(p1[2]-p0[2])*tt];
+   const p=surfFrom(c,[s,0,0.25]);if(prev)push(prev,p);prev=p;}});
+ B.legAxis.forEach(ax=>{const p0=ax[0],p1=ax[1];let prev=null;
+  for(let i=0;i<=14;i++){const tt=i/14,c=[p0[0]+(p1[0]-p0[0])*tt,p0[1]+(p1[1]-p0[1])*tt,p0[2]+(p1[2]-p0[2])*tt];
+   const p=surfFrom(c,[0,0,1]);if(prev)push(prev,p);prev=p;}});
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(seg,3));
  const line=new THREE.LineSegments(g,MAT_SEAM);line.computeLineDistances();return line;}
@@ -476,8 +563,8 @@ function rebuild(){
  const H=P.estatura;
  clearRoot();
  let tris=0;
- // cuerpo: torso + brazos + piernas + manos (dress form de cuerpo entero) — lino/lona
- const bodyGeom=ringGroupsGeom([body.torso].concat(body.arms,body.legMeshes));
+ // cuerpo: superficie implícita (torso + brazos + piernas FUNDIDOS) — lino/lona
+ const bodyGeom=bodyGeomImplicit(body);
  addMesh(bodyGeom,MAT_BODY,true);tris+=bodyGeom.__tris;
  // costuras marcadas (centro, princesa, costados, busto/cintura, hombro, brazo, pierna)
  ROOT.add(seamLines(body,L));
@@ -496,7 +583,7 @@ function rebuild(){
  const armGeom=ringGroupsGeom(arms);addMesh(armGeom,MAT_BLACK,true);tris+=armGeom.__tris;
  const whGeom=ringGroupsGeom(wheels);addMesh(whGeom,MAT_WHEEL,true);tris+=whGeom.__tris;
  // prenda
- const prof=bodyProfileFrom(body.torso);
+ const prof=body.prof;
  const gm=buildGarment(L,g);
  let garMesh=null;
  if(showG&&!simMode){const gg=coloredGarmentGeom(gm.groups);

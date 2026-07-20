@@ -40,23 +40,30 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
    cintura) y **colisiona con el maniquí**, formando pliegues reales que se
    renderizan como tejido PBR. Botón *«Re-drapear»* para volver a simular.
 
-## Cómo se construye
+## Cómo se construye (superficie implícita)
 
-- **Figura**: se *loftea* una pila de **anillos elípticos** cuyo perímetro
-  reproduce cada medida a su altura (cuello, busto, cintura, cadera) —con la
-  relación ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse)— y
-  se **cierra** por arriba (cúpula sobre el cuello) y por abajo (fondo
-  redondeado). Los anillos se convierten en una **malla indexada** de Three.js con
-  **normales promediadas** (`computeVertexNormals`), de ahí el aspecto suave. En
-  el **hombro** se interpolan anillos intermedios con suavizado coseno (pendiente
-  0 en los extremos) entre el trapecio del cuello, la línea de hombro y el pecho,
-  de modo que la transición de anchura queda **redondeada** en vez de formar una
-  arista/cresta marcada.
-- **Brazos y piernas**: cápsulas cónicas (perímetro de brazo/muñeca y de cadera)
-  cerradas en ambos extremos con un domo hacia el centroide del anillo (`capEnd`,
-  válido para extremos fuera del eje) — mano y tobillo redondeados; el extremo
-  superior queda hundido en el hombro/pelvis para que la unión no muestre bocas
-  abiertas.
+El cuerpo ya **no** es una pila de anillos, sino una **superficie implícita
+(campo de distancia)** poligonizada — el mismo método que usan las herramientas
+de *made-to-measure*: así los brazos, las piernas y los hombros se **funden** con
+el torso en una sola superficie continua, sin uniones atornilladas, sin huecos de
+axila ni facetas.
+
+- **Torso**: un **cilindro generalizado** de sección elíptica cuyo (ancho, fondo)
+  se interpola por altura desde las medidas (cuello, hombro, pecho, busto,
+  cintura, cadera) — la misma silueta paramétrica de antes, ahora como SDF.
+- **Brazos y piernas**: **round cones** (cápsulas cónicas, fórmula de iq) por las
+  medidas de brazo/muñeca y cadera/rodilla/tobillo.
+- **Fusión**: todo se une con **smooth-min** (`smin`), que mezcla suavemente las
+  primitivas — el deltoides sale del hombro, el muslo de la pelvis, sin costuras.
+- **Poligonización**: **Surface Nets** sobre una rejilla del campo (un vértice por
+  celda con cambio de signo, colocado en el promedio de los cruces), con winding
+  coherente por el signo de la arista. Las **normales** se sacan del **gradiente
+  analítico** del campo, de ahí el sombreado suave con poca malla.
+- **Relieve de lona**: como la malla implícita no tiene UVs regulares, la trama de
+  lino se aplica por **triplanar** en el shader (`onBeforeCompile`): se muestrea la
+  altura por posición mundial en 3 planos y se perturba la normal
+  (`perturbNormalArb`), evitando los artefactos de tangentes de un *bump map* por
+  UV.
 - **Costuras**: `LineSegments` con material discontinuo (`LineDashedMaterial`),
   siguiendo los anillos del cuerpo (verticales de centro/princesa/costado y
   horizontales de busto y cintura) y una costura por brazo y por pierna,
