@@ -195,7 +195,20 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
   legAxis.push([hip,an]);
   legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
  });
- return {prof,yTop,yBot,limbs,legs,armAxis,legAxis,shW,levels:L};}
+ // ---- pecho/busto y glúteos: elipsoides que se funden con el torso ----
+ const bAD=adC(P.busto,bRat), hAD=adC(hipC,hRat);
+ const blobs=[];
+ [1,-1].forEach(s=>{
+  // busto (mujer, marcado) / pectoral (hombre, plano y alto)
+  blobs.push(male
+   ?{c:[s*P.busto*0.075,L.chestY,bAD.d*0.6], r:[P.busto*0.095,P.busto*0.055,P.busto*0.05], k:5.5}
+   :{c:[s*P.busto*0.052,L.bustY-1,bAD.d*0.62], r:[P.busto*0.075,P.busto*0.08,P.busto*0.062], k:3.5});
+  // glúteos (atrás, en el asiento, bajo la línea de cadera)
+  blobs.push(male
+   ?{c:[s*P.cadera*0.055,L.hipY-4,-hAD.d*0.58], r:[P.cadera*0.075,P.cadera*0.075,P.cadera*0.055], k:5.5}
+   :{c:[s*P.cadera*0.06,L.hipY-4,-hAD.d*0.55], r:[P.cadera*0.092,P.cadera*0.088,P.cadera*0.075], k:5.0});
+ });
+ return {prof,yTop,yBot,limbs,legs,blobs,armAxis,legAxis,shW,levels:L};}
 
 // ---- SDF del cuerpo y poligonización por Surface Nets ----
 function smin(a,b,k){const h=Math.max(0,Math.min(1,0.5+0.5*(b-a)/k));return b+h*(a-b)-k*h*(1-h);}
@@ -210,6 +223,11 @@ function sdRoundCone(p,a,b,r1,r2){ // cono con extremos esféricos (iq)
  if((z<0?-1:1)*a2*z2>kk)return Math.sqrt(x2+z2)*il2-r2;  // sign(z)
  if((y<0?-1:1)*a2*y2<kk)return Math.sqrt(x2+y2)*il2-r1;  // sign(y)
  return (Math.sqrt(x2*a2*il2)+y*rr)*il2-r1;}
+function sdEllipsoid(p,c,r){ // elipsoide (iq, aprox.) — para pecho/busto y glúteos
+ const qx=(p[0]-c[0]),qy=(p[1]-c[1]),qz=(p[2]-c[2]);
+ const k0=Math.hypot(qx/r[0],qy/r[1],qz/r[2]);
+ const k1=Math.hypot(qx/(r[0]*r[0]),qy/(r[1]*r[1]),qz/(r[2]*r[2]));
+ return k0*(k0-1.0)/(k1||1e-9);}
 function torsoAD(prof,y){ // (a,d) interpolado del torso
  if(y<=prof[0].y)return prof[0];
  const n=prof.length;if(y>=prof[n-1].y)return prof[n-1];
@@ -224,6 +242,7 @@ function sdTorso(p,B){ // cilindro generalizado de sección elíptica, con tapas
  return dyv>0?Math.hypot(Math.max(radial,0),dyv):radial;}
 function bodyField(p,B){let d=sdTorso(p,B);
  for(let i=0;i<B.limbs.length;i++){const s=B.limbs[i];d=smin(d,sdRoundCone(p,s.a,s.b,s.r1,s.r2),s.k);}
+ if(B.blobs)for(let i=0;i<B.blobs.length;i++){const b=B.blobs[i];d=smin(d,sdEllipsoid(p,b.c,b.r),b.k);}
  return d;}
 function fieldNormal(B,x,y,z){const e=0.35;
  const nx=bodyField([x+e,y,z],B)-bodyField([x-e,y,z],B),

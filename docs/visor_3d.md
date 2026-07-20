@@ -53,6 +53,9 @@ axila ni facetas.
   cintura, cadera) — la misma silueta paramétrica de antes, ahora como SDF.
 - **Brazos y piernas**: **round cones** (cápsulas cónicas, fórmula de iq) por las
   medidas de brazo/muñeca y cadera/rodilla/tobillo.
+- **Pecho/busto y glúteos**: **elipsoides** (SDF de iq) delante (busto) y detrás
+  (asiento), por busto/cadera, que dan el perfil en S. En hombre son más planos y
+  altos (pectoral).
 - **Fusión**: todo se une con **smooth-min** (`smin`), que mezcla suavemente las
   primitivas — el deltoides sale del hombro, el muslo de la pelvis, sin costuras.
 - **Poligonización**: **Surface Nets** sobre una rejilla del campo (un vértice por
