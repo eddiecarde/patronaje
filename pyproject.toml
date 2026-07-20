@@ -25,5 +25,8 @@ patronaje = "patronaje.cli:main"
 [tool.setuptools.packages.find]
 include = ["patronaje*"]
 
+[tool.setuptools.package-data]
+patronaje = ["assets/*.js"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

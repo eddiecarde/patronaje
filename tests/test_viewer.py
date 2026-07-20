@@ -36,7 +36,13 @@ def test_body_viewer_3d_generates_self_contained():
     for marker in ("buildBody", "buildGarment", "easeColor", "getContext", "window.__rendered",
                    "buildCloth", "stepCloth", "garmentGrids"):
         assert marker in html
-    assert "src=" not in html and 'href="http' not in html and "cdn" not in html.lower()
+    # WebGL/PBR con Three.js **incrustado** (offline, sin red): la librería va inline,
+    # no se carga de ningún recurso remoto. (Los strings de URL que trae la propia
+    # librería —licencia, aviso de deprecación— no son cargas de red.)
+    assert "THREE" in html and "WebGLRenderer" in html
+    assert "<script src" not in html          # ningún <script> remoto
+    assert 'href="http' not in html           # ninguna hoja de estilos externa
+    assert 'src="http' not in html            # ningún recurso remoto (CDN)
 
 
 def _chromium():

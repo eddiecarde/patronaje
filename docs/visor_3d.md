@@ -1,13 +1,23 @@
-# Visor 3D — maniquí a medida (Opción A)
+# Visor 3D — maniquí a medida (WebGL / PBR)
 
-`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico** al
-estilo profesional: cuerpo completo con **brazos** y **piernas**, **pomo negro sobre
-poste** metálico (en vez de cabeza) y **base rodante de 5 patas**. Hay maniquí de
-**Mujer** y de **Hombre** (selector *«Cuerpo»*), con siluetas distintas (mujer en reloj
-de arena; hombre de hombros anchos y torso recto) y **medidas por defecto** propias de
-cada uno. La prenda se muestra como **cáscara** con **mapa de ajuste** (holgura por
-zona). Se **gira con el ratón** y se recalcula al mover las medidas — todo
-**autocontenido**, sin dependencias.
+`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico**
+renderizado con **WebGL** (Three.js), al estilo de una horma profesional de
+atelier: **torso cerrado y suave** (cuello → hombros → busto → cintura → cadera,
+con fondo redondeado), **pomo negro** sobre **poste** metálico y **base rodante
+de 5 patas** negra. Hay maniquí de **Mujer** y de **Hombre** (selector
+*«Cuerpo»*), con siluetas distintas (mujer en reloj de arena; hombre de hombros
+anchos y torso recto) y **medidas por defecto** propias de cada uno.
+
+A diferencia de la versión anterior (renderizador por software, aspecto
+facetado), ahora se usan **materiales PBR** (lino/lona para el cuerpo, metal para
+el poste, negro satinado para el pedestal), **iluminación de estudio** (luz clave
+con sombra + relleno + contra) y **sombras suaves** proyectadas sobre el suelo,
+con *tone mapping* ACES y salida sRGB. El resultado se acerca al aspecto de la
+foto de referencia.
+
+Todo es **autocontenido y sin red**: la librería Three.js va **incrustada** en el
+propio HTML (no se descarga de ningún CDN), así que el visor funciona abriendo el
+archivo, sin servidor ni conexión.
 
 ```bash
 python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
@@ -19,13 +29,32 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
 1. **Cáscara + mapa de ajuste** (por defecto): la prenda como superficie ajustada
    al cuerpo con su silueta y **holgura real**, para evaluar la **horma**. El mapa
    de ajuste colorea cada zona por la holgura: 🔴 tira (&lt;0), 🟠 ajustado (&lt;3 cm),
-   🟢 cómodo, 🔵 holgado (&gt;11 cm).
+   🟢 cómodo, 🔵 holgado (&gt;11 cm). La casilla *«Ver prenda»* la muestra/oculta
+   (para ver el maniquí desnudo).
 2. **Caída (simulación)** — casilla *«Caída (sim)»*: la prenda pasa a ser una
    **malla de tela** que **cae por gravedad**, se sujeta por arriba (hombros o
-   cintura) y **colisiona con el maniquí**, formando pliegues reales. Botón
-   *«Re-drapear»* para volver a simular.
+   cintura) y **colisiona con el maniquí**, formando pliegues reales que se
+   renderizan como tejido PBR. Botón *«Re-drapear»* para volver a simular.
 
-## Simulación de caída (Fase 2)
+## Cómo se construye
+
+- **Figura**: se *loftea* una pila de **anillos elípticos** cuyo perímetro
+  reproduce cada medida a su altura (cuello, busto, cintura, cadera) —con la
+  relación ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse)— y
+  se **cierra** por arriba (cúpula sobre el cuello) y por abajo (fondo
+  redondeado). Los anillos se convierten en una **malla indexada** de Three.js con
+  **normales promediadas** (`computeVertexNormals`), de ahí el aspecto suave.
+- **Materiales (PBR)**: `MeshStandardMaterial` — cuerpo lino (rugosidad alta, sin
+  metalicidad), poste metálico, pomo/pedestal negros. La prenda usa **colores por
+  vértice** (el mapa de ajuste) sobre material semitransparente.
+- **Luz y sombra**: hemisférica + 3 direccionales (clave/relleno/contra); la clave
+  proyecta **sombra** (PCF suave) sobre un suelo de estudio. Cámara en órbita:
+  arrastra para girar, rueda para acercar.
+- **Prenda**: cáscara a *offset* del cuerpo por la holgura, siguiendo la silueta de
+  cada tipo (torso para camisa/vestido/blazer; falda acampanada; dos perneras para
+  el pantalón). Se muestra sin mangas sobre la horma, como en un atelier.
+
+## Simulación de caída (PBD)
 
 Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:
 
@@ -35,28 +64,23 @@ Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:
 - **Gravedad** + integración de Verlet + amortiguación; el anillo superior queda
   **fijo** (la prenda cuelga de ahí).
 - **Colisión** con el maniquí: el **torso** empuja cada partícula fuera de su
-  elipse a esa altura; las **piernas** empujan con **cápsulas** (segmento + radio),
-  de modo que el pantalón cae como dos perneras que se apoyan en las piernas.
-
-Es una simulación de la prenda **ya montada** cayendo sobre el cuerpo; la Fase 3
-sería coser las piezas planas por los **piquetes casados** antes de simular.
-
-## Cómo funciona (sin dependencias)
-
-- **Figura**: se construye por *loft* de **anillos elípticos** cuyo perímetro es la
-  medida a cada nivel (cuello, busto, cintura, cadera) — con la relación
-  ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse) — más cabeza,
-  cuello, **brazos** y **piernas** (tubos cónicos desde el hombro y la cadera, con
-  alturas proporcionadas por la estatura).
-- **Prenda**: cáscara a *offset* del cuerpo por la holgura, con la silueta de cada
-  tipo (torso + mangas para camisa/vestido/blazer; falda acampanada; dos piernas
-  para el pantalón).
-- **Render**: un pequeño **renderizador 3D por software** — proyección en
-  perspectiva, sombreado *lambert* por cara y *painter's algorithm* (orden por
-  profundidad) — dibuja sobre un `<canvas>`. La cámara **auto-encuadra** la figura.
+  elipse a esa altura; las **piernas** (colisionadores cápsula, aunque no se
+  dibujen en la horma) empujan al pantalón para que caiga como dos perneras.
+- Cada paso reescribe las posiciones del `BufferGeometry` de la tela y recomputa
+  normales, de modo que los pliegues se ven con sombreado PBR.
 
 ## Medidas ajustables
 
 Busto, holgura de busto, cintura, cadera, contorno de cuello, ancho de espalda,
-altura de cadera, talle, estatura y largo de prenda. Cada cambio regenera el
-maniquí y la prenda al instante, y actualiza el mapa de ajuste.
+contorno de brazo, muñeca, altura de cadera, talle, estatura y largo de prenda.
+Cada cambio regenera el maniquí y la prenda al instante, y actualiza el mapa de
+ajuste.
+
+## Por qué Three.js incrustado
+
+Para alcanzar el aspecto fotográfico (PBR + sombras) hace falta un motor WebGL.
+En lugar de cargarlo desde un CDN (lo que rompería el funcionamiento offline), la
+librería se **vendoriza** en `patronaje/assets/three.min.js` y el generador la
+**incrusta** en el HTML. Así el visor sigue siendo **un único archivo** que
+funciona sin red — la restricción de "sin dependencias externas de red" se
+mantiene, aunque el peso del archivo suba (~680 KB).
