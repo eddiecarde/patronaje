@@ -156,14 +156,14 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  const H=P.estatura, male=SEX==='M';
  const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
  const hipC=male?P.cadera*0.93:P.cadera;
- const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.52:0.45);
+ const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.44:0.39);
  // anillos del torso, de arriba (cuello) hacia abajo (cadera baja)
  const neck=ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08);
  const T=[];
  // hombro suave: trapecio -> hombro -> pecho con anillos intermedios (coseno)
  // para redondear la cresta del hombro en vez de una arista/tienda.
  const trapU=ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085); // trapecio bajo el cuello
- const shoulder=ringAD(L.shY,shW,P.busto*(male?0.135:0.12));   // línea de hombro (algo más de fondo)
+ const shoulder=ringAD(L.shY,shW,P.busto*(male?0.14:0.13));    // línea de hombro (algo más de fondo)
  const chest=ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05);
  T.push(trapU);
  T.push(...blendRings(trapU,shoulder,2));                      // sube redondeando hasta el hombro
@@ -178,30 +178,32 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  const hipLow=ringC(L.hipY-4,hipC*0.965,hRat-0.02);
  // malla cerrada: tapa de cuello + trapecio + cuerpo + cadera + fondo redondeado
  const topCap=capFrom(neck,H*0.03,4).reverse();     // cúpula sobre el cuello (redondea hombros)
- const botCap=capFrom(hipLow,-H*0.05,4);            // pelvis redondeada (las piernas emergen de aquí)
+ const botCap=capFrom(hipLow,-H*0.038,4);           // pelvis redondeada (las piernas emergen de aquí)
  const torso=topCap.concat([neck],T,[hipLow],botCap);
  const mainRings=[neck].concat(T,[hipLow]);         // perfil limpio cuello->cadera (para costuras)
- // ---- brazos: cápsula cónica hombro->codo->muñeca, cerrada en ambos extremos ----
- const aR=P.contorno_brazo/(2*Math.PI)*0.95, wR=P.muneca/(2*Math.PI)*1.1; // radios (perímetro/2π)
+ // ---- brazos: cápsula cónica hombro->codo->muñeca, afinada y colgando recta ----
+ const aR=P.contorno_brazo/(2*Math.PI)*0.86, wR=P.muneca/(2*Math.PI)*1.02; // radios (perímetro/2π)
+ const eaR=aR*0.78;                                 // codo/antebrazo, más afinado
  const arms=[];
  [1,-1].forEach(s=>{
-  const sh=[s*shW*0.82,L.shY-5,0.3];               // arranca bajo el hombro (axila), oculto
-  const el=[s*shW*0.95,(L.shY+L.hipY)/2,2.6];      // codo, algo adelante y afuera
-  const wr=[s*shW*0.9,L.hipY-8,4.0];               // muñeca, mano adelante
-  const t1=tube(sh,el,aR*1.1,aR*0.9,4), t2=tube(el,wr,aR*0.9,wR,4);
+  const sh=[s*shW*0.98,L.shY-2,0.2];               // pegado a la punta del hombro (poco hueco de axila)
+  const el=[s*shW*0.9,(L.shY+L.hipY)/2,1.8];       // codo, cae casi recto (poco hacia afuera)
+  const wr=[s*shW*0.82,L.hipY-9,3.4];              // muñeca afinada, mano algo adelante
+  const t1=tube(sh,el,aR,eaR,4), t2=tube(el,wr,eaR,wR,4);
   const rings=t1.concat(t2.slice(1));              // brazo continuo (codo = pliegue natural)
-  const top=capEnd(rings[0],aR*0.6,2).reverse();   // hombro redondeado (cierra arriba, bajo el hombro)
-  const hand=capEnd(rings[rings.length-1],-wR*2.2,3); // mano redondeada
+  const top=capEnd(rings[0],aR*0.75,2).reverse();  // deltoides redondeado
+  const hand=capEnd(rings[rings.length-1],-wR*2.4,3); // mano redondeada
   arms.push(top.concat(rings,hand));
  });
- // ---- piernas: muslo->rodilla->tobillo (sin pies), rellenan la cadera ----
- const thR=P.cadera*(male?0.12:0.115), knR=thR*0.62, ankR=thR*0.46, cx=thR*0.72;
+ // ---- piernas: muslo->rodilla->pantorrilla->tobillo (sin pies), rellenan la cadera ----
+ const thR=P.cadera*(male?0.122:0.118), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.40, cx=thR*0.66;
  const legMeshes=[],legs=[];
  [1,-1].forEach(s=>{
-  const hip=[s*cx,L.hipY,0], kn=[s*cx*0.95,L.kneeY,0.5], an=[s*cx*0.92,L.ankleY,0.5];
-  const t1=tube(hip,kn,thR,knR,5), t2=tube(kn,an,knR,ankR,4);
-  const rings=t1.concat(t2.slice(1));
-  const top=capEnd(rings[0],thR*0.4,2).reverse();  // muslo redondeado hacia la cadera (oculto)
+  const hip=[s*cx,L.hipY-1,0], kn=[s*cx*0.96,L.kneeY,0.5];
+  const ca=[s*cx*0.95,(L.kneeY+L.ankleY)*0.5,0.8], an=[s*cx*0.93,L.ankleY,0.5];
+  const t1=tube(hip,kn,thR,knR,5), t2=tube(kn,ca,knR,caR,3), t3=tube(ca,an,caR,ankR,3);
+  const rings=t1.concat(t2.slice(1),t3.slice(1));  // muslo->rodilla->pantorrilla->tobillo
+  const top=capEnd(rings[0],thR*0.5,2).reverse();  // muslo redondeado hacia la cadera (oculto)
   const foot=capEnd(rings[rings.length-1],-ankR*0.8,2); // tobillo cerrado
   legMeshes.push(top.concat(rings,foot));
   legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
