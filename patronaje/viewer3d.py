@@ -166,9 +166,9 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  const shoulder=ringAD(L.shY,shW,P.busto*(male?0.14:0.13));    // línea de hombro (algo más de fondo)
  const chest=ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05);
  T.push(trapU);
- T.push(...blendRings(trapU,shoulder,2));                      // sube redondeando hasta el hombro
+ T.push(...blendRings(trapU,shoulder,3));                      // sube redondeando hasta el hombro
  T.push(shoulder);
- T.push(...blendRings(shoulder,chest,3));                      // baja redondeando hacia el pecho
+ T.push(...blendRings(shoulder,chest,4));                      // baja redondeando hacia el pecho
  T.push(chest);
  T.push(ringC(L.bustY,P.busto,bRat));
  T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
@@ -182,8 +182,8 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  const torso=topCap.concat([neck],T,[hipLow],botCap);
  const mainRings=[neck].concat(T,[hipLow]);         // perfil limpio cuello->cadera (para costuras)
  // ---- brazos: cápsula cónica hombro->codo->muñeca, afinada y colgando recta ----
- const aR=P.contorno_brazo/(2*Math.PI)*0.86, wR=P.muneca/(2*Math.PI)*1.02; // radios (perímetro/2π)
- const eaR=aR*0.78;                                 // codo/antebrazo, más afinado
+ const aR=P.contorno_brazo/(2*Math.PI)*0.80, wR=P.muneca/(2*Math.PI)*1.0; // radios (perímetro/2π)
+ const eaR=aR*0.74;                                 // codo/antebrazo, más afinado
  const arms=[];
  [1,-1].forEach(s=>{
   const sh=[s*shW*0.98,L.shY-2,0.2];               // pegado a la punta del hombro (poco hueco de axila)
@@ -196,7 +196,7 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
   arms.push(top.concat(rings,hand));
  });
  // ---- piernas: muslo->rodilla->pantorrilla->tobillo (sin pies), rellenan la cadera ----
- const thR=P.cadera*(male?0.122:0.118), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.40, cx=thR*0.66;
+ const thR=P.cadera*(male?0.113:0.118), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.40, cx=thR*(male?0.74:0.66);
  const legMeshes=[],legs=[];
  [1,-1].forEach(s=>{
   const hip=[s*cx,L.hipY-1,0], kn=[s*cx*0.96,L.kneeY,0.5];
