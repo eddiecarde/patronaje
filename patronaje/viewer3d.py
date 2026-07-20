@@ -1,15 +1,19 @@
-"""Visor 3D del maniquí a medida (Opción A).
+"""Visor 3D del maniquí a medida (Opción B — WebGL/PBR con Three.js).
 
-Genera un HTML **autocontenido** con un maniquí paramétrico (dress form)
-construido desde las medidas, y la prenda como **cáscara** a offset del cuerpo,
-coloreada por un **mapa de ajuste** (holgura por zona: verde cómodo, ámbar
-ajustado, rojo tira, azul holgado). Se rota con el ratón y se recalcula al mover
-las medidas — sin dependencias: un pequeño renderizador 3D por software
-(proyección + painter's algorithm) dibuja sobre un Canvas.
+Genera un HTML **autocontenido y sin red** (la librería Three.js va *incrustada*,
+no se descarga de ningún CDN) con un maniquí de sastre (dress form) paramétrico
+renderizado con **WebGL**: materiales **PBR** (lino/lona para el cuerpo, metal
+para el poste, negro satinado para el pomo y el pedestal), **iluminación de
+estudio** (luz clave + relleno + contra) y **sombras suaves** proyectadas sobre
+el suelo. La prenda se muestra como cáscara coloreada por el **mapa de ajuste**
+(holgura por zona) o, activando *«Caída (sim)»*, como **malla de tela** que cae
+por gravedad (solver PBD) y colisiona con el maniquí.
 
-No es simulación de caída (Fase 2): la prenda es una superficie ajustada al
-cuerpo con su silueta y holgura reales, suficiente para "verla puesta" y evaluar
-la horma.
+El cuerpo se construye por *loft* de anillos elípticos cuyo perímetro reproduce
+cada medida (busto, cintura, cadera…) — el mismo motor paramétrico de antes —
+pero ahora se convierte en mallas suaves de Three.js (normales promediadas) en
+lugar de dibujarse con un renderizador por software. Hay maniquí de **Mujer** y
+de **Hombre** con siluetas y medidas propias.
 
 Uso:
     python -m patronaje.viewer3d --output output   # genera output/viewer_3d.html
@@ -18,6 +22,15 @@ from __future__ import annotations
 
 import argparse
 import os
+
+_ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+
+
+def _three_js() -> str:
+    """Devuelve el código de Three.js vendorizado (para incrustar, sin red)."""
+    with open(os.path.join(_ASSET_DIR, "three.min.js"), "r", encoding="utf-8") as f:
+        return f.read()
+
 
 _PAGE = r"""<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,24 +42,27 @@ _PAGE = r"""<!doctype html><html lang="es"><head><meta charset="utf-8">
 .sub{color:#6b8199;font-size:13px;margin-bottom:12px}
 .stage{display:flex;gap:16px;flex-wrap:wrap}
 .controls{flex:1 1 280px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
-.view{flex:2 1 600px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px}
-canvas{width:100%;height:auto;touch-action:none;cursor:grab;background:linear-gradient(#eef4fb,#dfe8f2)}
+.view{flex:2 1 600px;background:#0e141c;border:1px solid var(--line);border-radius:10px;padding:10px}
+canvas{width:100%;height:auto;touch-action:none;cursor:grab;border-radius:6px;display:block}
 .row{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px}
 .row label{flex:0 0 120px}.row input[type=range]{flex:1}.row b{flex:0 0 50px;text-align:right;font-variant-numeric:tabular-nums}
 select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:8px}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .kv{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:4px 0;font-size:13px}
-@media(prefers-color-scheme:dark){body{background:#0f1720;color:#dfe8f2}.controls,.view{background:#16212e;border-color:#2a3a4d}}
+@media(prefers-color-scheme:dark){body{background:#0f1720;color:#dfe8f2}.controls{background:#16212e;border-color:#2a3a4d}}
 </style></head><body><div class="wrap">
-<h1>Patronaje — maniquí 3D a medida</h1>
-<div class="sub">Maniquí paramétrico desde tus medidas + la prenda como cáscara con
- <b>mapa de ajuste</b> (holgura por zona). Arrastra para girar. Sin dependencias:
- renderizador 3D por software. No es simulación de caída (eso es la Fase 2).</div>
+<h1>Patronaje — maniquí 3D a medida (WebGL)</h1>
+<div class="sub">Maniquí de sastre paramétrico desde tus medidas, renderizado con
+ <b>WebGL</b>: materiales PBR (lino/metal), iluminación de estudio y sombras. La prenda
+ se ve como cáscara con <b>mapa de ajuste</b> o cae como tela (PBD). Arrastra para girar,
+ rueda para acercar. Librería <b>incrustada</b>: funciona sin red ni descargas.</div>
 <div class="stage">
  <div class="controls">
   <div class="row"><label>Cuerpo</label><select id="sexo"><option value="F">Mujer</option><option value="M">Hombre</option></select></div>
   <div class="row"><label>Prenda</label><select id="garment"></select></div>
+  <div class="row"><label>Ver prenda</label>
+   <span style="flex:1"><input type="checkbox" id="showg" checked> <span style="font-size:12px;color:#6b8199">muestra/oculta la prenda</span></span></div>
   <div class="row"><label>Caída (sim)</label>
    <span style="flex:1"><input type="checkbox" id="sim"> <span style="font-size:12px;color:#6b8199">simula la caída de la tela (PBD)</span></span>
    <button id="redrape" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer">Re-drapear</button></div>
@@ -58,8 +74,9 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
    <span><i style="background:#2980b9"></i>holgado</span></div>
   <div id="fit" style="margin-top:8px"></div>
  </div>
- <div class="view"><canvas id="cv" width="620" height="720"></canvas></div>
+ <div class="view"><canvas id="cv" width="640" height="760"></canvas></div>
 </div></div>
+<script>/*__THREE__*/</script>
 <script>
 // ================= parámetros =================
 const DEFS={
@@ -76,7 +93,7 @@ const PRESETS={
  M:{busto:100,cintura:87,cadera:100,contorno_cuello:40,ancho_espalda:45,contorno_brazo:34,muneca:19,altura_cadera:22,talle:47,estatura:178,largo:74}};
 
 // ================= geometría paramétrica =================
-const N=36;
+const N=64;                                     // segmentos por anillo (alta resolución = suave)
 function ringC(y,C,ratio){ // anillo por circunferencia (Ramanujan) y ratio ancho/fondo
  const r=ratio,P1=Math.PI*(3*(r+1)-Math.sqrt((3*r+1)*(r+3))),d=C/P1,a=r*d;
  return ringAD(y,a,d);}
@@ -94,58 +111,13 @@ function bodyLevels(){
   neckY=shY+H*0.02, headB=neckY+H*0.03, headT=headB+H*0.135;
  return {ankleY,kneeY,hipY,waistY,bustY,chestY,shY,neckY,headB,headT};}
 
-function ellip(c,rx,ry,rz){const out=[];  // elipsoide (rings) para mano/pie
- for(let i=0;i<=6;i++){const ph=(-Math.PI/2)+Math.PI*i/6,rr=Math.cos(ph);
+function ellip(c,rx,ry,rz){const out=[];  // elipsoide (rings) para mano/pie/pomo
+ for(let i=0;i<=8;i++){const ph=(-Math.PI/2)+Math.PI*i/8,rr=Math.cos(ph);
   const ring=[];for(let k=0;k<N;k++){const th=2*Math.PI*k/N;
    ring.push([c[0]+rx*rr*Math.cos(th),c[1]+ry*Math.sin(ph),c[2]+rz*rr*Math.sin(th)]);}out.push(ring);}
  return out;}
 
-function buildBody(L){  // figura humana (dress form): torso + brazos + piernas
- const H=P.estatura, male=SEX==='M';
- // silueta por sexo: hombre más recto (menos cintura, cadera estrecha, hombros anchos);
- // mujer reloj de arena (busto, cintura marcada, cadera ancha)
- const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
- const hipC=male?P.cadera*0.93:P.cadera;
- const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.52:0.45);
- const T=[];
- T.push(ringC(L.hipY-4,hipC*0.94,hRat-0.02));           // pelvis (se mantiene ancha para las piernas)
- T.push(ringC(L.hipY,hipC,hRat));
- T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
- T.push(ringC(L.waistY,waistC,wRat));
- T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
- T.push(ringC(L.bustY,P.busto,bRat));
- T.push(ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05));
- T.push(ringAD(L.shY,shW,P.busto*(male?0.125:0.11)));    // línea de hombro
- T.push(ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085)); // trapecio hacia el cuello
- T.push(ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08));
- const limbs=[];
- // brazos: nacen del hombro y cuelgan a los lados
- const shX=shW*0.92, armLen=H*0.44,
-  uR=P.contorno_brazo/(male?5.0:5.6), fR=P.muneca/(male?4.4:4.8), wR=P.muneca/7.2;
- [1,-1].forEach(s=>{
-  const sh=[s*shX,L.shY-1,0.3], el=[s*(shX+1.2),L.shY-armLen*0.46,1.5], wr=[s*(shX+2.2),L.shY-armLen,2.4];
-  limbs.push(tube(sh,el,uR*1.15,fR,5));
-  limbs.push(tube(el,wr,fR,wR,4));
-  limbs.push(ellip(wr,wR*1.3,wR*1.7,wR*1.1));            // mano
- });
- // piernas (+ colisionadores cápsula para la simulación)
- const tR=P.cadera*(male?0.108:0.10), kR=tR*0.70, aR=tR*0.5, lx=P.cadera/10, legs=[];
- [1,-1].forEach(s=>{
-  const hip=[s*lx,L.hipY-2,0], kn=[s*lx*0.95,L.kneeY,0.3], an=[s*lx*0.92,L.ankleY,0.3];
-  limbs.push(tube(hip,kn,tR,kR,5));
-  limbs.push(tube(kn,an,kR,aR,4));
-  limbs.push(ellip([s*lx*0.9,L.ankleY-1,aR*1.4],aR*1.0,aR*0.85,aR*2.4)); // pie
-  legs.push({a:hip,b:kn,r0:tR,r1:kR},{a:kn,b:an,r0:kR,r1:aR});
- });
- return {torso:T,limbs,legs,levels:L};}
-
-function headRings(L){ // cabeza elipsoide
- const cy=(L.headB+L.headT)/2, ry=(L.headT-L.headB)/2, rx=ry*0.70, rz=ry*0.80, out=[];
- for(let i=0;i<=8;i++){const ph=(-Math.PI/2)+Math.PI*i/8, y=cy+ry*Math.sin(ph), rr=Math.cos(ph);
-  out.push(ringAD(y,rx*rr,rz*rr));}
- return out;}
-
-function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piernas)
+function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piernas/poste)
  const ax=[p1[0]-p0[0],p1[1]-p0[1],p1[2]-p0[2]];const L=Math.hypot(ax[0],ax[1],ax[2])||1;
  const dir=[ax[0]/L,ax[1]/L,ax[2]/L];
  let up=[0,1,0]; if(Math.abs(dir[1])>0.9)up=[1,0,0];
@@ -157,49 +129,75 @@ function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piern
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
 
-// prenda: cáscara a offset del cuerpo, coloreada por holgura
+// dome de cierre desde un anillo hacia un punto central (para tapar la malla)
+function capFrom(ring,dy,steps){
+ let a=0,d=0,y=ring[0][1];for(const p of ring){a=Math.max(a,Math.abs(p[0]));d=Math.max(d,Math.abs(p[2]));}
+ const out=[];for(let i=1;i<=steps;i++){const t=i/steps,s=Math.cos(t*Math.PI/2);
+  out.push(ringAD(y+dy*Math.sin(t*Math.PI/2),Math.max(a*s,1e-3),Math.max(d*s,1e-3)));}
+ return out;}
+
+function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuello→cadera)
+ const H=P.estatura, male=SEX==='M';
+ const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
+ const hipC=male?P.cadera*0.93:P.cadera;
+ const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.52:0.45);
+ // anillos del torso, de arriba (cuello) hacia abajo (cadera baja)
+ const neck=ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08);
+ const T=[];
+ T.push(ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085)); // trapecio bajo el cuello
+ T.push(ringAD(L.shY,shW,P.busto*(male?0.125:0.11)));       // línea de hombro
+ T.push(ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05));
+ T.push(ringC(L.bustY,P.busto,bRat));
+ T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
+ T.push(ringC(L.waistY,waistC,wRat));
+ T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
+ T.push(ringC(L.hipY,hipC,hRat));
+ const hipLow=ringC(L.hipY-4,hipC*0.965,hRat-0.02);
+ // malla cerrada: tapa de cuello + trapecio + cuerpo + cadera + fondo redondeado
+ const topCap=capFrom(neck,H*0.03,4).reverse();     // cúpula sobre el cuello (redondea hombros)
+ const botCap=capFrom(hipLow,-H*0.07,5);            // fondo redondeado del maniquí
+ const torso=topCap.concat([neck],T,[hipLow],botCap);
+ // colisionadores de pierna (cápsula) para que el pantalón caiga sobre ellas en la sim
+ const tR=P.cadera*(male?0.108:0.10), kR=tR*0.70, aR=tR*0.5, lx=P.cadera/10, legs=[];
+ [1,-1].forEach(s=>{
+  const hip=[s*lx,L.hipY-2,0], kn=[s*lx*0.95,L.kneeY,0.3], an=[s*lx*0.92,L.ankleY,0.3];
+  legs.push({a:hip,b:kn,r0:tR,r1:kR},{a:kn,b:an,r0:kR,r1:aR});
+ });
+ return {torso,legs,levels:L};}
+
+// prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
+function fillEase(rings,v){return rings.map(()=>v);}
+function capEndGroup(g,dy){ // tapa el extremo abierto (último anillo) de una manga/pernera
+ const last=g.rings[g.rings.length-1],caps=capFrom(last,dy,3),ev=g.ease[g.ease.length-1];
+ for(const c of caps)g.ease.push(ev);
+ g.rings=g.rings.concat(caps);return g;}
 function buildGarment(L,g){
- const faces=[],fit=[];const push=(rings,cf,alpha)=>ringsToFaces(rings,cf,alpha,faces);
- const eB=P.holgura_busto, eW=Math.max(0,eB*0.7), eH=4, hemY=L.waistY-(P.largo-P.talle*0.44);
- function shellRings(topY,botY,botC,botR){
-  return [ringC(L.shY-1,P.contorno_cuello+6,1.15),
-   ringC(L.bustY,P.busto+eB,1.26),ringC(L.waistY,P.cintura+eW,1.34),
-   ringC(Math.min(botY,L.hipY),P.cadera+eH,1.42),ringC(botY,botC,botR)];}
+ const groups=[],fit=[];
+ const eB=P.holgura_busto, eW=Math.max(0,eB*0.7), eH=4;
  if(g==="falda"){
   const hem=L.waistY-(P.largo);
   const rings=[ringC(L.waistY,P.cintura+2,1.34),ringC(L.hipY,P.cadera+4,1.42),ringC(hem,P.cadera+4+18,1.4)];
-  push(rings,(i)=>easeColor([2,4,4][i]||4),0.62);
+  groups.push({rings,ease:[2,4,4],alpha:0.68});
   fit.push(["Cintura",2],["Cadera",4]);
  }else if(g==="pantalon"){
   const rings=[ringC(L.waistY,P.cintura+2,1.34),ringC(L.hipY,P.cadera+5,1.42)];
-  push(rings,(i)=>easeColor([2,5][i]||5),0.62);
-  // dos perneras (siguen las piernas del maniquí, con holgura)
+  groups.push({rings,ease:[2,5],alpha:0.68});
   const legTop=L.hipY-2, ankle=L.ankleY+3, cx=P.cadera/9.5, tR=P.cadera*0.16+2.5;
   [1,-1].forEach(s=>{
-   const t1=tube([s*cx,legTop,0],[s*cx*0.92,L.kneeY,0.3],tR,tR*0.62,5);
-   const t2=tube([s*cx*0.92,L.kneeY,0.3],[s*cx*0.9,ankle,0.3],tR*0.62,tR*0.5,4);
-   ringsToFaces(t1,()=>easeColor(5),0.62,faces);ringsToFaces(t2,()=>easeColor(5),0.62,faces);});
+   const t1=tube([s*cx,legTop,0],[s*cx*0.92,L.kneeY,0.3],tR,tR*0.62,6);
+   const t2=tube([s*cx*0.92,L.kneeY,0.3],[s*cx*0.9,ankle,0.3],tR*0.62,tR*0.5,5);
+   groups.push({rings:t1,ease:fillEase(t1,5),alpha:0.68});
+   groups.push(capEndGroup({rings:t2,ease:fillEase(t2,5),alpha:0.68},-4));});
   fit.push(["Cintura",2],["Cadera",5]);
- }else{ // camisa / vestido / blazer (torso + mangas)
+ }else{ // camisa / vestido / blazer — cáscara de torso sobre el dress form (sin mangas)
   const botY=(g==="vestido")?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
   const botC=(g==="vestido")?P.cadera+6+ ((P.largo>90)?14:2):P.cadera+eH;
-  const rings=[ringC(L.shY-1,P.contorno_cuello+8,1.15),ringC(L.bustY,P.busto+eB,1.26),
+  const rings=[ringC(L.chestY,P.busto*0.9+eB*0.6,1.22),ringC(L.bustY,P.busto+eB,1.26),
    ringC(L.waistY,P.cintura+eW,1.34),ringC(botY,botC,1.42)];
-  const cols=[eB*0.6,eB,eW,eH];
-  push(rings,(i)=>easeColor(cols[i]),0.6);
-  // mangas (cuelgan sobre los brazos)
-  const sh=P.ancho_espalda*0.50, sy=L.shY-2, armLen=P.estatura*0.44;
-  const slLen=(g==="blazer")?armLen*0.62:(g==="vestido"?armLen*0.42:armLen*0.55);
-  [1,-1].forEach(s=>{const t=tube([s*sh,sy,0.3],[s*(sh+1.5),sy-slLen,1.6],P.contorno_brazo/5.2,P.contorno_brazo/6.0,6);
-   ringsToFaces(t,()=>easeColor(eB*0.8),0.72,faces);});
+  groups.push({rings,ease:[eB*0.6,eB,eW,eH],alpha:0.62});
   fit.push(["Busto",eB],["Cintura",eW],["Cadera",eH]);
  }
- return {faces,fit};}
-
-function ringsToFaces(rings,colorFn,alpha,out){
- for(let r=0;r<rings.length-1;r++){const A=rings[r],B=rings[r+1],col=colorFn(r);
-  for(let k=0;k<N;k++){const k2=(k+1)%N;
-   out.push({v:[A[k],A[k2],B[k2],B[k]],col,alpha});}}}
+ return {groups,fit};}
 
 // ================= perfil del cuerpo (para colisión) =================
 function perim(a,d){return Math.PI*(3*(a+d)-Math.sqrt((3*a+d)*(a+3*d)));}
@@ -213,10 +211,6 @@ function bodyAD(prof,y){
   const t=(y-prof[i].y)/(prof[i+1].y-prof[i].y||1);
   return [prof[i].a+(prof[i+1].a-prof[i].a)*t,prof[i].d+(prof[i+1].d-prof[i].d)*t];}}
  return [prof[0].a,prof[0].d];}
-function easeAtY(L,y){const pts=[[L.bustY,P.holgura_busto],[L.waistY,Math.max(1,P.holgura_busto*0.7)],[L.hipY,4]];
- if(y>=pts[0][0])return pts[0][1]; if(y<=pts[2][0])return pts[2][1];
- for(let i=0;i<2;i++){if(y<=pts[i][0]&&y>=pts[i+1][0]){const t=(pts[i][0]-y)/(pts[i][0]-pts[i+1][0]);
-  return pts[i][1]+(pts[i+1][1]-pts[i][1])*t;}}return 4;}
 
 // mallas de tela (rings x N) para simular; ring 0 se fija (cuelga de ahí)
 function garmentGrids(L,g,prof){
@@ -280,76 +274,157 @@ function stepCloth(cl,dt){
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
-  // colisión con el maniquí: torso (elipse por altura) arriba, piernas (cápsulas) abajo
   for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
    if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=0.8;d+=0.8;
     const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
     if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
    for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);}}
 }
-function clothFaces(cl,col){const out=[];
- for(const q of cl.faces)out.push({v:[cl.pos[q[0]],cl.pos[q[1]],cl.pos[q[2]],cl.pos[q[3]]],col,alpha:0.9});
- return out;}
 
-// ================= render =================
-const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-let yaw=0.5,pitch=0.05,drag=null,MESH=null,CLOTH=null,simMode=false,raf=null;
+// ================= escena Three.js =================
+const cv=document.getElementById('cv');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0d131b);
+const camera=new THREE.PerspectiveCamera(36,cv.width/cv.height,1,3000);
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setSize(cv.width,cv.height,false);
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+// iluminación de estudio: hemisférica + clave (con sombra) + relleno + contra
+scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.85));
+const key=new THREE.DirectionalLight(0xffffff,2.4);
+key.position.set(90,230,150);key.castShadow=true;
+key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0006;
+const sc=key.shadow.camera;sc.left=-100;sc.right=100;sc.top=240;sc.bottom=-30;sc.near=1;sc.far=700;
+scene.add(key);
+const fill=new THREE.DirectionalLight(0xdfe8ff,0.6);fill.position.set(-110,90,60);scene.add(fill);
+const rim=new THREE.DirectionalLight(0xffffff,0.9);rim.position.set(-40,150,-160);scene.add(rim);
+
+// suelo de estudio (recibe sombra)
+const floorMat=new THREE.MeshStandardMaterial({color:0x141c26,roughness:0.95,metalness:0.0});
+const floor=new THREE.Mesh(new THREE.CircleGeometry(170,72),floorMat);
+floor.rotation.x=-Math.PI/2;floor.position.y=0.0;floor.receiveShadow=true;scene.add(floor);
+
+// materiales PBR
+const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,roughness:0.86,metalness:0.03});
+const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
+const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
+const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
+const MAT_WHEEL=new THREE.MeshStandardMaterial({color:0x0d0d12,roughness:0.6,metalness:0.2});
+function garmentMat(alpha){return new THREE.MeshStandardMaterial({
+ vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
+ side:THREE.DoubleSide});}
+const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.85,metalness:0.02,side:THREE.DoubleSide});
+
+// helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
+function ringGroupsGeom(groups){
+ const pos=[],idx=[];let off=0,tris=0;
+ for(const rings of groups){const R=rings.length;
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);}
+  for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   const a=off+r*N+k,b=off+r*N+k2,c=off+(r+1)*N+k2,d=off+(r+1)*N+k;
+   idx.push(a,b,c,a,c,d);tris+=2;}
+  off+=R*N;}
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setIndex(idx);g.computeVertexNormals();g.__tris=tris;return g;}
+
+function coloredGarmentGeom(groups){ // groups: [{rings,ease}]
+ const pos=[],col=[],idx=[];let off=0,tris=0;
+ for(const grp of groups){const rings=grp.rings,R=rings.length;
+  for(let r=0;r<R;r++){const c=easeColor(grp.ease[r]);
+   for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);
+    col.push((c[0]/255)**2.2,(c[1]/255)**2.2,(c[2]/255)**2.2);}}
+  for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   const a=off+r*N+k,b=off+r*N+k2,c=off+(r+1)*N+k2,d=off+(r+1)*N+k;
+   idx.push(a,b,c,a,c,d);tris+=2;}
+  off+=R*N;}
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+ g.setIndex(idx);g.computeVertexNormals();g.__tris=tris;return g;}
+
+function clothGeom(cl){
+ const pos=new Float32Array(cl.pos.length*3),idx=[];
+ for(let i=0;i<cl.pos.length;i++){pos[i*3]=cl.pos[i][0];pos[i*3+1]=cl.pos[i][1];pos[i*3+2]=cl.pos[i][2];}
+ for(const q of cl.faces)idx.push(q[0],q[1],q[2],q[0],q[2],q[3]);
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ g.setIndex(idx);g.computeVertexNormals();g.__tris=idx.length/3;return g;}
+
+// ================= estado / rebuild =================
+const ROOT=new THREE.Group();scene.add(ROOT);
+let MESH=null,CLOTH=null,simMode=false,showG=true,raf=null;
+let theta=0.62,phi=1.28,radius=380,target=new THREE.Vector3(0,90,0),camReady=false;
+
+function clearRoot(){
+ for(const c of ROOT.children.slice()){ROOT.remove(c);if(c.geometry)c.geometry.dispose();}}
+
+function addMesh(geom,mat,shadow){
+ const m=new THREE.Mesh(geom,mat);m.castShadow=!!shadow;m.receiveShadow=false;ROOT.add(m);return m;}
+
+function updateCamera(){
+ const rp=Math.sin(phi);
+ camera.position.set(target.x+radius*rp*Math.sin(theta),target.y+radius*Math.cos(phi),
+  target.z+radius*rp*Math.cos(theta));
+ camera.lookAt(target);}
 
 function rebuild(){
  const L=bodyLevels(),body=buildBody(L),g=document.getElementById('garment').value;
- const H=P.estatura, SKIN=[226,214,192], POST=[95,98,104], BLACK=[32,32,38];
- const bfaces=[];
- ringsToFaces(body.torso,()=>SKIN,1.0,bfaces);
- for(const limb of body.limbs)ringsToFaces(limb,()=>SKIN,1.0,bfaces);
- // pomo negro sobre poste metálico (remate de dress form, en vez de cabeza)
- ringsToFaces(tube([0,L.neckY-1,0],[0,L.neckY+H*0.045,0],P.contorno_cuello/10,P.contorno_cuello/13,2),()=>POST,1.0,bfaces);
- ringsToFaces(ellip([0,L.neckY+H*0.075,0],H*0.019,H*0.032,H*0.019),()=>BLACK,1.0,bfaces);
- // pedestal: poste central negro + base de 5 patas con ruedas
- ringsToFaces(tube([0,2,0],[0,L.hipY-4,0],2.3,2.3,2),()=>BLACK,1.0,bfaces);
+ const H=P.estatura;
+ clearRoot();
+ let tris=0;
+ // cuerpo: torso cerrado (dress form) — lino/lona
+ const bodyGeom=ringGroupsGeom([body.torso]);
+ addMesh(bodyGeom,MAT_BODY,true);tris+=bodyGeom.__tris;
+ // pomo negro sobre poste metálico (remate del dress form)
+ const postGeom=ringGroupsGeom([tube([0,L.neckY-1,0],[0,L.neckY+H*0.045,0],P.contorno_cuello/10,P.contorno_cuello/13,3)]);
+ addMesh(postGeom,MAT_POST,true);tris+=postGeom.__tris;
+ const knobGeom=ringGroupsGeom([ellip([0,L.neckY+H*0.075,0],H*0.019,H*0.032,H*0.019)]);
+ addMesh(knobGeom,MAT_KNOB,true);tris+=knobGeom.__tris;
+ // pedestal: poste central + base de 5 patas con ruedas
+ const pedGeom=ringGroupsGeom([tube([0,2,0],[0,L.hipY-4,0],2.3,2.3,3)]);
+ addMesh(pedGeom,MAT_BLACK,true);tris+=pedGeom.__tris;
+ const arms=[],wheels=[];
  for(let i=0;i<5;i++){const a=2*Math.PI*i/5+0.35,R=H*0.12;
-  ringsToFaces(tube([0,2.5,0],[Math.cos(a)*R,1.0,Math.sin(a)*R],1.7,1.0,1),()=>BLACK,1.0,bfaces);
-  ringsToFaces(ellip([Math.cos(a)*R,0.2,Math.sin(a)*R],1.5,1.3,1.5),()=>[16,16,20],1.0,bfaces);}
+  arms.push(tube([0,2.5,0],[Math.cos(a)*R,1.0,Math.sin(a)*R],1.7,1.0,2));
+  wheels.push(ellip([Math.cos(a)*R,1.2,Math.sin(a)*R],1.5,1.3,1.5));}
+ const armGeom=ringGroupsGeom(arms);addMesh(armGeom,MAT_BLACK,true);tris+=armGeom.__tris;
+ const whGeom=ringGroupsGeom(wheels);addMesh(whGeom,MAT_WHEEL,true);tris+=whGeom.__tris;
+ // prenda
  const prof=bodyProfileFrom(body.torso);
  const gm=buildGarment(L,g);
- const all=bfaces.concat(gm.faces);
- let yMin=1e9,yMax=-1e9;for(const fa of all)for(const v of fa.v){if(v[1]<yMin)yMin=v[1];if(v[1]>yMax)yMax=v[1];}
- MESH={body:bfaces,garment:gm.faces,cy:(yMin+yMax)/2,hh:Math.max(1,yMax-yMin),prof,legs:body.legs,L,g};
+ let garMesh=null;
+ if(showG&&!simMode){const gg=coloredGarmentGeom(gm.groups);
+  garMesh=addMesh(gg,garmentMat(0.9),false);tris+=gg.__tris;}
+ MESH={body:body,cy:0,prof,legs:body.legs,L,g,groups:gm.groups};
+ // encuadre (una vez / al cambiar de sexo)
+ const yTop=L.neckY+H*0.11,yBot=0;
+ target.set(0,(yTop+yBot)/2,0);
+ if(!camReady){radius=(yTop-yBot)*1.35;camReady=true;}
  document.getElementById('fit').innerHTML='<b>Holgura (ajuste)</b>'+gm.fit.map(f=>
   '<div class="kv"><span>'+f[0]+'</span><b style="color:rgb('+easeColor(f[1]).join(',')+')">'+f[1].toFixed(1)+' cm</b></div>').join('');
- if(simMode){startSim();}else{if(raf)cancelAnimationFrame(raf),raf=null;draw();}}
+ CLOTH=null;
+ if(simMode){startSim();}else{if(raf){cancelAnimationFrame(raf);raf=null;}window.__rendered=tris;draw();}}
 
 function startSim(){
  const grids=garmentGrids(MESH.L,MESH.g,MESH.prof);
  CLOTH=buildCloth(grids,MESH.prof,MESH.legs,MESH.L.hipY);
+ const cg=clothGeom(CLOTH);
+ const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
+ clothMesh.name='__cloth';ROOT.add(clothMesh);
  if(raf)cancelAnimationFrame(raf);
- let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);n++;
-  draw();if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
+ let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);
+  const pa=cg.attributes.position.array;
+  for(let i=0;i<CLOTH.pos.length;i++){pa[i*3]=CLOTH.pos[i][0];pa[i*3+1]=CLOTH.pos[i][1];pa[i*3+2]=CLOTH.pos[i][2];}
+  cg.attributes.position.needsUpdate=true;cg.computeVertexNormals();
+  window.__rendered=cg.__tris+200;n++;draw();
+  if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
 
-function render(faces){
- const w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);
- const cyaw=Math.cos(yaw),syaw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
- const rot=p=>{let x=p[0]*cyaw-p[2]*syaw,z=p[0]*syaw+p[2]*cyaw,y=p[1];
-  return [x,y*cp-z*sp,y*sp+z*cp];};
- const cy=MESH.cy,dist=260,f=760,sc=0.72*h*dist/(f*MESH.hh);
- const proj=p=>{const zc=p[2]+dist,k=f/(zc||1e-3)*sc;return [w/2+p[0]*k,h*0.52-(p[1]-cy)*k,zc];};
- const light=norm([0.35,0.55,0.75]),draws=[];
- for(const fa of faces){const rv=fa.v.map(rot);
-  const n=norm(cross([rv[1][0]-rv[0][0],rv[1][1]-rv[0][1],rv[1][2]-rv[0][2]],
-                     [rv[2][0]-rv[0][0],rv[2][1]-rv[0][1],rv[2][2]-rv[0][2]]));
-  const lamb=Math.abs(n[0]*light[0]+n[1]*light[1]+n[2]*light[2]);
-  const pv=rv.map(proj),zc=(pv[0][2]+pv[1][2]+pv[2][2]+pv[3][2])/4;
-  draws.push({pv,zc,col:fa.col,sh:Math.min(1,0.35+0.75*lamb),alpha:fa.alpha});}
- draws.sort((a,b)=>b.zc-a.zc);
- for(const d of draws){const c=d.col;ctx.beginPath();ctx.moveTo(d.pv[0][0],d.pv[0][1]);
-  for(let i=1;i<4;i++)ctx.lineTo(d.pv[i][0],d.pv[i][1]);ctx.closePath();
-  ctx.fillStyle='rgba('+Math.round(c[0]*d.sh)+','+Math.round(c[1]*d.sh)+','+Math.round(c[2]*d.sh)+','+d.alpha+')';ctx.fill();}
- window.__rendered=draws.length;}
-
-function draw(){
- let faces=MESH.body.slice();
- if(simMode&&CLOTH)faces=faces.concat(clothFaces(CLOTH,[57,110,158]));
- else faces=faces.concat(MESH.garment);
- render(faces);}
+function draw(){updateCamera();renderer.render(scene,camera);}
 
 // ================= UI =================
 function buildSliders(){const c=document.getElementById('sliders');c.innerHTML='';
@@ -362,23 +437,27 @@ const gsel=document.getElementById('garment');
  .forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;gsel.appendChild(o);});
 gsel.onchange=rebuild;
 document.getElementById('sexo').onchange=e=>{SEX=e.target.value;
- for(const k in PRESETS[SEX])P[k]=PRESETS[SEX][k];buildSliders();rebuild();};
+ for(const k in PRESETS[SEX])P[k]=PRESETS[SEX][k];camReady=false;buildSliders();rebuild();};
+document.getElementById('showg').onchange=e=>{showG=e.target.checked;rebuild();};
 document.getElementById('sim').onchange=e=>{simMode=e.target.checked;rebuild();};
 document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
-cv.onpointerdown=e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
-cv.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*0.01;pitch+=(e.clientY-drag[1])*0.01;
- pitch=Math.max(-0.9,Math.min(0.9,pitch));drag=[e.clientX,e.clientY];draw();};
-cv.onpointerup=()=>{drag=null;cv.style.cursor='grab';};
+cv.onpointerdown=e=>{cv.__drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
+cv.onpointermove=e=>{if(!cv.__drag)return;theta-=(e.clientX-cv.__drag[0])*0.01;phi-=(e.clientY-cv.__drag[1])*0.01;
+ phi=Math.max(0.25,Math.min(2.7,phi));cv.__drag=[e.clientX,e.clientY];draw();};
+cv.onpointerup=()=>{cv.__drag=null;cv.style.cursor='grab';};
+cv.onwheel=e=>{e.preventDefault();radius*=(1+Math.sign(e.deltaY)*0.08);
+ radius=Math.max(120,Math.min(900,radius));draw();};
 buildSliders();rebuild();
 </script></body></html>"""
 
 
 def build_body_viewer(outdir: str = "output") -> str:
-    """Genera el visor 3D del maniquí a medida (HTML autocontenido)."""
+    """Genera el visor 3D del maniquí a medida (HTML autocontenido, Three.js incrustado)."""
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "viewer_3d.html")
+    html = _PAGE.replace("/*__THREE__*/", _three_js())
     with open(path, "w", encoding="utf-8") as f:
-        f.write(_PAGE)
+        f.write(html)
     return path
 
 

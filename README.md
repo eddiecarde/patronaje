@@ -97,11 +97,15 @@ copa de manga por bisección) está **portado a JavaScript**, así que no necesi
 servidor ni dependencias. La fidelidad del port se verifica contra el motor
 Python (Δ < 0.0002 cm). Ver `docs/visor_vivo.md`.
 
-**Maniquí 3D a medida**: `python -m patronaje.viewer3d` genera `output/viewer_3d.html`,
-un maniquí paramétrico (dress form) construido desde las medidas, con la prenda como
-**cáscara** y un **mapa de ajuste** (holgura por zona: cómodo/ajustado/tira/holgado).
-Se gira con el ratón, autocontenido (renderizador 3D por software, sin dependencias).
-Ver `docs/visor_3d.md`.
+**Maniquí 3D a medida (WebGL/PBR)**: `python -m patronaje.viewer3d` genera
+`output/viewer_3d.html`, un maniquí de sastre (dress form) paramétrico construido
+desde las medidas y renderizado con **WebGL**: **torso cerrado y suave**, materiales
+**PBR** (lino/metal), **iluminación de estudio** y **sombras**, al estilo de una
+horma profesional (Mujer / Hombre). La prenda se ve como **cáscara** con **mapa de
+ajuste** (holgura por zona: cómodo/ajustado/tira/holgado) o **cae como tela** (solver
+PBD). Se gira con el ratón (rueda para acercar). Es **autocontenido y sin red**: la
+librería Three.js va **incrustada** en el HTML (no se descarga de ningún CDN); se
+vendoriza en `patronaje/assets/three.min.js`. Ver `docs/visor_3d.md`.
 
 Tallas disponibles: `XS S M L XL XXL` (medidas base en
 `patronaje/parametric/measurements.py`). Grading: ver `docs/grading.md`;
