@@ -43,7 +43,11 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
   relación ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse)— y
   se **cierra** por arriba (cúpula sobre el cuello) y por abajo (fondo
   redondeado). Los anillos se convierten en una **malla indexada** de Three.js con
-  **normales promediadas** (`computeVertexNormals`), de ahí el aspecto suave.
+  **normales promediadas** (`computeVertexNormals`), de ahí el aspecto suave. En
+  el **hombro** se interpolan anillos intermedios con suavizado coseno (pendiente
+  0 en los extremos) entre el trapecio del cuello, la línea de hombro y el pecho,
+  de modo que la transición de anchura queda **redondeada** en vez de formar una
+  arista/cresta marcada.
 - **Materiales (PBR)**: `MeshStandardMaterial` — cuerpo lino (rugosidad alta, sin
   metalicidad), poste metálico, pomo/pedestal negros. La prenda usa **colores por
   vértice** (el mapa de ajuste) sobre material semitransparente.

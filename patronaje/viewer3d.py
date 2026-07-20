@@ -129,6 +129,14 @@ function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piern
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
 
+// interpola 'steps' anillos entre rA y rB (exclusivos), con suavizado coseno
+// (pendiente 0 en ambos extremos) para redondear crestas al loftear
+function blendRings(rA,rB,steps){const out=[];
+ for(let i=1;i<=steps;i++){const t=i/(steps+1),s=0.5-0.5*Math.cos(Math.PI*t),ring=[];
+  for(let k=0;k<N;k++)ring.push([rA[k][0]+(rB[k][0]-rA[k][0])*s,
+   rA[k][1]+(rB[k][1]-rA[k][1])*s,rA[k][2]+(rB[k][2]-rA[k][2])*s]);
+  out.push(ring);}return out;}
+
 // dome de cierre desde un anillo hacia un punto central (para tapar la malla)
 function capFrom(ring,dy,steps){
  let a=0,d=0,y=ring[0][1];for(const p of ring){a=Math.max(a,Math.abs(p[0]));d=Math.max(d,Math.abs(p[2]));}
@@ -144,9 +152,16 @@ function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuell
  // anillos del torso, de arriba (cuello) hacia abajo (cadera baja)
  const neck=ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08);
  const T=[];
- T.push(ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085)); // trapecio bajo el cuello
- T.push(ringAD(L.shY,shW,P.busto*(male?0.125:0.11)));       // línea de hombro
- T.push(ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05));
+ // hombro suave: trapecio -> hombro -> pecho con anillos intermedios (coseno)
+ // para redondear la cresta del hombro en vez de una arista/tienda.
+ const trapU=ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085); // trapecio bajo el cuello
+ const shoulder=ringAD(L.shY,shW,P.busto*(male?0.135:0.12));   // línea de hombro (algo más de fondo)
+ const chest=ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05);
+ T.push(trapU);
+ T.push(...blendRings(trapU,shoulder,2));                      // sube redondeando hasta el hombro
+ T.push(shoulder);
+ T.push(...blendRings(shoulder,chest,3));                      // baja redondeando hacia el pecho
+ T.push(chest);
  T.push(ringC(L.bustY,P.busto,bRat));
  T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
  T.push(ringC(L.waistY,waistC,wRat));
