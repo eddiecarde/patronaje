@@ -64,6 +64,11 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
 - **Materiales (PBR)**: `MeshStandardMaterial` — cuerpo lino (rugosidad alta, sin
   metalicidad), poste metálico, pomo/pedestal negros. La prenda usa **colores por
   vértice** (el mapa de ajuste) sobre material semitransparente.
+- **Textura de lona (procedural)**: el cuerpo lleva una **trama de lino** dibujada
+  por código en un `<canvas>` (sin imágenes externas): un mapa de **color** beige
+  con variación de hilo y un **bump map** de tejido plano (warp/weft alternos +
+  ruido de fibra) que da **relieve** bajo la luz PBR. El lofteado genera además
+  **coordenadas UV** (`k` alrededor, anillo hacia abajo) para mapear la trama.
 - **Luz y sombra**: hemisférica + 3 direccionales (clave/relleno/contra); la clave
   proyecta **sombra** (PCF suave) sobre un suelo de estudio. Cámara en órbita:
   arrastra para girar, rueda para acercar.

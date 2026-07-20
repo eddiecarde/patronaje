@@ -351,8 +351,35 @@ const floorMat=new THREE.MeshStandardMaterial({color:0x141c26,roughness:0.95,met
 const floor=new THREE.Mesh(new THREE.CircleGeometry(170,72),floorMat);
 floor.rotation.x=-Math.PI/2;floor.position.y=0.0;floor.receiveShadow=true;scene.add(floor);
 
+// textura de lona/lino PROCEDURAL (tejido plano): sin imágenes externas, se dibuja
+// en un <canvas> -> mapa de color + bump de trama, para el relieve bajo luz PBR.
+function makeLinen(){
+ const px=128,thread=4;                              // 32 hilos por baldosa (mosaico continuo)
+ const bc=document.createElement('canvas');bc.width=bc.height=px;const bx=bc.getContext('2d');
+ const cc=document.createElement('canvas');cc.width=cc.height=px;const cx=cc.getContext('2d');
+ const bi=bx.createImageData(px,px),ci=cx.createImageData(px,px);
+ for(let j=0;j<px;j++)for(let i=0;i<px;i++){
+  const over=((Math.floor(i/thread)+Math.floor(j/thread))&1)===0; // trama por encima/por debajo
+  const u=(i%thread)/thread,v=(j%thread)/thread;
+  const crest=over?Math.sin(Math.PI*u):Math.sin(Math.PI*v);       // cresta del hilo (0..1)
+  const noise=(Math.random()-0.5)*0.13;                            // fibras/slubs del lino
+  const h=Math.max(0,Math.min(1,0.34+crest*0.6+noise));
+  const o=(j*px+i)*4,g=Math.round(h*255);
+  bi.data[o]=bi.data[o+1]=bi.data[o+2]=g;bi.data[o+3]=255;         // bump (altura)
+  const sh=(0.8+h*0.22)*(over?1.0:0.95);                           // color beige con variación de hilo
+  ci.data[o]=Math.round(233*sh);ci.data[o+1]=Math.round(220*sh);ci.data[o+2]=Math.round(198*sh);ci.data[o+3]=255;
+ }
+ bx.putImageData(bi,0,0);cx.putImageData(ci,0,0);return {bump:bc,color:cc};}
+const _lin=makeLinen();
+const LIN_BUMP=new THREE.CanvasTexture(_lin.bump);
+LIN_BUMP.wrapS=LIN_BUMP.wrapT=THREE.RepeatWrapping;LIN_BUMP.repeat.set(7,1);
+const LIN_COLOR=new THREE.CanvasTexture(_lin.color);
+LIN_COLOR.wrapS=LIN_COLOR.wrapT=THREE.RepeatWrapping;LIN_COLOR.repeat.set(7,1);
+LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
+
 // materiales PBR
-const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,roughness:0.86,metalness:0.03});
+const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
+ bumpMap:LIN_BUMP,bumpScale:0.5,roughness:0.9,metalness:0.02});
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -365,15 +392,17 @@ const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opa
 
 // helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
 function ringGroupsGeom(groups){
- const pos=[],idx=[];let off=0,tris=0;
+ const pos=[],uv=[],idx=[];let off=0,tris=0;
  for(const rings of groups){const R=rings.length;
-  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);}
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);
+   uv.push(k/N, r*0.5);}                       // UV: k alrededor, anillo hacia abajo (para la lona)
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    const a=off+r*N+k,b=off+r*N+k2,c=off+(r+1)*N+k2,d=off+(r+1)*N+k;
    idx.push(a,b,c,a,c,d);tris+=2;}
   off+=R*N;}
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
  g.setIndex(idx);g.computeVertexNormals();g.__tris=tris;return g;}
 
 function coloredGarmentGeom(groups){ // groups: [{rings,ease}]
