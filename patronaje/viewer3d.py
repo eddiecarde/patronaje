@@ -66,6 +66,7 @@ const DEFS={
  busto:["Busto/Pecho",76,124,88],holgura_busto:["Holgura busto",-2,20,8],
  cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],
  contorno_cuello:["Contorno cuello",32,46,37],ancho_espalda:["Ancho espalda",30,48,37],
+ contorno_brazo:["Contorno brazo",22,44,30],muneca:["Muñeca",13,24,18],
  altura_cadera:["Altura cadera",16,26,20],talle:["Talle (nuca-cint.)",34,52,41],
  estatura:["Estatura",150,190,168],largo:["Largo prenda",30,130,68]};
 const P={};for(const k in DEFS)P[k]=DEFS[k][3];
@@ -105,31 +106,32 @@ function buildBody(L){  // figura humana (dress form): torso + brazos + piernas
  // mujer reloj de arena (busto, cintura marcada, cadera ancha)
  const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
  const hipC=male?P.cadera*0.93:P.cadera;
- const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.60:0.52);
+ const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.52:0.45);
  const T=[];
- T.push(ringC(L.hipY-7,hipC*0.95,hRat-0.04));           // unión a las piernas
+ T.push(ringC(L.hipY-4,hipC*0.94,hRat-0.02));           // pelvis (se mantiene ancha para las piernas)
  T.push(ringC(L.hipY,hipC,hRat));
  T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
  T.push(ringC(L.waistY,waistC,wRat));
  T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
  T.push(ringC(L.bustY,P.busto,bRat));
- T.push(ringC(L.chestY,P.busto*(male?0.95:0.88),bRat-0.06));
- T.push(ringAD(L.shY,shW,P.busto*(male?0.135:0.115)));   // hombros
- T.push(ringC(L.neckY,P.contorno_cuello*(male?1.05:1.02),1.10));
+ T.push(ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05));
+ T.push(ringAD(L.shY,shW,P.busto*(male?0.125:0.11)));    // línea de hombro
+ T.push(ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085)); // trapecio hacia el cuello
+ T.push(ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08));
  const limbs=[];
- // brazos (cuelgan a los lados, ligera separación)
- const shX=shW, armLen=H*0.44,
-  uR=P.contorno_brazo/(male?5.4:6.0), fR=P.muneca/(male?4.6:5.0), wR=P.muneca/7.5;
+ // brazos: nacen del hombro y cuelgan a los lados
+ const shX=shW*0.92, armLen=H*0.44,
+  uR=P.contorno_brazo/(male?5.0:5.6), fR=P.muneca/(male?4.4:4.8), wR=P.muneca/7.2;
  [1,-1].forEach(s=>{
-  const sh=[s*shX,L.shY-3,0.4], el=[s*(shX+1.5),L.shY-armLen*0.46,1.6], wr=[s*(shX+2.6),L.shY-armLen,2.6];
-  limbs.push(tube(sh,el,uR,fR,4));
+  const sh=[s*shX,L.shY-1,0.3], el=[s*(shX+1.2),L.shY-armLen*0.46,1.5], wr=[s*(shX+2.2),L.shY-armLen,2.4];
+  limbs.push(tube(sh,el,uR*1.15,fR,5));
   limbs.push(tube(el,wr,fR,wR,4));
   limbs.push(ellip(wr,wR*1.3,wR*1.7,wR*1.1));            // mano
  });
  // piernas (+ colisionadores cápsula para la simulación)
- const tR=P.cadera*(male?0.17:0.16), kR=tR*0.55, aR=tR*0.36, lx=P.cadera/9.5, legs=[];
+ const tR=P.cadera*(male?0.108:0.10), kR=tR*0.70, aR=tR*0.5, lx=P.cadera/10, legs=[];
  [1,-1].forEach(s=>{
-  const hip=[s*lx,L.hipY-6,0], kn=[s*lx*0.92,L.kneeY,0.3], an=[s*lx*0.9,L.ankleY,0.3];
+  const hip=[s*lx,L.hipY-2,0], kn=[s*lx*0.95,L.kneeY,0.3], an=[s*lx*0.92,L.ankleY,0.3];
   limbs.push(tube(hip,kn,tR,kR,5));
   limbs.push(tube(kn,an,kR,aR,4));
   limbs.push(ellip([s*lx*0.9,L.ankleY-1,aR*1.4],aR*1.0,aR*0.85,aR*2.4)); // pie
