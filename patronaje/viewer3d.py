@@ -169,19 +169,19 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
  t=adC((waistC+P.busto)/2,(wRat+bRat)/2); pAD((L.waistY+L.bustY)/2,t.a,t.d);
  t=adC(P.busto,bRat);        pAD(L.bustY,t.a,t.d);
  t=adC(P.busto*(male?0.95:0.90),bRat-0.05); pAD(L.chestY,t.a,t.d);
- pAD(L.shY, shW*0.82, P.busto*(male?0.14:0.13));           // hombro: torso estrecho (el brazo pone el deltoides)
- pAD((L.shY+L.neckY)/2, shW*0.5, P.busto*0.09);            // trapecio
+ pAD(L.shY, shW*0.66, P.busto*(male?0.135:0.125));         // hombro: torso estrecho (el deltoides da la anchura)
+ pAD((L.shY+L.neckY)/2, shW*0.46, P.busto*0.085);          // trapecio (cuello baja en pendiente al hombro)
  t=adC(P.contorno_cuello*(male?1.05:1.0),1.06); pAD(L.neckY,t.a,t.d); // cuello
  prof.sort((u,v)=>u.y-v.y);
  let maxA=0;for(const q of prof)maxA=Math.max(maxA,q.a);  // punto más ancho del torso (cadera)
  const yTop=L.neckY, yBot=L.hipY-6;
  // ---- primitivas (round cones) que se FUNDEN con el torso: brazos, piernas ----
- const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*1.0, eaR=aR*0.76;
+ const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*0.86, eaR=aR*0.74;
  const armX=maxA+aR*0.35;                                 // brazos cuelgan por FUERA del punto más ancho
- const thR=P.cadera*(male?0.115:0.12), knR=thR*0.60, caR=thR*0.66, ankR=thR*0.42, cx=thR*(male?0.78:0.72);
+ const thR=P.cadera*(male?0.115:0.12), knR=thR*0.56, caR=thR*0.62, ankR=thR*0.34, cx=thR*(male?0.78:0.72);
  const limbs=[],legs=[],armAxis=[],legAxis=[];
  [1,-1].forEach(s=>{
-  const sh=[s*shW*1.02,L.shY-1,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
+  const sh=[s*shW*0.94,L.shY-3.5,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
   const ht=[wr[0],L.hipY-4-wR*2.6,wr[2]+0.5];             // punta de la mano
   limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});             // brazo alto (funde en el hombro)
   limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});             // antebrazo
