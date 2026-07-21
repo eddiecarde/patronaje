@@ -66,6 +66,14 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
   <div class="row"><label>Caída (sim)</label>
    <span style="flex:1"><input type="checkbox" id="sim"> <span style="font-size:12px;color:#6b8199">simula la caída de la tela (PBD)</span></span>
    <button id="redrape" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer">Re-drapear</button></div>
+  <div class="row"><label>Tejido</label>
+   <select id="fabric" style="flex:1;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff"></select></div>
+  <div class="row"><label>Ver tensión</label>
+   <span style="flex:1"><input type="checkbox" id="tension"> <span style="font-size:12px;color:#6b8199">mapa de estiramiento de la tela</span></span></div>
+  <div id="tlegend" class="legend" style="display:none">
+   <span><i style="background:#2f7fd0"></i>flojo</span>
+   <span><i style="background:#3aa85a"></i>reposo</span>
+   <span><i style="background:#d84a3a"></i>estirado</span></div>
   <div id="sliders"></div>
   <div class="legend">
    <span><i style="background:#c0392b"></i>tira (&lt;0)</span>
@@ -265,7 +273,7 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
  for(let i=0;i<NX;i++)for(let j=0;j<NY;j++)for(let k=0;k<NZ;k++)
   F[gi(i,j,k)]=bodyField([x0+i*cs,y0+j*cs,z0+k*cs],B);
  const ci=(i,j,k)=>(i*ny+j)*nz+k,cellV=new Int32Array(nx*ny*nz).fill(-1);
- const pos=[],nor=[],uv=[];
+ const pos=[],nor=[],uv=[],ao=[];
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)for(let k=0;k<nz;k++){
   const v=[];let mask=0;
   for(let c=0;c<8;c++){const o=_CORN[c],val=F[gi(i+o[0],j+o[1],k+o[2])];v.push(val);if(val<0)mask|=1<<c;}
@@ -277,6 +285,13 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
   const px=x0+(i+sx/cnt)*cs,py=y0+(j+sy/cnt)*cs,pz=z0+(k+sz/cnt)*cs;
   cellV[ci(i,j,k)]=pos.length/3;pos.push(px,py,pz);
   const nn=fieldNormal(B,px,py,pz);nor.push(nn[0],nn[1],nn[2]);
+  // oclusión ambiental por el propio campo (iq): en cavidades (axila, cintura,
+  // cuello, entrepierna) el campo sube más lento que el paso -> se oscurece.
+  let occ=0,sca=1;
+  for(let s=1;s<=5;s++){const h=s*1.5,
+   dd=bodyField([px+nn[0]*h,py+nn[1]*h,pz+nn[2]*h],B);
+   occ+=Math.max(0,h-dd)*sca;sca*=0.78;}
+  ao.push(Math.max(0.35,Math.min(1,1-0.16*occ)));
   uv.push(Math.atan2(px,pz)/(2*Math.PI)+0.5,py*0.5);}  // costura UV atrás (oculta)
  const idx=[];
  // quad con winding coherente (flip): normal saliente consistente en toda la malla
@@ -293,6 +308,7 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
  g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.setAttribute('ao',new THREE.Float32BufferAttribute(ao,1));
  g.setIndex(idx);g.__tris=idx.length/3;return g;}
 
 // prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
@@ -381,31 +397,61 @@ function ellipsoidPush(p,c,r){  // empuja la partícula fuera de un elipsoide (b
  const e=qx*qx+qy*qy+qz*qz;
  if(e<1&&e>1e-6){const s=1/Math.sqrt(e);
   p[0]=c[0]+(p[0]-c[0])*s;p[1]=c[1]+(p[1]-c[1])*s;p[2]=c[2]+(p[2]-c[2])*s;}}
-function buildCloth(grids,prof,legs,hipY){
+function buildCloth(grids,prof,legs,hipY,B){
  const pos=[],prev=[],pin=[],cons=[],faces=[],gridInfo=[];
  for(const rings of grids){
   const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());pin.push(r===0?1:0);}
-  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
-   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  const add=(a,b,t)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz),t||0]);};             // t=1 -> flexión (rigidez de tejido)
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    add(idx(r,k),idx(r,k2));                                   // anillo
    if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}  // columna + cizalla
-   if(r<R-2)add(idx(r,k),idx(r+2,k));}                        // flexión
+   if(r<R-2)add(idx(r,k),idx(r+2,k),1);}                      // flexión
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
   gridInfo.push({base,R});}
- return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0};}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,B:B||null};}
+
+// biblioteca de tejidos: parámetros físicos (rigidez de flexión, amortiguación,
+// peso) + acabado de superficie (rugosidad, brillo). Un "material digital" ligero
+// y reutilizable, en la línea de un U3M sin archivos externos.
+const FABRICS={
+ algodon:{label:"Algodón",bendK:0.55,damp:0.985,gmul:1.0,rough:0.86,sheen:0.5},
+ lino:   {label:"Lino",   bendK:0.72,damp:0.985,gmul:1.05,rough:0.92,sheen:0.32},
+ lana:   {label:"Lana",   bendK:0.5, damp:0.980,gmul:1.15,rough:0.95,sheen:0.28},
+ seda:   {label:"Seda",   bendK:0.28,damp:0.972,gmul:0.9, rough:0.42,sheen:1.1},
+ denim:  {label:"Mezclilla",bendK:0.9,damp:0.990,gmul:1.2,rough:0.80,sheen:0.45},
+ gasa:   {label:"Gasa",   bendK:0.16,damp:0.965,gmul:0.8, rough:0.55,sheen:0.95}};
+let FAB=FABRICS.algodon, showTension=false;
+
+// mapa de tensión: color por vértice según el estiramiento medio de sus aristas
+// (azul = flojo, verde = reposo, rojo = estirado) — diagnóstico de ajuste.
+function clothTension(cl){
+ const n=cl.pos.length,ratio=new Float32Array(n),cnt=new Float32Array(n);
+ for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
+  const d=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]),r=d/(c[2]||1e-6);
+  ratio[c[0]]+=r;cnt[c[0]]++;ratio[c[1]]+=r;cnt[c[1]]++;}
+ let mean=0,m=0;
+ for(let i=0;i<n;i++){if(cnt[i]){ratio[i]/=cnt[i];mean+=ratio[i];m++;}else ratio[i]=1;}
+ mean=m?mean/m:1;                        // tensión RELATIVA a la media: resalta focos
+ const col=new Float32Array(n*3);
+ for(let i=0;i<n;i++){const t=Math.max(-1,Math.min(1,(ratio[i]-mean)*16));let r,g,bl;
+  if(t>=0){r=0.16+0.74*t;g=0.66-0.42*t;bl=0.30*(1-t);}      // media -> estirado (rojo)
+  else{const s=-t;r=0.16*(1-s);g=0.66-0.30*s;bl=0.30+0.55*s;} // media -> flojo (azul)
+  col[i*3]=r;col[i*3+1]=g;col[i*3+2]=bl;}
+ return col;}
 
 function stepCloth(cl,dt){
- const g=-160*dt*dt, damp=0.985;
+ const g=-160*dt*dt*FAB.gmul, damp=FAB.damp;
  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i],q=cl.prev[i];
   const vx=(p[0]-q[0])*damp,vy=(p[1]-q[1])*damp,vz=(p[2]-q[2])*damp;
   q[0]=p[0];q[1]=p[1];q[2]=p[2];p[0]+=vx;p[1]+=vy+g;p[2]+=vz;}
  for(let it=0;it<8;it++){
   for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
    let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6;
-   const diff=(d-c[2])/d*0.5,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
+   const st=c[3]?FAB.bendK:1.0;                              // flexión suave según tejido
+   const diff=(d-c[2])/d*0.5*st,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
@@ -438,11 +484,11 @@ function clothFromRings(grids,prof,legs,hipY,pinTop,blobs,B){  // como buildClot
  for(const rings of grids){const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());
    pin.push((r===0&&(!pinTop||pinTop[k]))?1:0);}
-  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
-   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  const add=(a,b,t)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz),t||0]);};
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    add(idx(r,k),idx(r,k2));if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}
-   if(r<R-2)add(idx(r,k),idx(r+2,k));}
+   if(r<R-2)add(idx(r,k),idx(r+2,k),1);}
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}}
  return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null};}
@@ -473,7 +519,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 
 // iluminación de estudio: hemisférica + clave (con sombra) + relleno + contra
-scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.85));
+scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.5));   // el resto de ambiente lo da la IBL
 const key=new THREE.DirectionalLight(0xffffff,2.4);
 key.position.set(90,230,150);key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0009;key.shadow.normalBias=1.6;
@@ -481,6 +527,23 @@ const sc=key.shadow.camera;sc.left=-100;sc.right=100;sc.top=240;sc.bottom=-30;sc
 scene.add(key);
 const fill=new THREE.DirectionalLight(0xdfe8ff,0.6);fill.position.set(-110,90,60);scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,0.9);rim.position.set(-40,150,-160);scene.add(rim);
+
+// IBL (image-based lighting): entorno de estudio PROCEDURAL (sin HDRI externo),
+// filtrado por PMREM -> irradiancia difusa realista + brillo especular suave en la
+// lona y la tela. Es lo que da el aspecto "de foto" al maniquí, no un cambio de motor.
+function makeEnv(){
+ const w=512,h=256,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+ const g=x.createLinearGradient(0,0,0,h);            // cenit -> horizonte -> suelo
+ g.addColorStop(0.0,'#eef2f7');g.addColorStop(0.42,'#c9d2de');g.addColorStop(0.5,'#aeb8c6');
+ g.addColorStop(0.5,'#39414e');g.addColorStop(1.0,'#20262f');
+ x.fillStyle=g;x.fillRect(0,0,w,h);
+ const rg=x.createRadialGradient(w*0.66,h*0.26,4,w*0.66,h*0.26,h*0.46);   // ventana/luz clave
+ rg.addColorStop(0,'rgba(255,255,255,0.92)');rg.addColorStop(1,'rgba(255,255,255,0)');
+ x.fillStyle=rg;x.fillRect(0,0,w,h);return c;}
+const _envTex=new THREE.CanvasTexture(makeEnv());_envTex.mapping=THREE.EquirectangularReflectionMapping;
+const _pmrem=new THREE.PMREMGenerator(renderer);_pmrem.compileEquirectangularShader();
+scene.environment=_pmrem.fromEquirectangular(_envTex).texture;
+_envTex.dispose();_pmrem.dispose();
 
 // suelo de estudio (recibe sombra)
 const floorMat=new THREE.MeshStandardMaterial({color:0x141c26,roughness:0.95,metalness:0.0});
@@ -515,25 +578,33 @@ LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
 
 // materiales PBR
 const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
- roughness:0.9,metalness:0.02,side:THREE.DoubleSide});
-// relieve de lona por TRIPLANAR en el shader (sin depender de UVs de la malla implícita):
-// perturba la normal con el gradiente de la trama muestreada por posición mundial.
-MAT_BODY.onBeforeCompile=sh=>{
- sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:0.42};sh.uniforms.uLinAmt={value:0.9};
- sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
-  '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
- sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
-  +sh.fragmentShader.replace('#include <normal_fragment_maps>',
-  ['#include <normal_fragment_maps>','{',
-   ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
-   ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
-   ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
-   ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
-   ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
-   ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
-   ' normal=normalize(abs(fDet)*normal - vGrad);',
-   '}'].join('\n'));};
-MAT_BODY.needsUpdate=true;
+ roughness:0.9,metalness:0.02,side:THREE.DoubleSide,envMapIntensity:0.4});
+// relieve de tejido por TRIPLANAR en el shader (sin depender de UVs): perturba la
+// normal con el gradiente de la trama muestreada por posición mundial. Reutilizable
+// en el cuerpo (lona) y en la prenda (tela).
+function applyLinen(mat,sc,amt,useAo){
+ mat.onBeforeCompile=sh=>{
+  sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:sc};sh.uniforms.uLinAmt={value:amt};
+  const vHead='varying vec3 vWP;\n'+(useAo?'attribute float ao;varying float vAo;\n':'');
+  sh.vertexShader=vHead+sh.vertexShader.replace('#include <worldpos_vertex>',
+   '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;'+(useAo?'\n vAo=ao;':''));
+  sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
+   +(useAo?'varying float vAo;\n':'')
+   +sh.fragmentShader.replace('#include <normal_fragment_maps>',
+   ['#include <normal_fragment_maps>','{',
+    ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
+    ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
+    ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
+    ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
+    ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
+    ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
+    ' normal=normalize(abs(fDet)*normal - vGrad);',
+    '}'].join('\n'));
+  if(useAo)  // oclusión de contacto: oscurece el difuso e indirecto en cavidades
+   sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',
+    '#include <color_fragment>\n diffuseColor.rgb*=vAo;');};
+ mat.needsUpdate=true;}
+applyLinen(MAT_BODY,0.42,0.9,true);
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -541,7 +612,12 @@ const MAT_WHEEL=new THREE.MeshStandardMaterial({color:0x0d0d12,roughness:0.6,met
 function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
  side:THREE.DoubleSide});}
-const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.85,metalness:0.02,side:THREE.DoubleSide});
+const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.86,metalness:0.02,side:THREE.DoubleSide,envMapIntensity:0.55});
+applyLinen(MAT_CLOTH,0.9,0.5);                 // la prenda también con relieve de tela (más fino)
+// material del mapa de tensión (color por vértice, sin relieve para leer bien el color)
+const MAT_TENSION=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,metalness:0.02,side:THREE.DoubleSide});
+// color de tela por prenda
+const GCOL={camisa:0xdfe3ea,falda:0x7d5a86,pantalon:0x36435c,vestido:0xa8455a,blazer:0x3a4150};
 const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opacity:0.72,dashSize:1.4,gapSize:0.9});
 
 // helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
@@ -630,7 +706,9 @@ function updateCamera(){
  camera.lookAt(target);}
 
 function rebuild(){
- const L=bodyLevels(),body=buildBody(L,simMode),g=document.getElementById('garment').value;
+ const g=document.getElementById('garment').value;
+ const torsoG=(g==='camisa'||g==='vestido'||g==='blazer');   // solo el torso se drapea sin brazos
+ const L=bodyLevels(),body=buildBody(L,simMode&&torsoG);
  const H=P.estatura;
  clearRoot();
  let tris=0;
@@ -670,17 +748,22 @@ function rebuild(){
  if(simMode){startSim();}else{if(raf){cancelAnimationFrame(raf);raf=null;}window.__rendered=tris;draw();}}
 
 function startSim(){
+ MAT_CLOTH.color.setHex(GCOL[MESH.g]||0x3f6fa0);
+ MAT_CLOTH.roughness=FAB.rough;MAT_CLOTH.envMapIntensity=FAB.sheen;MAT_CLOTH.needsUpdate=true;
  const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
  CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
-            :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY);
+            :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY,MESH.body);
  const cg=clothGeom(CLOTH);
- const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
+ if(showTension)cg.setAttribute('color',new THREE.BufferAttribute(clothTension(CLOTH),3));
+ const clothMesh=new THREE.Mesh(cg,showTension?MAT_TENSION:MAT_CLOTH);clothMesh.castShadow=true;
  clothMesh.name='__cloth';ROOT.add(clothMesh);
  if(raf)cancelAnimationFrame(raf);
  let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);
   const pa=cg.attributes.position.array;
   for(let i=0;i<CLOTH.pos.length;i++){pa[i*3]=CLOTH.pos[i][0];pa[i*3+1]=CLOTH.pos[i][1];pa[i*3+2]=CLOTH.pos[i][2];}
-  cg.attributes.position.needsUpdate=true;cg.computeVertexNormals();
+  cg.attributes.position.needsUpdate=true;
+  if(showTension){const cc=clothTension(CLOTH),ca=cg.attributes.color.array;ca.set(cc);cg.attributes.color.needsUpdate=true;}
+  cg.computeVertexNormals();
   window.__rendered=cg.__tris+200;n++;draw();
   if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
 
@@ -701,6 +784,11 @@ document.getElementById('sexo').onchange=e=>{SEX=e.target.value;
 document.getElementById('showg').onchange=e=>{showG=e.target.checked;rebuild();};
 document.getElementById('sim').onchange=e=>{simMode=e.target.checked;rebuild();};
 document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
+const fabsel=document.getElementById('fabric');
+for(const k in FABRICS){const o=document.createElement('option');o.value=k;o.textContent=FABRICS[k].label;fabsel.appendChild(o);}
+fabsel.onchange=e=>{FAB=FABRICS[e.target.value];if(simMode)startSim();};
+document.getElementById('tension').onchange=e=>{showTension=e.target.checked;
+ document.getElementById('tlegend').style.display=showTension?'flex':'none';if(simMode)startSim();};
 cv.onpointerdown=e=>{cv.__drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
 cv.onpointermove=e=>{if(!cv.__drag)return;theta-=(e.clientX-cv.__drag[0])*0.01;phi-=(e.clientY-cv.__drag[1])*0.01;
  phi=Math.max(0.25,Math.min(2.7,phi));cv.__drag=[e.clientX,e.clientY];draw();};

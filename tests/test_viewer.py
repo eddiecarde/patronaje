@@ -141,6 +141,44 @@ def test_live_viewer_matches_python_engine():
 
 
 @pytest.mark.skipif(not _browser_available(), reason="Playwright/Chromium no disponible")
+def test_live_viewer_drag_edits_measurement():
+    """Edición directa: arrastrar un punto del trazo cambia la medida y recalcula,
+    y el slider correspondiente se sincroniza (fidelidad UI ↔ parámetro)."""
+    playwright = pytest.importorskip("playwright.sync_api")
+    d = tempfile.mkdtemp()
+    url = pathlib.Path(build_live_viewer(d)).resolve().as_uri()
+    with playwright.sync_playwright() as pw:
+        b = _launch(pw)
+        pg = b.new_page(viewport={"width": 1100, "height": 900})
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(url)
+        pg.wait_for_function("window.HANDLES !== undefined")
+        pg.check("#edit")
+        n = pg.evaluate("window.HANDLES.length")            # camisa: 4 manijas
+        before = pg.evaluate("P.busto")
+        pos = pg.eval_on_selector(
+            "#svg svg",
+            "el=>{const m=el.getScreenCTM();const h=window.HANDLES.find(h=>h.key==='busto');"
+            "return {x:m.a*h.ax+m.c*h.ay+m.e,y:m.b*h.ax+m.d*h.ay+m.f};}")
+        pg.mouse.move(pos["x"], pos["y"])
+        pg.mouse.down()
+        pg.mouse.move(pos["x"] - 30, pos["y"], steps=6)      # estrecha el busto
+        pg.mouse.up()
+        after = pg.evaluate("P.busto")
+        slider = float(pg.eval_on_selector("#sl-busto", "e=>e.value"))
+        # cada prenda expone manijas de edición
+        counts = {g: pg.evaluate(f"GARMENTS['{g}'].handles(P).length")
+                  for g in ["camisa", "falda", "pantalon", "vestido", "blazer"]}
+        b.close()
+    assert not errs, errs
+    assert n == 4
+    assert after < before                        # arrastrar hacia dentro reduce el busto
+    assert abs(slider - after) < 1e-6            # el slider refleja la medida
+    assert all(v >= 1 for v in counts.values()), counts
+
+
+@pytest.mark.skipif(not _browser_available(), reason="Playwright/Chromium no disponible")
 def test_body_viewer_3d_renders_each_garment():
     """El maniquí 3D dibuja caras para cada prenda sin errores de consola."""
     playwright = pytest.importorskip("playwright.sync_api")
@@ -191,3 +229,33 @@ def test_cloth_simulation_is_stable():
         assert s["bad"] == 0, f"{g}: NaN en la malla"
         assert 5 < s["span"] < 250, f"{g}: la tela explotó/colapsó ({s['span']})"
         assert s["n"] > 100
+
+
+@pytest.mark.skipif(not _browser_available(), reason="Playwright/Chromium no disponible")
+def test_fabric_presets_and_tension_map():
+    """El tejido cambia la física (rigidez de flexión) y el mapa de tensión pinta
+    color por vértice, sin errores y estable."""
+    playwright = pytest.importorskip("playwright.sync_api")
+    from patronaje.viewer3d import build_body_viewer
+    d = tempfile.mkdtemp()
+    url = pathlib.Path(build_body_viewer(d)).resolve().as_uri()
+    with playwright.sync_playwright() as pw:
+        b = _launch(pw)
+        pg = b.new_page()
+        errs = []
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(url)
+        pg.wait_for_function("window.__rendered !== undefined")
+        # presets: la seda flexa mucho más suave que la mezclilla
+        soft = pg.evaluate("FABRICS.seda.bendK")
+        stiff = pg.evaluate("FABRICS.denim.bendK")
+        # mapa de tensión: color por vértice válido (RGB en [0,1]) y del tamaño de la malla
+        info = pg.evaluate(
+            "(()=>{simMode=true;showTension=true;rebuild();if(raf)cancelAnimationFrame(raf);"
+            "for(let i=0;i<120;i++)stepCloth(CLOTH,0.12);const c=clothTension(CLOTH);"
+            "let ok=c.length===CLOTH.pos.length*3;for(const v of c)if(v<0||v>1)ok=false;"
+            "return {ok,len:c.length,n:CLOTH.pos.length};})()")
+        b.close()
+    assert not errs, errs
+    assert soft < stiff, "la seda debe flexar más suave que la mezclilla"
+    assert info["ok"] and info["len"] == info["n"] * 3

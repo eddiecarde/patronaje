@@ -79,9 +79,18 @@ axila ni facetas.
   con variación de hilo y un **bump map** de tejido plano (warp/weft alternos +
   ruido de fibra) que da **relieve** bajo la luz PBR. El lofteado genera además
   **coordenadas UV** (`k` alrededor, anillo hacia abajo) para mapear la trama.
-- **Luz y sombra**: hemisférica + 3 direccionales (clave/relleno/contra); la clave
-  proyecta **sombra** (PCF suave) sobre un suelo de estudio. Cámara en órbita:
-  arrastra para girar, rueda para acercar.
+- **Oclusión ambiental (AO)**: la propia superficie implícita se usa para **hornear
+  oclusión de contacto** por vértice — se marcha el campo de distancia unos pasos a lo
+  largo de la normal y, donde sube más lento que el paso (axila, cuello, bajo el busto,
+  cintura, entrepierna), se **oscurece** el difuso. Da la sensación de profundidad de
+  una foto sin *post-proceso*.
+- **Luz y sombra**: **IBL** (image-based lighting) con un **entorno de estudio
+  procedural** (sin HDRI externo) filtrado por **PMREM**, que aporta irradiancia difusa
+  realista y un brillo especular suave sobre la lona y la tela; más hemisférica + 3
+  direccionales (clave/relleno/contra). La clave proyecta **sombra** (PCF suave) sobre
+  un suelo de estudio, con *tone mapping* ACES. Cámara en órbita: arrastra para girar,
+  rueda para acercar. Sube la calidad **con el mismo motor** (Three.js), no cambiando de
+  framework.
 - **Prenda**: cáscara a *offset* del cuerpo por la holgura, siguiendo la silueta de
   cada tipo (torso para camisa/vestido/blazer; falda acampanada; dos perneras para
   el pantalón). Se muestra sin mangas sobre la horma, como en un atelier.
@@ -97,6 +106,24 @@ brazos** para que la tela caiga limpia. La **colisión es exacta**: la tela se
 empuja fuera del **campo de distancia del cuerpo** (`bodyField` = torso + piernas
 + busto + glúteos), así no atraviesa la figura. El motor de patrones (`fittedBodice`,
 `skirtPanel`…) es el **mismo** que el del visor 2D (módulo compartido, `engine_js()`).
+
+## Tejido y mapa de tensión
+
+- **Selector «Tejido»** (algodón, lino, lana, seda, mezclilla, gasa): cada tejido
+  es un **material digital ligero** —en la línea de un U3M sin archivos externos—
+  con **parámetros físicos** (rigidez de flexión, amortiguación, peso) y **acabado
+  de superficie** (rugosidad, brillo). La seda flexa suave y brilla; la mezclilla
+  es rígida y mate; la gasa cae ligerísima. Cambiar el tejido re-drapea con esa
+  física y aplica su acabado a la tela.
+- **Casilla «Ver tensión»**: colorea la prenda por el **estiramiento** de la malla
+  **relativo a la media** (🔵 flojo · 🟢 reposo · 🔴 estirado). Es un **diagnóstico
+  de ajuste**: la zona que agarra el cuerpo (busto, cintura, cadera) sale cálida y
+  la tela que cuelga libre sale fría. Es la lectura que un diseñador mira para
+  juzgar el ajuste antes de coser una muestra.
+
+> Alcance honesto: el drapeado es **indicativo**, no un solver de fit certificado.
+> El maniquí es una **horma estática**; los avatares con pose (tensión sobre un
+> cuerpo en movimiento) siguen fuera del alcance, como en el benchmark.
 
 ## Simulación de caída (PBD)
 
