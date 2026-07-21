@@ -179,13 +179,13 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
  const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*0.86, eaR=aR*0.74;
  const armX=maxA+aR*0.35;                                 // brazos cuelgan por FUERA del punto más ancho
  const thR=P.cadera*(male?0.115:0.12), knR=thR*0.56, caR=thR*0.62, ankR=thR*0.34, cx=thR*(male?0.78:0.72);
- const limbs=[],legs=[],armAxis=[],legAxis=[];
+ const limbs=[],legs=[],blobs=[],armAxis=[],legAxis=[];
  [1,-1].forEach(s=>{
   const sh=[s*shW*0.94,L.shY-3.5,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
-  const ht=[wr[0],L.hipY-4-wR*2.6,wr[2]+0.5];             // punta de la mano
   limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});             // brazo alto (funde en el hombro)
   limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});             // antebrazo
-  limbs.push({a:wr,b:ht,r1:wR,r2:wR*0.72,k:1.2});         // mano
+  // mano: elipsoide aplanado (manopla) — fino de canto, largo hacia abajo
+  blobs.push({c:[wr[0],wr[1]-wR*1.9,wr[2]+0.4],r:[wR*0.62,wR*2.3,wR*1.35],k:1.3});
   armAxis.push([sh,wr,s]);
   const hip=[s*cx,L.hipY+1,0], kn=[s*cx*0.96,L.kneeY,0.5],
         ca=[s*cx*0.95,(L.kneeY+L.ankleY)/2,0.8], an=[s*cx*0.93,L.ankleY,0.5];
@@ -197,7 +197,6 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
  });
  // ---- pecho/busto y glúteos: elipsoides que se funden con el torso ----
  const bAD=adC(P.busto,bRat), hAD=adC(hipC,hRat);
- const blobs=[];
  [1,-1].forEach(s=>{
   // busto (mujer, marcado) / pectoral (hombre, plano y alto)
   blobs.push(male
