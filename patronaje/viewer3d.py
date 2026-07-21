@@ -77,6 +77,7 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
  <div class="view"><canvas id="cv" width="640" height="760"></canvas></div>
 </div></div>
 <script>/*__THREE__*/</script>
+<script>/*__ENGINE__*/</script>
 <script>
 // ================= parámetros =================
 const DEFS={
@@ -155,7 +156,7 @@ function capFrom(ring,dy,steps){
 // perfil (a,d) del torso por circunferencia y ratio a esa altura
 function adC(C,r){const P1=Math.PI*(3*(r+1)-Math.sqrt((3*r+1)*(r+3)));const d=C/P1;return {a:r*d,d};}
 
-function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cápsulas fundidas)
+function buildBody(L,drape){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cápsulas fundidas)
  const male=SEX==='M';
  const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
  const hipC=male?P.cadera*0.93:P.cadera;
@@ -179,14 +180,16 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
  const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*0.86, eaR=aR*0.74;
  const armX=maxA+aR*0.35;                                 // brazos cuelgan por FUERA del punto más ancho
  const thR=P.cadera*(male?0.115:0.12), knR=thR*0.56, caR=thR*0.62, ankR=thR*0.34, cx=thR*(male?0.78:0.72);
- const limbs=[],legs=[],blobs=[],armAxis=[],legAxis=[];
+ const limbs=[],legs=[],blobs=[],armCaps=[],armAxis=[],legAxis=[];
  [1,-1].forEach(s=>{
   const sh=[s*shW*0.94,L.shY-3.5,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
-  limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});             // brazo alto (funde en el hombro)
-  limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});             // antebrazo
-  // mano: elipsoide aplanado (manopla) — fino de canto, largo hacia abajo
-  blobs.push({c:[wr[0],wr[1]-wR*1.9,wr[2]+0.4],r:[wR*0.62,wR*2.3,wR*1.35],k:1.3});
-  armAxis.push([sh,wr,s]);
+  if(!drape){                                            // al drapear: horma SIN brazos (como en atelier)
+   limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});           // brazo alto (funde en el hombro)
+   limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});           // antebrazo
+   blobs.push({c:[wr[0],wr[1]-wR*1.9,wr[2]+0.4],r:[wR*0.62,wR*2.3,wR*1.35],k:1.3}); // mano
+   armAxis.push([sh,wr,s]);
+   armCaps.push({a:el,b:wr,r0:eaR*1.05,r1:wR*1.05});
+  }
   const hip=[s*cx,L.hipY+1,0], kn=[s*cx*0.96,L.kneeY,0.5],
         ca=[s*cx*0.95,(L.kneeY+L.ankleY)/2,0.8], an=[s*cx*0.93,L.ankleY,0.5];
   limbs.push({a:hip,b:kn,r1:thR,r2:knR,k:5.5});           // muslo (funde en la pelvis)
@@ -196,18 +199,19 @@ function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cá
   legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
  });
  // ---- pecho/busto y glúteos: elipsoides que se funden con el torso ----
- const bAD=adC(P.busto,bRat), hAD=adC(hipC,hRat);
+ const bAD=adC(P.busto,bRat), hAD=adC(hipC,hRat), colBlobs=[];
  [1,-1].forEach(s=>{
   // busto (mujer, marcado) / pectoral (hombre, plano y alto)
-  blobs.push(male
+  const bust=male
    ?{c:[s*P.busto*0.075,L.chestY,bAD.d*0.6], r:[P.busto*0.095,P.busto*0.055,P.busto*0.05], k:5.5}
-   :{c:[s*P.busto*0.052,L.bustY-1,bAD.d*0.62], r:[P.busto*0.075,P.busto*0.08,P.busto*0.062], k:3.5});
+   :{c:[s*P.busto*0.052,L.bustY-1,bAD.d*0.62], r:[P.busto*0.075,P.busto*0.08,P.busto*0.062], k:3.5};
   // glúteos (atrás, en el asiento, bajo la línea de cadera)
-  blobs.push(male
+  const glute=male
    ?{c:[s*P.cadera*0.055,L.hipY-4,-hAD.d*0.58], r:[P.cadera*0.075,P.cadera*0.075,P.cadera*0.055], k:5.5}
-   :{c:[s*P.cadera*0.06,L.hipY-4,-hAD.d*0.55], r:[P.cadera*0.092,P.cadera*0.088,P.cadera*0.075], k:5.0});
+   :{c:[s*P.cadera*0.06,L.hipY-4,-hAD.d*0.55], r:[P.cadera*0.092,P.cadera*0.088,P.cadera*0.075], k:5.0};
+  blobs.push(bust,glute);colBlobs.push(bust,glute);   // colBlobs: colisión de la tela
  });
- return {prof,yTop,yBot,limbs,legs,blobs,armAxis,legAxis,shW,levels:L};}
+ return {prof,yTop,yBot,limbs,legs,blobs,colBlobs,armCaps,armAxis,legAxis,shW,levels:L};}
 
 // ---- SDF del cuerpo y poligonización por Surface Nets ----
 function smin(a,b,k){const h=Math.max(0,Math.min(1,0.5+0.5*(b-a)/k));return b+h*(a-b)-k*h*(1-h);}
@@ -372,6 +376,11 @@ function capsulePush(p,seg){  // empuja la partícula fuera de una cápsula (seg
  const cx=a[0]+abx*t,cy=a[1]+aby*t,cz=a[2]+abz*t;
  let dx=p[0]-cx,dy=p[1]-cy,dz=p[2]-cz,dl=Math.hypot(dx,dy,dz),r=(seg.r0+(seg.r1-seg.r0)*t)+0.8;
  if(dl<r&&dl>1e-6){const s=r/dl;p[0]=cx+dx*s;p[1]=cy+dy*s;p[2]=cz+dz*s;}}
+function ellipsoidPush(p,c,r){  // empuja la partícula fuera de un elipsoide (busto/glúteo)
+ const gap=1.0,qx=(p[0]-c[0])/(r[0]+gap),qy=(p[1]-c[1])/(r[1]+gap),qz=(p[2]-c[2])/(r[2]+gap);
+ const e=qx*qx+qy*qy+qz*qz;
+ if(e<1&&e>1e-6){const s=1/Math.sqrt(e);
+  p[0]=c[0]+(p[0]-c[0])*s;p[1]=c[1]+(p[1]-c[1])*s;p[2]=c[2]+(p[2]-c[2])*s;}}
 function buildCloth(grids,prof,legs,hipY){
  const pos=[],prev=[],pin=[],cons=[],faces=[],gridInfo=[];
  for(const rings of grids){
@@ -393,19 +402,63 @@ function stepCloth(cl,dt){
  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i],q=cl.prev[i];
   const vx=(p[0]-q[0])*damp,vy=(p[1]-q[1])*damp,vz=(p[2]-q[2])*damp;
   q[0]=p[0];q[1]=p[1];q[2]=p[2];p[0]+=vx;p[1]+=vy+g;p[2]+=vz;}
- for(let it=0;it<6;it++){
+ for(let it=0;it<8;it++){
   for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
    let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6;
    const diff=(d-c[2])/d*0.5,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
-  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
-   if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=0.8;d+=0.8;
+  if(!cl.B)for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+   if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=1.6;d+=1.6;   // colisión aproximada (falda/pantalón)
     const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
     if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
-   for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);}}
+   for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);
+   if(cl.blobs)for(let j=0;j<cl.blobs.length;j++)ellipsoidPush(p,cl.blobs[j].c,cl.blobs[j].r);}}
+ // prendas de torso: colisión EXACTA contra el campo del cuerpo (una vez por paso).
+ // También se empujan los puntos FIJADOS del borde superior (escote/sisa) para que
+ // se apoyen por delante del busto en vez de que éste asome.
+ if(cl.B){const mg=1.4;for(let i=0;i<cl.pos.length;i++){const p=cl.pos[i];
+  const f=bodyField(p,cl.B);if(f<mg){const n=fieldNormal(cl.B,p[0],p[1],p[2]),d=mg-f;
+   p[0]+=n[0]*d;p[1]+=n[1]*d;p[2]+=n[2]*d;}}}
 }
+
+// ===== TRY-ON completo: prenda REAL cosida (tubo con escote/sisa/hombro del bloque)
+// que se sujeta por los HOMBROS y CAE por gravedad (PBD), colisionando con el maniquí.
+function topEdgeArr(L,g){                 // altura del borde superior por azimut k
+ const gsh=L.shY-1.5, fnd=P.contorno_cuello/5+1.0, bnd=2.0, arm=L.shY-7.5;
+ const cK=[0,8,16,24,32,40,48,56], cV=[arm,gsh,gsh-fnd,gsh,arm,gsh,gsh-bnd,gsh];
+ const arr=new Array(N);
+ for(let k=0;k<N;k++){let i=0;while(i<cK.length-1&&k>=cK[i+1])i++;
+  const a=cK[i],b=(i+1<cK.length)?cK[i+1]:cK[0]+N,va=cV[i],vb=cV[(i+1)%cK.length];
+  const t=(k-a)/(b-a),s=0.5-0.5*Math.cos(Math.PI*t);arr[k]=va+(vb-va)*s;}
+ return arr;}
+function clothFromRings(grids,prof,legs,hipY,pinTop,blobs,B){  // como buildCloth, pin selectivo en r=0
+ const pos=[],prev=[],pin=[],cons=[],faces=[];
+ for(const rings of grids){const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());
+   pin.push((r===0&&(!pinTop||pinTop[k]))?1:0);}
+  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   add(idx(r,k),idx(r,k2));if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}
+   if(r<R-2)add(idx(r,k),idx(r+2,k));}
+  for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
+   faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null};}
+function buildGarmentCloth(L,g,prof,legs,blobs,B){  // prenda de torso real (escote/sisa) cosida
+ const top=topEdgeArr(L,g),M=15,eB=P.holgura_busto;
+ const hemY=(g==='vestido')?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
+ const rad=y=>{const yy=Math.max(prof[0].y,Math.min(prof[prof.length-1].y,y));
+  let ad=bodyAD(prof,yy);const bc=perim(ad[0],ad[1]),ease=(y>=L.bustY?eB+4:eB*0.85+9),sc=(bc+ease)/bc;
+  return [ad[0]*sc,ad[1]*sc];};
+ const rings=[];
+ for(let r=0;r<=M;r++){const t=r/M,ring=[];
+  for(let k=0;k<N;k++){const th=2*Math.PI*k/N,yTop=top[k],y=yTop+(hemY-yTop)*t,ad=rad(y);
+   ring.push([ad[0]*Math.cos(th),y,ad[1]*Math.sin(th)]);}
+  rings.push(ring);}
+ // sujeta TODO el borde superior (escote/sisa/hombro): la prenda cuelga de ahí y cae
+ return clothFromRings([rings],prof,legs||[],L.hipY,null,blobs,B);}
 
 // ================= escena Three.js =================
 const cv=document.getElementById('cv');
@@ -577,7 +630,7 @@ function updateCamera(){
  camera.lookAt(target);}
 
 function rebuild(){
- const L=bodyLevels(),body=buildBody(L),g=document.getElementById('garment').value;
+ const L=bodyLevels(),body=buildBody(L,simMode),g=document.getElementById('garment').value;
  const H=P.estatura;
  clearRoot();
  let tris=0;
@@ -606,7 +659,7 @@ function rebuild(){
  let garMesh=null;
  if(showG&&!simMode){const gg=coloredGarmentGeom(gm.groups);
   garMesh=addMesh(gg,garmentMat(0.9),false);tris+=gg.__tris;}
- MESH={body:body,cy:0,prof,legs:body.legs,L,g,groups:gm.groups};
+ MESH={body:body,cy:0,prof,legs:body.legs,colBlobs:body.colBlobs,armCaps:body.armCaps,L,g,groups:gm.groups};
  // encuadre (una vez / al cambiar de sexo)
  const yTop=L.neckY+H*0.11,yBot=0;
  target.set(0,(yTop+yBot)/2,0);
@@ -617,8 +670,9 @@ function rebuild(){
  if(simMode){startSim();}else{if(raf){cancelAnimationFrame(raf);raf=null;}window.__rendered=tris;draw();}}
 
 function startSim(){
- const grids=garmentGrids(MESH.L,MESH.g,MESH.prof);
- CLOTH=buildCloth(grids,MESH.prof,MESH.legs,MESH.L.hipY);
+ const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
+ CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
+            :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY);
  const cg=clothGeom(CLOTH);
  const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
  clothMesh.name='__cloth';ROOT.add(clothMesh);
@@ -662,7 +716,9 @@ def build_body_viewer(outdir: str = "output") -> str:
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "viewer_3d.html")
     from .webshell import inject_shell
-    html = inject_shell(_PAGE.replace("/*__THREE__*/", _three_js()))
+    from .viewer import engine_js
+    html = _PAGE.replace("/*__THREE__*/", _three_js()).replace("/*__ENGINE__*/", engine_js())
+    html = inject_shell(html)
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     return path
