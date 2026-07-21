@@ -381,7 +381,7 @@ function ellipsoidPush(p,c,r){  // empuja la partícula fuera de un elipsoide (b
  const e=qx*qx+qy*qy+qz*qz;
  if(e<1&&e>1e-6){const s=1/Math.sqrt(e);
   p[0]=c[0]+(p[0]-c[0])*s;p[1]=c[1]+(p[1]-c[1])*s;p[2]=c[2]+(p[2]-c[2])*s;}}
-function buildCloth(grids,prof,legs,hipY){
+function buildCloth(grids,prof,legs,hipY,B){
  const pos=[],prev=[],pin=[],cons=[],faces=[],gridInfo=[];
  for(const rings of grids){
   const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
@@ -395,7 +395,7 @@ function buildCloth(grids,prof,legs,hipY){
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
   gridInfo.push({base,R});}
- return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0};}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,B:B||null};}
 
 function stepCloth(cl,dt){
  const g=-160*dt*dt, damp=0.985;
@@ -516,24 +516,27 @@ LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
 // materiales PBR
 const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
  roughness:0.9,metalness:0.02,side:THREE.DoubleSide});
-// relieve de lona por TRIPLANAR en el shader (sin depender de UVs de la malla implícita):
-// perturba la normal con el gradiente de la trama muestreada por posición mundial.
-MAT_BODY.onBeforeCompile=sh=>{
- sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:0.42};sh.uniforms.uLinAmt={value:0.9};
- sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
-  '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
- sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
-  +sh.fragmentShader.replace('#include <normal_fragment_maps>',
-  ['#include <normal_fragment_maps>','{',
-   ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
-   ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
-   ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
-   ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
-   ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
-   ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
-   ' normal=normalize(abs(fDet)*normal - vGrad);',
-   '}'].join('\n'));};
-MAT_BODY.needsUpdate=true;
+// relieve de tejido por TRIPLANAR en el shader (sin depender de UVs): perturba la
+// normal con el gradiente de la trama muestreada por posición mundial. Reutilizable
+// en el cuerpo (lona) y en la prenda (tela).
+function applyLinen(mat,sc,amt){
+ mat.onBeforeCompile=sh=>{
+  sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:sc};sh.uniforms.uLinAmt={value:amt};
+  sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
+   '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
+  sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
+   +sh.fragmentShader.replace('#include <normal_fragment_maps>',
+   ['#include <normal_fragment_maps>','{',
+    ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
+    ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
+    ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
+    ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
+    ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
+    ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
+    ' normal=normalize(abs(fDet)*normal - vGrad);',
+    '}'].join('\n'));};
+ mat.needsUpdate=true;}
+applyLinen(MAT_BODY,0.42,0.9);
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -541,7 +544,10 @@ const MAT_WHEEL=new THREE.MeshStandardMaterial({color:0x0d0d12,roughness:0.6,met
 function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
  side:THREE.DoubleSide});}
-const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.85,metalness:0.02,side:THREE.DoubleSide});
+const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.86,metalness:0.02,side:THREE.DoubleSide});
+applyLinen(MAT_CLOTH,0.9,0.5);                 // la prenda también con relieve de tela (más fino)
+// color de tela por prenda
+const GCOL={camisa:0xdfe3ea,falda:0x7d5a86,pantalon:0x36435c,vestido:0xa8455a,blazer:0x3a4150};
 const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opacity:0.72,dashSize:1.4,gapSize:0.9});
 
 // helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
@@ -630,7 +636,9 @@ function updateCamera(){
  camera.lookAt(target);}
 
 function rebuild(){
- const L=bodyLevels(),body=buildBody(L,simMode),g=document.getElementById('garment').value;
+ const g=document.getElementById('garment').value;
+ const torsoG=(g==='camisa'||g==='vestido'||g==='blazer');   // solo el torso se drapea sin brazos
+ const L=bodyLevels(),body=buildBody(L,simMode&&torsoG);
  const H=P.estatura;
  clearRoot();
  let tris=0;
@@ -670,9 +678,10 @@ function rebuild(){
  if(simMode){startSim();}else{if(raf){cancelAnimationFrame(raf);raf=null;}window.__rendered=tris;draw();}}
 
 function startSim(){
+ MAT_CLOTH.color.setHex(GCOL[MESH.g]||0x3f6fa0);
  const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
  CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
-            :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY);
+            :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY,MESH.body);
  const cg=clothGeom(CLOTH);
  const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
  clothMesh.name='__cloth';ROOT.add(clothMesh);
