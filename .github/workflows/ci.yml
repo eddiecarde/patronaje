@@ -22,13 +22,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyflakes playwright
+          pip install pyflakes playwright pytest-cov
       - name: Install Chromium (Playwright)
         run: python -m playwright install --with-deps chromium
       - name: Lint (pyflakes)
         run: python -m pyflakes patronaje tests
-      - name: Tests (pytest)  # incluye render WebGL + simulación del visor 3D
-        run: python -m pytest -q
+      - name: Tests (pytest + cobertura)  # incluye render WebGL + simulación del visor 3D
+        run: python -m pytest -q --cov=patronaje --cov-report=term-missing
       - name: Smoke — generar patrón talla S + visores
         run: |
           python -m patronaje.cli --size S --output /tmp/ci_out

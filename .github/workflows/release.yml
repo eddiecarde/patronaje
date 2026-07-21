@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt build
+      - name: Tests (los del navegador se saltan solos sin Playwright)
+        run: python -m pytest -q
+      - name: Build sdist + wheel
+        run: python -m build
+      - name: Generar muestra talla S + visores
+        run: |
+          python -m patronaje.cli --size S --output dist_sample
+          python -m patronaje.viewer --output dist_sample
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*
+            dist_sample/index.html
+            dist_sample/viewer_3d.html
