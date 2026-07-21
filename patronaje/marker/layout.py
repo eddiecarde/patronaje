@@ -168,11 +168,15 @@ def _skyline_pack(instances, fabric_width, gap, step):
                     place_y = max(place_y, skyline[gc] - top)
                 if not ok:
                     continue
-                if best is None or place_y < best[0] - 1e-6:
-                    best = (place_y, c0, flip, prof, w, h, contour)
+                # hueco creado bajo la pieza (relleno de valles): a igual altura de
+                # colocación, se prefiere el encaje que deja menos aire debajo.
+                waste = sum(place_y + top - skyline[c0 + j] for j, (top, bot) in prof.items())
+                key = (round(place_y / max(step, 0.5)), waste)
+                if best is None or key < best[0]:
+                    best = (key, place_y, c0, flip, prof, w, h, contour)
         if best is None:
             continue
-        place_y, c0, flip, prof, w, h, contour = best
+        _key, place_y, c0, flip, prof, w, h, contour = best
         for j, (top, bot) in prof.items():
             skyline[c0 + j] = place_y + bot + gap
         placements.append(Placement(piece, k, c0 * step, place_y, w, h, mirror or flip))
@@ -189,15 +193,21 @@ def nest_skyline(shirt, fabric_width: float, gap: float = 1.0,
     prendas (bundle) para llenar el ancho, como un marker industrial.
     """
     instances = _all_instances(shirt, copies)
-    orders = (lambda it: it[3] * it[4],   # área bbox desc
-              lambda it: it[4],            # alto desc
-              lambda it: it[3])            # ancho desc
+    orders = (lambda it: it[3] * it[4],          # área bbox desc
+              lambda it: it[4],                  # alto desc
+              lambda it: it[3],                  # ancho desc
+              lambda it: max(it[3], it[4]),      # dimensión mayor desc
+              lambda it: it[3] + it[4])          # semiperímetro bbox desc
+    # una malla más fina encaja mejor el contorno (menos desperdicio) a más cómputo;
+    # se prueban ambas y se conserva el marker de menor largo.
+    steps = (step,) if copies > 1 else (step, step * 0.5)
     best = None
-    for key in orders:
-        ordered = sorted(instances, key=key, reverse=True)
-        pls, length = _skyline_pack(ordered, fabric_width, gap, step)
-        if best is None or length < best[1] - 1e-6:
-            best = (pls, length)
+    for st in steps:
+        for key in orders:
+            ordered = sorted(instances, key=key, reverse=True)
+            pls, length = _skyline_pack(ordered, fabric_width, gap, st)
+            if best is None or length < best[1] - 1e-6:
+                best = (pls, length)
     return best
 
 
