@@ -415,8 +415,10 @@ function stepCloth(cl,dt){
     if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
    for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);
    if(cl.blobs)for(let j=0;j<cl.blobs.length;j++)ellipsoidPush(p,cl.blobs[j].c,cl.blobs[j].r);}}
- // prendas de torso: colisión EXACTA contra el campo del cuerpo (una vez por paso)
- if(cl.B){const mg=0.9;for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+ // prendas de torso: colisión EXACTA contra el campo del cuerpo (una vez por paso).
+ // También se empujan los puntos FIJADOS del borde superior (escote/sisa) para que
+ // se apoyen por delante del busto en vez de que éste asome.
+ if(cl.B){const mg=1.4;for(let i=0;i<cl.pos.length;i++){const p=cl.pos[i];
   const f=bodyField(p,cl.B);if(f<mg){const n=fieldNormal(cl.B,p[0],p[1],p[2]),d=mg-f;
    p[0]+=n[0]*d;p[1]+=n[1]*d;p[2]+=n[2]*d;}}}
 }
