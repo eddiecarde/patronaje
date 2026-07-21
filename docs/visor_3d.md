@@ -79,9 +79,18 @@ axila ni facetas.
   con variación de hilo y un **bump map** de tejido plano (warp/weft alternos +
   ruido de fibra) que da **relieve** bajo la luz PBR. El lofteado genera además
   **coordenadas UV** (`k` alrededor, anillo hacia abajo) para mapear la trama.
-- **Luz y sombra**: hemisférica + 3 direccionales (clave/relleno/contra); la clave
-  proyecta **sombra** (PCF suave) sobre un suelo de estudio. Cámara en órbita:
-  arrastra para girar, rueda para acercar.
+- **Oclusión ambiental (AO)**: la propia superficie implícita se usa para **hornear
+  oclusión de contacto** por vértice — se marcha el campo de distancia unos pasos a lo
+  largo de la normal y, donde sube más lento que el paso (axila, cuello, bajo el busto,
+  cintura, entrepierna), se **oscurece** el difuso. Da la sensación de profundidad de
+  una foto sin *post-proceso*.
+- **Luz y sombra**: **IBL** (image-based lighting) con un **entorno de estudio
+  procedural** (sin HDRI externo) filtrado por **PMREM**, que aporta irradiancia difusa
+  realista y un brillo especular suave sobre la lona y la tela; más hemisférica + 3
+  direccionales (clave/relleno/contra). La clave proyecta **sombra** (PCF suave) sobre
+  un suelo de estudio, con *tone mapping* ACES. Cámara en órbita: arrastra para girar,
+  rueda para acercar. Sube la calidad **con el mismo motor** (Three.js), no cambiando de
+  framework.
 - **Prenda**: cáscara a *offset* del cuerpo por la holgura, siguiendo la silueta de
   cada tipo (torso para camisa/vestido/blazer; falda acampanada; dos perneras para
   el pantalón). Se muestra sin mangas sobre la horma, como en un atelier.

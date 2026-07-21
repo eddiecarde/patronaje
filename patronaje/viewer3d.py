@@ -265,7 +265,7 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
  for(let i=0;i<NX;i++)for(let j=0;j<NY;j++)for(let k=0;k<NZ;k++)
   F[gi(i,j,k)]=bodyField([x0+i*cs,y0+j*cs,z0+k*cs],B);
  const ci=(i,j,k)=>(i*ny+j)*nz+k,cellV=new Int32Array(nx*ny*nz).fill(-1);
- const pos=[],nor=[],uv=[];
+ const pos=[],nor=[],uv=[],ao=[];
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)for(let k=0;k<nz;k++){
   const v=[];let mask=0;
   for(let c=0;c<8;c++){const o=_CORN[c],val=F[gi(i+o[0],j+o[1],k+o[2])];v.push(val);if(val<0)mask|=1<<c;}
@@ -277,6 +277,13 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
   const px=x0+(i+sx/cnt)*cs,py=y0+(j+sy/cnt)*cs,pz=z0+(k+sz/cnt)*cs;
   cellV[ci(i,j,k)]=pos.length/3;pos.push(px,py,pz);
   const nn=fieldNormal(B,px,py,pz);nor.push(nn[0],nn[1],nn[2]);
+  // oclusión ambiental por el propio campo (iq): en cavidades (axila, cintura,
+  // cuello, entrepierna) el campo sube más lento que el paso -> se oscurece.
+  let occ=0,sca=1;
+  for(let s=1;s<=5;s++){const h=s*1.5,
+   dd=bodyField([px+nn[0]*h,py+nn[1]*h,pz+nn[2]*h],B);
+   occ+=Math.max(0,h-dd)*sca;sca*=0.78;}
+  ao.push(Math.max(0.35,Math.min(1,1-0.16*occ)));
   uv.push(Math.atan2(px,pz)/(2*Math.PI)+0.5,py*0.5);}  // costura UV atrás (oculta)
  const idx=[];
  // quad con winding coherente (flip): normal saliente consistente en toda la malla
@@ -293,6 +300,7 @@ function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry s
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
  g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.setAttribute('ao',new THREE.Float32BufferAttribute(ao,1));
  g.setIndex(idx);g.__tris=idx.length/3;return g;}
 
 // prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
@@ -473,7 +481,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 
 // iluminación de estudio: hemisférica + clave (con sombra) + relleno + contra
-scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.85));
+scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.5));   // el resto de ambiente lo da la IBL
 const key=new THREE.DirectionalLight(0xffffff,2.4);
 key.position.set(90,230,150);key.castShadow=true;
 key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0009;key.shadow.normalBias=1.6;
@@ -481,6 +489,23 @@ const sc=key.shadow.camera;sc.left=-100;sc.right=100;sc.top=240;sc.bottom=-30;sc
 scene.add(key);
 const fill=new THREE.DirectionalLight(0xdfe8ff,0.6);fill.position.set(-110,90,60);scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,0.9);rim.position.set(-40,150,-160);scene.add(rim);
+
+// IBL (image-based lighting): entorno de estudio PROCEDURAL (sin HDRI externo),
+// filtrado por PMREM -> irradiancia difusa realista + brillo especular suave en la
+// lona y la tela. Es lo que da el aspecto "de foto" al maniquí, no un cambio de motor.
+function makeEnv(){
+ const w=512,h=256,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+ const g=x.createLinearGradient(0,0,0,h);            // cenit -> horizonte -> suelo
+ g.addColorStop(0.0,'#eef2f7');g.addColorStop(0.42,'#c9d2de');g.addColorStop(0.5,'#aeb8c6');
+ g.addColorStop(0.5,'#39414e');g.addColorStop(1.0,'#20262f');
+ x.fillStyle=g;x.fillRect(0,0,w,h);
+ const rg=x.createRadialGradient(w*0.66,h*0.26,4,w*0.66,h*0.26,h*0.46);   // ventana/luz clave
+ rg.addColorStop(0,'rgba(255,255,255,0.92)');rg.addColorStop(1,'rgba(255,255,255,0)');
+ x.fillStyle=rg;x.fillRect(0,0,w,h);return c;}
+const _envTex=new THREE.CanvasTexture(makeEnv());_envTex.mapping=THREE.EquirectangularReflectionMapping;
+const _pmrem=new THREE.PMREMGenerator(renderer);_pmrem.compileEquirectangularShader();
+scene.environment=_pmrem.fromEquirectangular(_envTex).texture;
+_envTex.dispose();_pmrem.dispose();
 
 // suelo de estudio (recibe sombra)
 const floorMat=new THREE.MeshStandardMaterial({color:0x141c26,roughness:0.95,metalness:0.0});
@@ -515,16 +540,18 @@ LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
 
 // materiales PBR
 const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
- roughness:0.9,metalness:0.02,side:THREE.DoubleSide});
+ roughness:0.9,metalness:0.02,side:THREE.DoubleSide,envMapIntensity:0.4});
 // relieve de tejido por TRIPLANAR en el shader (sin depender de UVs): perturba la
 // normal con el gradiente de la trama muestreada por posición mundial. Reutilizable
 // en el cuerpo (lona) y en la prenda (tela).
-function applyLinen(mat,sc,amt){
+function applyLinen(mat,sc,amt,useAo){
  mat.onBeforeCompile=sh=>{
   sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:sc};sh.uniforms.uLinAmt={value:amt};
-  sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
-   '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
+  const vHead='varying vec3 vWP;\n'+(useAo?'attribute float ao;varying float vAo;\n':'');
+  sh.vertexShader=vHead+sh.vertexShader.replace('#include <worldpos_vertex>',
+   '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;'+(useAo?'\n vAo=ao;':''));
   sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
+   +(useAo?'varying float vAo;\n':'')
    +sh.fragmentShader.replace('#include <normal_fragment_maps>',
    ['#include <normal_fragment_maps>','{',
     ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
@@ -534,9 +561,12 @@ function applyLinen(mat,sc,amt){
     ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
     ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
     ' normal=normalize(abs(fDet)*normal - vGrad);',
-    '}'].join('\n'));};
+    '}'].join('\n'));
+  if(useAo)  // oclusión de contacto: oscurece el difuso e indirecto en cavidades
+   sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',
+    '#include <color_fragment>\n diffuseColor.rgb*=vAo;');};
  mat.needsUpdate=true;}
-applyLinen(MAT_BODY,0.42,0.9);
+applyLinen(MAT_BODY,0.42,0.9,true);
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -544,7 +574,7 @@ const MAT_WHEEL=new THREE.MeshStandardMaterial({color:0x0d0d12,roughness:0.6,met
 function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
  side:THREE.DoubleSide});}
-const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.86,metalness:0.02,side:THREE.DoubleSide});
+const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.86,metalness:0.02,side:THREE.DoubleSide,envMapIntensity:0.55});
 applyLinen(MAT_CLOTH,0.9,0.5);                 // la prenda también con relieve de tela (más fino)
 // color de tela por prenda
 const GCOL={camisa:0xdfe3ea,falda:0x7d5a86,pantalon:0x36435c,vestido:0xa8455a,blazer:0x3a4150};
