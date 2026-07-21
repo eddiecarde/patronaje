@@ -21,7 +21,7 @@ import sys
 from .garment.shirt import build_shirt
 from .validation.validators import validate_all
 from .export.dxf_r2013 import export_dxf
-from .export.dxf_aama import export_dxf_aama
+from .export.dxf_aama import export_dxf_aama, validate_aama_dxf
 from .export.svg import export_svg
 from .export.pdf import export_pdf_1to1, export_pdf_a4
 from .export.ai import export_ai
@@ -132,6 +132,7 @@ def generate(size: str = "S", outdir: str = "output", *,
     outputs = {}
     outputs["dxf_r2013"] = export_dxf(shirt, f"{base}.dxf", include_seam=include_seam)
     outputs["dxf_aama"] = export_dxf_aama(shirt, f"{base}_AAMA_ASTM.dxf")
+    aama_report = validate_aama_dxf(outputs["dxf_aama"], shirt)   # conformidad round-trip
     outputs["svg"] = export_svg(shirt, f"{base}.svg", include_seam=include_seam)
     outputs["pdf_1a1"] = export_pdf_1to1(shirt, f"{base}_1a1.pdf", include_seam=include_seam)
     outputs["pdf_a4"] = export_pdf_a4(shirt, f"{base}_A4.pdf", include_seam=include_seam)
@@ -153,6 +154,15 @@ def generate(size: str = "S", outdir: str = "output", *,
                   f"(desperd. {dd['desperdicio']*100:.0f} %)  |  bundle x{dd['bundle_prendas']}: "
                   f"{dd['bundle_largo_por_prenda_m']:.2f} m/prenda (desperd. "
                   f"{dd['desperdicio_bundle']*100:.0f} %)")
+        print("\n=== CONFORMIDAD DXF AAMA/ASTM (round-trip) ===")
+        if aama_report["ok"]:
+            print(f"  [OK] {aama_report['blocks']} piezas conformes · auditoría DXF "
+                  f"{aama_report['audit_errors']} errores · round-trip verificado")
+            print("       (conforme a ASTM D6673; verificar el sello final en el CAM destino)")
+        else:
+            print(f"  [!] {len(aama_report['issues'])} incidencias de conformidad:")
+            for it in aama_report["issues"]:
+                print(f"       - {it}")
     if not quiet:
         print(f"\n=== ARCHIVOS GENERADOS (talla {size}) ===")
         for k, v in outputs.items():
