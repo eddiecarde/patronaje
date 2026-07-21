@@ -129,6 +129,22 @@ function tube(p0,p1,r0,r1,segs){ // cilindro entre dos puntos (para mangas/piern
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}
 
+// interpola 'steps' anillos entre rA y rB (exclusivos), con suavizado coseno
+// (pendiente 0 en ambos extremos) para redondear crestas al loftear
+function blendRings(rA,rB,steps){const out=[];
+ for(let i=1;i<=steps;i++){const t=i/(steps+1),s=0.5-0.5*Math.cos(Math.PI*t),ring=[];
+  for(let k=0;k<N;k++)ring.push([rA[k][0]+(rB[k][0]-rA[k][0])*s,
+   rA[k][1]+(rB[k][1]-rA[k][1])*s,rA[k][2]+(rB[k][2]-rA[k][2])*s]);
+  out.push(ring);}return out;}
+
+// dome de cierre hacia el CENTROIDE del anillo (sirve para extremos fuera del eje:
+// manos, pies). Encoge el anillo hacia su centro y lo desplaza en Y.
+function capEnd(ring,dyv,steps){
+ let cx=0,cz=0;const n=ring.length;for(const p of ring){cx+=p[0];cz+=p[2];}cx/=n;cz/=n;
+ const out=[];for(let i=1;i<=steps;i++){const t=i/steps,s=Math.cos(t*Math.PI/2),yo=dyv*Math.sin(t*Math.PI/2);
+  out.push(ring.map(p=>[cx+(p[0]-cx)*s,p[1]+yo,cz+(p[2]-cz)*s]));}
+ return out;}
+
 // dome de cierre desde un anillo hacia un punto central (para tapar la malla)
 function capFrom(ring,dy,steps){
  let a=0,d=0,y=ring[0][1];for(const p of ring){a=Math.max(a,Math.abs(p[0]));d=Math.max(d,Math.abs(p[2]));}
@@ -136,34 +152,144 @@ function capFrom(ring,dy,steps){
   out.push(ringAD(y+dy*Math.sin(t*Math.PI/2),Math.max(a*s,1e-3),Math.max(d*s,1e-3)));}
  return out;}
 
-function buildBody(L){  // maniquí de sastre (dress form): torso cerrado (cuello→cadera)
- const H=P.estatura, male=SEX==='M';
+// perfil (a,d) del torso por circunferencia y ratio a esa altura
+function adC(C,r){const P1=Math.PI*(3*(r+1)-Math.sqrt((3*r+1)*(r+3)));const d=C/P1;return {a:r*d,d};}
+
+function buildBody(L){  // maniquí de sastre como CAMPO IMPLÍCITO (torso + cápsulas fundidas)
+ const male=SEX==='M';
  const waistC=male?P.cintura+(P.busto-P.cintura)*0.28:P.cintura;
  const hipC=male?P.cadera*0.93:P.cadera;
- const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.52:0.45);
- // anillos del torso, de arriba (cuello) hacia abajo (cadera baja)
- const neck=ringC(L.neckY,P.contorno_cuello*(male?1.05:1.0),1.08);
- const T=[];
- T.push(ringAD((L.shY+L.neckY)/2,shW*0.56,P.busto*0.085)); // trapecio bajo el cuello
- T.push(ringAD(L.shY,shW,P.busto*(male?0.125:0.11)));       // línea de hombro
- T.push(ringC(L.chestY,P.busto*(male?0.95:0.90),bRat-0.05));
- T.push(ringC(L.bustY,P.busto,bRat));
- T.push(ringC((L.waistY+L.bustY)/2,(waistC+P.busto)/2,(wRat+bRat)/2));
- T.push(ringC(L.waistY,waistC,wRat));
- T.push(ringC((L.hipY+L.waistY)/2,(hipC+waistC)/2,(hRat+wRat)/2));
- T.push(ringC(L.hipY,hipC,hRat));
- const hipLow=ringC(L.hipY-4,hipC*0.965,hRat-0.02);
- // malla cerrada: tapa de cuello + trapecio + cuerpo + cadera + fondo redondeado
- const topCap=capFrom(neck,H*0.03,4).reverse();     // cúpula sobre el cuello (redondea hombros)
- const botCap=capFrom(hipLow,-H*0.07,5);            // fondo redondeado del maniquí
- const torso=topCap.concat([neck],T,[hipLow],botCap);
- // colisionadores de pierna (cápsula) para que el pantalón caiga sobre ellas en la sim
- const tR=P.cadera*(male?0.108:0.10), kR=tR*0.70, aR=tR*0.5, lx=P.cadera/10, legs=[];
+ const bRat=male?1.32:1.24, wRat=male?1.30:1.35, hRat=male?1.30:1.42, shW=P.ancho_espalda*(male?0.44:0.39);
+ // ---- perfil del torso (a,d) por altura: cadera baja -> cuello ----
+ const prof=[],pAD=(y,a,d)=>prof.push({y,a,d});let t;
+ t=adC(hipC*0.93,hRat-0.03); pAD(L.hipY-6,t.a,t.d);        // pelvis baja
+ t=adC(hipC,hRat);           pAD(L.hipY,t.a,t.d);
+ t=adC((hipC+waistC)/2,(hRat+wRat)/2); pAD((L.hipY+L.waistY)/2,t.a,t.d);
+ t=adC(waistC,wRat);         pAD(L.waistY,t.a,t.d);
+ t=adC((waistC+P.busto)/2,(wRat+bRat)/2); pAD((L.waistY+L.bustY)/2,t.a,t.d);
+ t=adC(P.busto,bRat);        pAD(L.bustY,t.a,t.d);
+ t=adC(P.busto*(male?0.95:0.90),bRat-0.05); pAD(L.chestY,t.a,t.d);
+ pAD(L.shY, shW*0.66, P.busto*(male?0.135:0.125));         // hombro: torso estrecho (el deltoides da la anchura)
+ pAD((L.shY+L.neckY)/2, shW*0.46, P.busto*0.085);          // trapecio (cuello baja en pendiente al hombro)
+ t=adC(P.contorno_cuello*(male?1.05:1.0),1.06); pAD(L.neckY,t.a,t.d); // cuello
+ prof.sort((u,v)=>u.y-v.y);
+ let maxA=0;for(const q of prof)maxA=Math.max(maxA,q.a);  // punto más ancho del torso (cadera)
+ const yTop=L.neckY, yBot=L.hipY-6;
+ // ---- primitivas (round cones) que se FUNDEN con el torso: brazos, piernas ----
+ const aR=P.contorno_brazo/(2*Math.PI)*0.82, wR=P.muneca/(2*Math.PI)*0.86, eaR=aR*0.74;
+ const armX=maxA+aR*0.35;                                 // brazos cuelgan por FUERA del punto más ancho
+ const thR=P.cadera*(male?0.115:0.12), knR=thR*0.56, caR=thR*0.62, ankR=thR*0.34, cx=thR*(male?0.78:0.72);
+ const limbs=[],legs=[],blobs=[],armAxis=[],legAxis=[];
  [1,-1].forEach(s=>{
-  const hip=[s*lx,L.hipY-2,0], kn=[s*lx*0.95,L.kneeY,0.3], an=[s*lx*0.92,L.ankleY,0.3];
-  legs.push({a:hip,b:kn,r0:tR,r1:kR},{a:kn,b:an,r0:kR,r1:aR});
+  const sh=[s*shW*0.94,L.shY-3.5,0.4], el=[s*armX,(L.shY+L.hipY)/2,2.0], wr=[s*armX,L.hipY-4,4.5];
+  limbs.push({a:sh,b:el,r1:aR,r2:eaR,k:3.5});             // brazo alto (funde en el hombro)
+  limbs.push({a:el,b:wr,r1:eaR,r2:wR,k:1.7});             // antebrazo
+  // mano: elipsoide aplanado (manopla) — fino de canto, largo hacia abajo
+  blobs.push({c:[wr[0],wr[1]-wR*1.9,wr[2]+0.4],r:[wR*0.62,wR*2.3,wR*1.35],k:1.3});
+  armAxis.push([sh,wr,s]);
+  const hip=[s*cx,L.hipY+1,0], kn=[s*cx*0.96,L.kneeY,0.5],
+        ca=[s*cx*0.95,(L.kneeY+L.ankleY)/2,0.8], an=[s*cx*0.93,L.ankleY,0.5];
+  limbs.push({a:hip,b:kn,r1:thR,r2:knR,k:5.5});           // muslo (funde en la pelvis)
+  limbs.push({a:kn,b:ca,r1:knR,r2:caR,k:2.2});            // pantorrilla
+  limbs.push({a:ca,b:an,r1:caR,r2:ankR,k:1.6});           // tobillo
+  legAxis.push([hip,an]);
+  legs.push({a:hip,b:kn,r0:thR*0.9,r1:knR},{a:kn,b:an,r0:knR,r1:ankR}); // colisionadores sim
  });
- return {torso,legs,levels:L};}
+ // ---- pecho/busto y glúteos: elipsoides que se funden con el torso ----
+ const bAD=adC(P.busto,bRat), hAD=adC(hipC,hRat);
+ [1,-1].forEach(s=>{
+  // busto (mujer, marcado) / pectoral (hombre, plano y alto)
+  blobs.push(male
+   ?{c:[s*P.busto*0.075,L.chestY,bAD.d*0.6], r:[P.busto*0.095,P.busto*0.055,P.busto*0.05], k:5.5}
+   :{c:[s*P.busto*0.052,L.bustY-1,bAD.d*0.62], r:[P.busto*0.075,P.busto*0.08,P.busto*0.062], k:3.5});
+  // glúteos (atrás, en el asiento, bajo la línea de cadera)
+  blobs.push(male
+   ?{c:[s*P.cadera*0.055,L.hipY-4,-hAD.d*0.58], r:[P.cadera*0.075,P.cadera*0.075,P.cadera*0.055], k:5.5}
+   :{c:[s*P.cadera*0.06,L.hipY-4,-hAD.d*0.55], r:[P.cadera*0.092,P.cadera*0.088,P.cadera*0.075], k:5.0});
+ });
+ return {prof,yTop,yBot,limbs,legs,blobs,armAxis,legAxis,shW,levels:L};}
+
+// ---- SDF del cuerpo y poligonización por Surface Nets ----
+function smin(a,b,k){const h=Math.max(0,Math.min(1,0.5+0.5*(b-a)/k));return b+h*(a-b)-k*h*(1-h);}
+function sdRoundCone(p,a,b,r1,r2){ // cono con extremos esféricos (iq)
+ const bax=b[0]-a[0],bay=b[1]-a[1],baz=b[2]-a[2];
+ const l2=bax*bax+bay*bay+baz*baz,rr=r1-r2,a2=l2-rr*rr,il2=1/l2;
+ const pax=p[0]-a[0],pay=p[1]-a[1],paz=p[2]-a[2];
+ const y=pax*bax+pay*bay+paz*baz,z=y-l2;
+ const wx=pax*l2-bax*y,wy=pay*l2-bay*y,wz=paz*l2-baz*y,x2=wx*wx+wy*wy+wz*wz;
+ const y2=y*y*l2,z2=z*z*l2;
+ const kk=(rr<0?-1:1)*rr*rr*x2;                     // sign(rr) sólo en k
+ if((z<0?-1:1)*a2*z2>kk)return Math.sqrt(x2+z2)*il2-r2;  // sign(z)
+ if((y<0?-1:1)*a2*y2<kk)return Math.sqrt(x2+y2)*il2-r1;  // sign(y)
+ return (Math.sqrt(x2*a2*il2)+y*rr)*il2-r1;}
+function sdEllipsoid(p,c,r){ // elipsoide (iq, aprox.) — para pecho/busto y glúteos
+ const qx=(p[0]-c[0]),qy=(p[1]-c[1]),qz=(p[2]-c[2]);
+ const k0=Math.hypot(qx/r[0],qy/r[1],qz/r[2]);
+ const k1=Math.hypot(qx/(r[0]*r[0]),qy/(r[1]*r[1]),qz/(r[2]*r[2]));
+ return k0*(k0-1.0)/(k1||1e-9);}
+function torsoAD(prof,y){ // (a,d) interpolado del torso
+ if(y<=prof[0].y)return prof[0];
+ const n=prof.length;if(y>=prof[n-1].y)return prof[n-1];
+ for(let i=0;i<n-1;i++)if(y>=prof[i].y&&y<=prof[i+1].y){
+  const tt=(y-prof[i].y)/(prof[i+1].y-prof[i].y||1);
+  return {a:prof[i].a+(prof[i+1].a-prof[i].a)*tt,d:prof[i].d+(prof[i+1].d-prof[i].d)*tt};}
+ return prof[0];}
+function sdTorso(p,B){ // cilindro generalizado de sección elíptica, con tapas redondeadas
+ const yc=Math.max(B.yBot,Math.min(B.yTop,p[1])),ad=torsoAD(B.prof,yc),a=ad.a,d=ad.d;
+ const ql=Math.hypot(p[0]/a,p[2]/d),radial=(ql-1)*Math.min(a,d);
+ const dyv=(p[1]>B.yTop)?p[1]-B.yTop:(p[1]<B.yBot?B.yBot-p[1]:0);
+ return dyv>0?Math.hypot(Math.max(radial,0),dyv):radial;}
+function bodyField(p,B){let d=sdTorso(p,B);
+ for(let i=0;i<B.limbs.length;i++){const s=B.limbs[i];d=smin(d,sdRoundCone(p,s.a,s.b,s.r1,s.r2),s.k);}
+ if(B.blobs)for(let i=0;i<B.blobs.length;i++){const b=B.blobs[i];d=smin(d,sdEllipsoid(p,b.c,b.r),b.k);}
+ return d;}
+function fieldNormal(B,x,y,z){const e=0.35;
+ const nx=bodyField([x+e,y,z],B)-bodyField([x-e,y,z],B),
+       ny=bodyField([x,y+e,z],B)-bodyField([x,y-e,z],B),
+       nz=bodyField([x,y,z+e],B)-bodyField([x,y,z-e],B),l=Math.hypot(nx,ny,nz)||1;
+ return [nx/l,ny/l,nz/l];}
+const _CORN=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]];
+const _EDG=[[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+function bodyGeomImplicit(B){ // Surface Nets sobre el campo -> BufferGeometry suave
+ let maxA=0,maxD=0;for(const q of B.prof){maxA=Math.max(maxA,q.a);maxD=Math.max(maxD,q.d);}
+ const aR=P.contorno_brazo/(2*Math.PI);
+ const xh=Math.max(maxA,B.shW*0.9+aR)+4, zh=Math.max(maxD,6)+5, cs=1.05;
+ const x0=-xh,y0=B.levels.ankleY-2,z0=-zh;
+ const nx=Math.ceil(2*xh/cs),ny=Math.ceil((B.yTop+2-y0)/cs),nz=Math.ceil(2*zh/cs);
+ const NX=nx+1,NY=ny+1,NZ=nz+1,gi=(i,j,k)=>(i*NY+j)*NZ+k;
+ const F=new Float32Array(NX*NY*NZ);
+ for(let i=0;i<NX;i++)for(let j=0;j<NY;j++)for(let k=0;k<NZ;k++)
+  F[gi(i,j,k)]=bodyField([x0+i*cs,y0+j*cs,z0+k*cs],B);
+ const ci=(i,j,k)=>(i*ny+j)*nz+k,cellV=new Int32Array(nx*ny*nz).fill(-1);
+ const pos=[],nor=[],uv=[];
+ for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)for(let k=0;k<nz;k++){
+  const v=[];let mask=0;
+  for(let c=0;c<8;c++){const o=_CORN[c],val=F[gi(i+o[0],j+o[1],k+o[2])];v.push(val);if(val<0)mask|=1<<c;}
+  if(mask===0||mask===255)continue;
+  let sx=0,sy=0,sz=0,cnt=0;
+  for(const e of _EDG){const c0=e[0],c1=e[1];if((v[c0]<0)!==(v[c1]<0)){
+   const tt=v[c0]/(v[c0]-v[c1]),o0=_CORN[c0],o1=_CORN[c1];
+   sx+=o0[0]+(o1[0]-o0[0])*tt;sy+=o0[1]+(o1[1]-o0[1])*tt;sz+=o0[2]+(o1[2]-o0[2])*tt;cnt++;}}
+  const px=x0+(i+sx/cnt)*cs,py=y0+(j+sy/cnt)*cs,pz=z0+(k+sz/cnt)*cs;
+  cellV[ci(i,j,k)]=pos.length/3;pos.push(px,py,pz);
+  const nn=fieldNormal(B,px,py,pz);nor.push(nn[0],nn[1],nn[2]);
+  uv.push(Math.atan2(px,pz)/(2*Math.PI)+0.5,py*0.5);}  // costura UV atrás (oculta)
+ const idx=[];
+ // quad con winding coherente (flip): normal saliente consistente en toda la malla
+ const quad=(a,b,c,d,flip)=>{if(a<0||b<0||c<0||d<0)return;
+  if(flip)idx.push(a,c,b,a,d,c);else idx.push(a,b,c,a,c,d);};
+ const S=(i,j,k)=>F[gi(i,j,k)]<0;
+ for(let i=0;i<nx;i++)for(let j=1;j<ny;j++)for(let k=1;k<nz;k++)
+  if(S(i,j,k)!==S(i+1,j,k))quad(cellV[ci(i,j,k)],cellV[ci(i,j-1,k)],cellV[ci(i,j-1,k-1)],cellV[ci(i,j,k-1)],S(i,j,k));
+ for(let i=1;i<nx;i++)for(let j=0;j<ny;j++)for(let k=1;k<nz;k++)
+  if(S(i,j,k)!==S(i,j+1,k))quad(cellV[ci(i,j,k)],cellV[ci(i,j,k-1)],cellV[ci(i-1,j,k-1)],cellV[ci(i-1,j,k)],S(i,j,k));
+ for(let i=1;i<nx;i++)for(let j=1;j<ny;j++)for(let k=0;k<nz;k++)
+  if(S(i,j,k)!==S(i,j,k+1))quad(cellV[ci(i,j,k)],cellV[ci(i-1,j,k)],cellV[ci(i-1,j-1,k)],cellV[ci(i,j-1,k)],S(i,j,k));
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+ g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.setIndex(idx);g.__tris=idx.length/3;return g;}
 
 // prenda: cáscara a offset del cuerpo, en grupos de anillos con holgura por anillo
 function fillEase(rings,v){return rings.map(()=>v);}
@@ -297,7 +423,7 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 scene.add(new THREE.HemisphereLight(0xf3f6ff,0x2a3340,0.85));
 const key=new THREE.DirectionalLight(0xffffff,2.4);
 key.position.set(90,230,150);key.castShadow=true;
-key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0006;
+key.shadow.mapSize.set(2048,2048);key.shadow.bias=-0.0009;key.shadow.normalBias=1.6;
 const sc=key.shadow.camera;sc.left=-100;sc.right=100;sc.top=240;sc.bottom=-30;sc.near=1;sc.far=700;
 scene.add(key);
 const fill=new THREE.DirectionalLight(0xdfe8ff,0.6);fill.position.set(-110,90,60);scene.add(fill);
@@ -308,8 +434,53 @@ const floorMat=new THREE.MeshStandardMaterial({color:0x141c26,roughness:0.95,met
 const floor=new THREE.Mesh(new THREE.CircleGeometry(170,72),floorMat);
 floor.rotation.x=-Math.PI/2;floor.position.y=0.0;floor.receiveShadow=true;scene.add(floor);
 
+// textura de lona/lino PROCEDURAL (tejido plano): sin imágenes externas, se dibuja
+// en un <canvas> -> mapa de color + bump de trama, para el relieve bajo luz PBR.
+function makeLinen(){
+ const px=128,thread=4;                              // 32 hilos por baldosa (mosaico continuo)
+ const bc=document.createElement('canvas');bc.width=bc.height=px;const bx=bc.getContext('2d');
+ const cc=document.createElement('canvas');cc.width=cc.height=px;const cx=cc.getContext('2d');
+ const bi=bx.createImageData(px,px),ci=cx.createImageData(px,px);
+ for(let j=0;j<px;j++)for(let i=0;i<px;i++){
+  const over=((Math.floor(i/thread)+Math.floor(j/thread))&1)===0; // trama por encima/por debajo
+  const u=(i%thread)/thread,v=(j%thread)/thread;
+  const crest=over?Math.sin(Math.PI*u):Math.sin(Math.PI*v);       // cresta del hilo (0..1)
+  const noise=(Math.random()-0.5)*0.13;                            // fibras/slubs del lino
+  const h=Math.max(0,Math.min(1,0.34+crest*0.6+noise));
+  const o=(j*px+i)*4,g=Math.round(h*255);
+  bi.data[o]=bi.data[o+1]=bi.data[o+2]=g;bi.data[o+3]=255;         // bump (altura)
+  const sh=(0.8+h*0.22)*(over?1.0:0.95);                           // color beige con variación de hilo
+  ci.data[o]=Math.round(233*sh);ci.data[o+1]=Math.round(220*sh);ci.data[o+2]=Math.round(198*sh);ci.data[o+3]=255;
+ }
+ bx.putImageData(bi,0,0);cx.putImageData(ci,0,0);return {bump:bc,color:cc};}
+const _lin=makeLinen();
+const LIN_BUMP=new THREE.CanvasTexture(_lin.bump);
+LIN_BUMP.wrapS=LIN_BUMP.wrapT=THREE.RepeatWrapping;LIN_BUMP.repeat.set(7,1);
+const LIN_COLOR=new THREE.CanvasTexture(_lin.color);
+LIN_COLOR.wrapS=LIN_COLOR.wrapT=THREE.RepeatWrapping;LIN_COLOR.repeat.set(7,1);
+LIN_COLOR.colorSpace=THREE.SRGBColorSpace;LIN_COLOR.anisotropy=4;
+
 // materiales PBR
-const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,roughness:0.86,metalness:0.03});
+const MAT_BODY=new THREE.MeshStandardMaterial({color:0xe9dcc6,map:LIN_COLOR,
+ roughness:0.9,metalness:0.02,side:THREE.DoubleSide});
+// relieve de lona por TRIPLANAR en el shader (sin depender de UVs de la malla implícita):
+// perturba la normal con el gradiente de la trama muestreada por posición mundial.
+MAT_BODY.onBeforeCompile=sh=>{
+ sh.uniforms.uLin={value:LIN_BUMP};sh.uniforms.uLinSc={value:0.42};sh.uniforms.uLinAmt={value:0.9};
+ sh.vertexShader='varying vec3 vWP;\n'+sh.vertexShader.replace('#include <worldpos_vertex>',
+  '#include <worldpos_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz;');
+ sh.fragmentShader='uniform sampler2D uLin;uniform float uLinSc;uniform float uLinAmt;varying vec3 vWP;\n'
+  +sh.fragmentShader.replace('#include <normal_fragment_maps>',
+  ['#include <normal_fragment_maps>','{',
+   ' vec3 an=abs(normal);an/=(an.x+an.y+an.z+1e-5);',
+   ' float h =an.x*texture2D(uLin,vWP.zy*uLinSc).r+an.y*texture2D(uLin,vWP.xz*uLinSc).r+an.z*texture2D(uLin,vWP.xy*uLinSc).r;',
+   ' vec2 dHdxy=vec2(dFdx(h),dFdy(h))*uLinAmt;',   // perturbNormalArb (bump por derivadas de pantalla)
+   ' vec3 sp=-vViewPosition, sx=dFdx(sp), sy=dFdy(sp);',
+   ' vec3 R1=cross(sy,normal), R2=cross(normal,sx); float fDet=dot(sx,R1);',
+   ' vec3 vGrad=sign(fDet)*(dHdxy.x*R1+dHdxy.y*R2);',
+   ' normal=normalize(abs(fDet)*normal - vGrad);',
+   '}'].join('\n'));};
+MAT_BODY.needsUpdate=true;
 const MAT_POST=new THREE.MeshStandardMaterial({color:0xc2c7cf,roughness:0.32,metalness:0.9});
 const MAT_KNOB=new THREE.MeshStandardMaterial({color:0x1b1b22,roughness:0.35,metalness:0.15});
 const MAT_BLACK=new THREE.MeshStandardMaterial({color:0x181820,roughness:0.5,metalness:0.35});
@@ -318,18 +489,21 @@ function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  vertexColors:true,roughness:0.72,metalness:0.02,transparent:alpha<0.99,opacity:alpha,
  side:THREE.DoubleSide});}
 const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.85,metalness:0.02,side:THREE.DoubleSide});
+const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opacity:0.72,dashSize:1.4,gapSize:0.9});
 
 // helpers: convertir listas de anillos en BufferGeometry indexada (normales suaves)
 function ringGroupsGeom(groups){
- const pos=[],idx=[];let off=0,tris=0;
+ const pos=[],uv=[],idx=[];let off=0,tris=0;
  for(const rings of groups){const R=rings.length;
-  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);}
+  for(let r=0;r<R;r++)for(let k=0;k<N;k++){const p=rings[r][k];pos.push(p[0],p[1],p[2]);
+   uv.push(k/N, r*0.5);}                       // UV: k alrededor, anillo hacia abajo (para la lona)
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    const a=off+r*N+k,b=off+r*N+k2,c=off+(r+1)*N+k2,d=off+(r+1)*N+k;
    idx.push(a,b,c,a,c,d);tris+=2;}
   off+=R*N;}
  const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
  g.setIndex(idx);g.computeVertexNormals();g.__tris=tris;return g;}
 
 function coloredGarmentGeom(groups){ // groups: [{rings,ease}]
@@ -355,6 +529,36 @@ function clothGeom(cl){
  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
  g.setIndex(idx);g.computeVertexNormals();g.__tris=idx.length/3;return g;}
 
+// costuras marcadas del maniquí (centro, princesa, costados, línea de busto/cintura,
+// hombro, brazo, pierna) como líneas discontinuas, al estilo de una horma de atelier
+function seamLines(B,L){
+ const seg=[],push=(a,b)=>seg.push(a[0],a[1],a[2],b[0],b[1],b[2]);
+ // marcha desde un punto interior 'o' en dirección 'd' hasta la superficie del campo
+ const surfFrom=(o,d)=>{const dl=Math.hypot(d[0],d[1],d[2])||1,u=[d[0]/dl,d[1]/dl,d[2]/dl];
+  let tt=0;for(let it=0;it<64;it++){const x=o[0]+u[0]*tt,y=o[1]+u[1]*tt,z=o[2]+u[2]*tt;
+   const f=bodyField([x,y,z],B);if(f>-0.35)return [x+u[0]*0.3,y+u[1]*0.3,z+u[2]*0.3];
+   tt+=Math.max(0.4,-f*0.9);}return [o[0]+u[0]*tt,o[1]+u[1]*tt,o[2]+u[2]*tt];};
+ const surf=(y,dx,dz)=>surfFrom([0,y,0],[dx,0,dz]);
+ const polyY=(dx,dz,yA,yB,n)=>{let prev=null;for(let i=0;i<=n;i++){const p=surf(yA+(yB-yA)*i/n,dx,dz);
+  if(prev)push(prev,p);prev=p;}};
+ // verticales del torso: centro delantero/trasero, costados, princesa delantera ±
+ const yA=L.hipY-3,yB=L.shY-2,ang=0.62;
+ polyY(0,1,yA,yB,18); polyY(0,-1,yA,yB,18); polyY(1,0,yA,yB,18); polyY(-1,0,yA,yB,18);
+ polyY(Math.sin(ang),Math.cos(ang),yA,yB,18); polyY(-Math.sin(ang),Math.cos(ang),yA,yB,18);
+ // horizontales: busto/pecho y cintura (marcha radial alrededor)
+ [L.bustY,L.waistY].forEach(y=>{let prev=null;for(let k=0;k<=N;k++){const th=2*Math.PI*k/N;
+  const p=surf(y,Math.cos(th),Math.sin(th));if(prev)push(prev,p);prev=p;}});
+ // costura exterior de cada brazo y delantera de cada pierna (marcha desde el eje del miembro)
+ B.armAxis.forEach(ax=>{const p0=ax[0],p1=ax[1],s=ax[2];let prev=null;
+  for(let i=0;i<=12;i++){const tt=i/12,c=[p0[0]+(p1[0]-p0[0])*tt,p0[1]+(p1[1]-p0[1])*tt,p0[2]+(p1[2]-p0[2])*tt];
+   const p=surfFrom(c,[s,0,0.25]);if(prev)push(prev,p);prev=p;}});
+ B.legAxis.forEach(ax=>{const p0=ax[0],p1=ax[1];let prev=null;
+  for(let i=0;i<=14;i++){const tt=i/14,c=[p0[0]+(p1[0]-p0[0])*tt,p0[1]+(p1[1]-p0[1])*tt,p0[2]+(p1[2]-p0[2])*tt];
+   const p=surfFrom(c,[0,0,1]);if(prev)push(prev,p);prev=p;}});
+ const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(seg,3));
+ const line=new THREE.LineSegments(g,MAT_SEAM);line.computeLineDistances();return line;}
+
 // ================= estado / rebuild =================
 const ROOT=new THREE.Group();scene.add(ROOT);
 let MESH=null,CLOTH=null,simMode=false,showG=true,raf=null;
@@ -377,9 +581,11 @@ function rebuild(){
  const H=P.estatura;
  clearRoot();
  let tris=0;
- // cuerpo: torso cerrado (dress form) — lino/lona
- const bodyGeom=ringGroupsGeom([body.torso]);
+ // cuerpo: superficie implícita (torso + brazos + piernas FUNDIDOS) — lino/lona
+ const bodyGeom=bodyGeomImplicit(body);
  addMesh(bodyGeom,MAT_BODY,true);tris+=bodyGeom.__tris;
+ // costuras marcadas (centro, princesa, costados, busto/cintura, hombro, brazo, pierna)
+ ROOT.add(seamLines(body,L));
  // pomo negro sobre poste metálico (remate del dress form)
  const postGeom=ringGroupsGeom([tube([0,L.neckY-1,0],[0,L.neckY+H*0.045,0],P.contorno_cuello/10,P.contorno_cuello/13,3)]);
  addMesh(postGeom,MAT_POST,true);tris+=postGeom.__tris;
@@ -395,7 +601,7 @@ function rebuild(){
  const armGeom=ringGroupsGeom(arms);addMesh(armGeom,MAT_BLACK,true);tris+=armGeom.__tris;
  const whGeom=ringGroupsGeom(wheels);addMesh(whGeom,MAT_WHEEL,true);tris+=whGeom.__tris;
  // prenda
- const prof=bodyProfileFrom(body.torso);
+ const prof=body.prof;
  const gm=buildGarment(L,g);
  let garMesh=null;
  if(showG&&!simMode){const gg=coloredGarmentGeom(gm.groups);
@@ -455,7 +661,8 @@ def build_body_viewer(outdir: str = "output") -> str:
     """Genera el visor 3D del maniquí a medida (HTML autocontenido, Three.js incrustado)."""
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "viewer_3d.html")
-    html = _PAGE.replace("/*__THREE__*/", _three_js())
+    from .webshell import inject_shell
+    html = inject_shell(_PAGE.replace("/*__THREE__*/", _three_js()))
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     return path

@@ -1,12 +1,16 @@
 # Visor 3D — maniquí a medida (WebGL / PBR)
 
-`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico**
-renderizado con **WebGL** (Three.js), al estilo de una horma profesional de
-atelier: **torso cerrado y suave** (cuello → hombros → busto → cintura → cadera,
-con fondo redondeado), **pomo negro** sobre **poste** metálico y **base rodante
-de 5 patas** negra. Hay maniquí de **Mujer** y de **Hombre** (selector
-*«Cuerpo»*), con siluetas distintas (mujer en reloj de arena; hombre de hombros
-anchos y torso recto) y **medidas por defecto** propias de cada uno.
+`output/viewer_3d.html` muestra un **maniquí de sastre (dress form) paramétrico
+de cuerpo entero** renderizado con **WebGL** (Three.js), al estilo de una horma
+profesional de atelier: **torso cerrado y suave** (cuello → hombros → busto →
+cintura → cadera), **brazos** con mano redondeada que cuelgan a los costados,
+**piernas** completas hasta el tobillo (sin pies) que emergen de la pelvis, y
+**líneas de costura marcadas** (centro delantero/trasero, princesa, línea de
+busto/pecho, cintura, hombro, costura de brazo y de pierna) dibujadas en
+discontinuo sobre la lona. Remata con **pomo negro** sobre **poste** metálico y
+**base rodante de 5 patas** negra. Hay maniquí de **Mujer** y de **Hombre**
+(selector *«Cuerpo»*), con siluetas distintas (mujer en reloj de arena; hombre de
+hombros anchos y torso recto) y **medidas por defecto** propias de cada uno.
 
 A diferencia de la versión anterior (renderizador por software, aspecto
 facetado), ahora se usan **materiales PBR** (lino/lona para el cuerpo, metal para
@@ -36,17 +40,45 @@ python -m patronaje.viewer3d --output output    # genera output/viewer_3d.html
    cintura) y **colisiona con el maniquí**, formando pliegues reales que se
    renderizan como tejido PBR. Botón *«Re-drapear»* para volver a simular.
 
-## Cómo se construye
+## Cómo se construye (superficie implícita)
 
-- **Figura**: se *loftea* una pila de **anillos elípticos** cuyo perímetro
-  reproduce cada medida a su altura (cuello, busto, cintura, cadera) —con la
-  relación ancho/fondo del cuerpo (Ramanujan para el perímetro de la elipse)— y
-  se **cierra** por arriba (cúpula sobre el cuello) y por abajo (fondo
-  redondeado). Los anillos se convierten en una **malla indexada** de Three.js con
-  **normales promediadas** (`computeVertexNormals`), de ahí el aspecto suave.
+El cuerpo ya **no** es una pila de anillos, sino una **superficie implícita
+(campo de distancia)** poligonizada — el mismo método que usan las herramientas
+de *made-to-measure*: así los brazos, las piernas y los hombros se **funden** con
+el torso en una sola superficie continua, sin uniones atornilladas, sin huecos de
+axila ni facetas.
+
+- **Torso**: un **cilindro generalizado** de sección elíptica cuyo (ancho, fondo)
+  se interpola por altura desde las medidas (cuello, hombro, pecho, busto,
+  cintura, cadera) — la misma silueta paramétrica de antes, ahora como SDF.
+- **Brazos y piernas**: **round cones** (cápsulas cónicas, fórmula de iq) por las
+  medidas de brazo/muñeca y cadera/rodilla/tobillo.
+- **Pecho/busto y glúteos**: **elipsoides** (SDF de iq) delante (busto) y detrás
+  (asiento), por busto/cadera, que dan el perfil en S. En hombre son más planos y
+  altos (pectoral).
+- **Fusión**: todo se une con **smooth-min** (`smin`), que mezcla suavemente las
+  primitivas — el deltoides sale del hombro, el muslo de la pelvis, sin costuras.
+- **Poligonización**: **Surface Nets** sobre una rejilla del campo (un vértice por
+  celda con cambio de signo, colocado en el promedio de los cruces), con winding
+  coherente por el signo de la arista. Las **normales** se sacan del **gradiente
+  analítico** del campo, de ahí el sombreado suave con poca malla.
+- **Relieve de lona**: como la malla implícita no tiene UVs regulares, la trama de
+  lino se aplica por **triplanar** en el shader (`onBeforeCompile`): se muestrea la
+  altura por posición mundial en 3 planos y se perturba la normal
+  (`perturbNormalArb`), evitando los artefactos de tangentes de un *bump map* por
+  UV.
+- **Costuras**: `LineSegments` con material discontinuo (`LineDashedMaterial`),
+  siguiendo los anillos del cuerpo (verticales de centro/princesa/costado y
+  horizontales de busto y cintura) y una costura por brazo y por pierna,
+  desplazadas ligeramente hacia afuera para que se vean sobre la superficie.
 - **Materiales (PBR)**: `MeshStandardMaterial` — cuerpo lino (rugosidad alta, sin
   metalicidad), poste metálico, pomo/pedestal negros. La prenda usa **colores por
   vértice** (el mapa de ajuste) sobre material semitransparente.
+- **Textura de lona (procedural)**: el cuerpo lleva una **trama de lino** dibujada
+  por código en un `<canvas>` (sin imágenes externas): un mapa de **color** beige
+  con variación de hilo y un **bump map** de tejido plano (warp/weft alternos +
+  ruido de fibra) que da **relieve** bajo la luz PBR. El lofteado genera además
+  **coordenadas UV** (`k` alrededor, anillo hacia abajo) para mapear la trama.
 - **Luz y sombra**: hemisférica + 3 direccionales (clave/relleno/contra); la clave
   proyecta **sombra** (PCF suave) sobre un suelo de estudio. Cámara en órbita:
   arrastra para girar, rueda para acercar.
