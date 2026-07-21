@@ -17,6 +17,23 @@ Todo en tiempo real.
 python -m patronaje.viewer --output output   # genera viewer.html y viewer_live.html
 ```
 
+## Edición directa sobre el lienzo (arrastrar puntos)
+
+Además de los sliders, la casilla **«Editar (arrastrar puntos)»** muestra
+**manijas** (los puntos ámbar) sobre puntos reales del trazo: escote, hombro,
+busto/pecho, cintura, cadera, largo… Al **arrastrar** una manija la medida
+correspondiente cambia y el patrón se **recalcula al instante**; el slider se
+sincroniza solo. Cada manija se mueve por su **eje** (guía discontinua): las de
+ancho en X, las de largo en Y.
+
+Es **manipulación directa manteniendo el método**: la manija no mueve un vértice
+suelto (eso rompería el bloque), sino que su posición se **invierte a la medida**
+que la genera (p. ej. arrastrar el costado de la sisa reescribe el busto vía
+`(busto+holgura)/4`), y el bloque se vuelve a trazar entero desde los parámetros.
+Así se acerca la experiencia a la de un CAD de patronaje sin perder la coherencia
+paramétrica. Cada prenda expone sus manijas (camisa 4, falda y pantalón 3,
+vestido 2, blazer 1).
+
 ## Cómo funciona
 
 El núcleo geométrico está **portado a JavaScript** dentro del propio HTML:

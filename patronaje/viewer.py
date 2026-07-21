@@ -170,7 +170,13 @@ button{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radiu
    <span><i class="dot" style="background:#22405e"></i>línea de costura</span>
    <span><i class="dot" style="background:#111"></i>pinza</span></div>
   <div id="metrics"></div>
-  <div style="margin-top:10px"><button id="reset">Restablecer medidas</button></div>
+  <div style="margin-top:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+   <button id="reset">Restablecer medidas</button>
+   <label style="font-size:13px;display:flex;gap:6px;align-items:center">
+    <input type="checkbox" id="edit"> Editar (arrastrar puntos)</label>
+   <span id="edithint" class="sub" style="margin:0;display:none">Arrastra los puntos
+    <i class="dot" style="background:#e0872a"></i> para cambiar las medidas.</span>
+  </div>
  </div>
 </div></div>
 <script>
@@ -382,7 +388,45 @@ const GARMENTS={
  vestido:{label:"Vestido",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","altura_cadera","largo_falda"],fn:dressPieces},
  blazer:{label:"Blazer",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","contorno_brazo","muneca","largo_manga"],fn:blazerPieces}};
 const P={};for(const k in DEFS)P[k]=DEFS[k][3];
-let current="camisa";
+let current="camisa",editMode=false;
+
+// ====== edición directa: puntos arrastrables que escriben en las medidas ======
+// Cada manija vive en un punto real del trazo y su inversa mapea la coordenada de
+// vuelta a una medida, así arrastrar = cambiar el parámetro y recalcular (fiel al
+// método; no es edición libre de vértices, que rompería el bloque).
+function clampP(k,v){const d=DEFS[k];return Math.max(d[1],Math.min(d[2],v));}
+function setParam(k,v){v=Math.round(clampP(k,v)*2)/2;P[k]=v;
+ const inp=document.getElementById('sl-'+k);if(inp){inp.value=v;
+  const b=document.getElementById('val-'+k);if(b)b.textContent=v;}}
+GARMENTS.camisa.handles=function(P){
+ const cc=P.contorno_cuello,fnw=cc/5-0.5,H=P.hombro,dropF=5.0,dxF=Math.sqrt(Math.max(0,H*H-dropF*dropF));
+ const cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
+ return [
+  {key:'contorno_cuello',axis:'x',x:fnw,y:0,inv:x=>(x+0.5)*5},
+  {key:'hombro',axis:'x',x:fnw+dxF,y:dropF,inv:x=>Math.sqrt((x-fnw)*(x-fnw)+dropF*dropF)},
+  {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto},
+  {key:'largo_camisa',axis:'y',x:cuarto,y:P.largo_camisa,inv:y=>y}];};
+GARMENTS.falda.handles=function(P){
+ const qh=(P.cadera+4)/4,qw=(P.cintura+1)/4,supp=Math.max(0,qh-qw),dart=Math.min(2.5,supp),sw=qh-(supp-dart);
+ return [
+  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-1},
+  {key:'cadera',axis:'x',x:qh,y:P.altura_cadera,inv:x=>4*x-4},
+  {key:'largo_falda',axis:'y',x:qh,y:P.largo_falda,inv:y=>y}];};
+GARMENTS.pantalon.handles=function(P){
+ const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,supp=Math.max(0,hq-wq),dart=Math.min(2,supp),sw=hq-(supp-dart);
+ const rise=P.cadera/4+4,hemY=P.largo_pantalon,fork=hq*0.20,lc=(hq-fork)/2,hout=lc+(42/4)*0.92;
+ return [
+  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-2},
+  {key:'cadera',axis:'x',x:hq,y:P.altura_cadera,inv:x=>4*x-5},
+  {key:'largo_pantalon',axis:'y',x:hout,y:hemY,inv:y=>y}];};
+GARMENTS.vestido.handles=function(P){
+ const cc=P.contorno_cuello,fnw=cc/5-0.5,cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
+ return [
+  {key:'contorno_cuello',axis:'x',x:fnw,y:0,inv:x=>(x+0.5)*5},
+  {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto}];};
+GARMENTS.blazer.handles=function(P){
+ const cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
+ return [{key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto}];};
 
 function draw(){
  const R=GARMENTS[current].fn(P);let ox=0,gap=6,parts=[],minY=1e9,maxY=-1e9;
@@ -390,7 +434,7 @@ function draw(){
   let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;
   poly.forEach(p=>{mnx=Math.min(mnx,p[0]);mxx=Math.max(mxx,p[0]);mny=Math.min(mny,p[1]);mxy=Math.max(mxy,p[1]);});
   const dx=ox-mnx;
-  parts.push({name,pts:poly.map(p=>[p[0]+dx,p[1]]),cx:(mnx+mxx)/2+dx,top:mny,
+  parts.push({name,dx,pts:poly.map(p=>[p[0]+dx,p[1]]),cx:(mnx+mxx)/2+dx,top:mny,
    darts:(darts||[]).map(dt=>dt.map(p=>[p[0]+dx,p[1]]))});
   minY=Math.min(minY,mny);maxY=Math.max(maxY,mxy);ox+=(mxx-mnx)+gap;});
  const pad=6,vb=[-pad,minY-pad-4,ox+2*pad,(maxY-minY)+2*pad+4];
@@ -400,6 +444,17 @@ function draw(){
   pt.darts.forEach(dt=>{svg+='<path d="M'+dt[0][0].toFixed(2)+' '+dt[0][1].toFixed(2)+'L'+dt[1][0].toFixed(2)+' '+dt[1][1].toFixed(2)
    +'L'+dt[2][0].toFixed(2)+' '+dt[2][1].toFixed(2)+'" fill="none" stroke="#111" stroke-width="0.35"/>';});
   svg+='<text x="'+pt.cx.toFixed(1)+'" y="'+(pt.top-1).toFixed(1)+'" font-size="3" text-anchor="middle" fill="#6b8199">'+pt.name+'</text>';});
+ window.HANDLES=[];
+ if(editMode&&GARMENTS[current].handles){
+  const hs=GARMENTS[current].handles(P);
+  svg+='<g class="handles">';
+  hs.forEach(h=>{const pd=parts[h.piece||0];if(!pd)return;const ax=h.x+pd.dx,ay=h.y;
+   window.HANDLES.push({ax,ay,dx:pd.dx,axis:h.axis,key:h.key,inv:h.inv});
+   const g=h.axis==='x'
+    ?'<line x1="'+(ax-7).toFixed(1)+'" y1="'+ay.toFixed(1)+'" x2="'+(ax+7).toFixed(1)+'" y2="'+ay.toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>'
+    :'<line x1="'+ax.toFixed(1)+'" y1="'+(ay-7).toFixed(1)+'" x2="'+ax.toFixed(1)+'" y2="'+(ay+7).toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>';
+   svg+=g+'<circle cx="'+ax.toFixed(2)+'" cy="'+ay.toFixed(2)+'" r="1.8" fill="#fff" stroke="#e0872a" stroke-width="0.7"/>';});
+  svg+='</g>';}
  svg+='</svg>';
  document.getElementById('svg').innerHTML=svg;
  document.getElementById('metrics').innerHTML=R.metrics.map(m=>
@@ -411,12 +466,33 @@ function build(){const c=document.getElementById('ctrls');c.innerHTML='';
   const row=document.createElement('div');row.className='row';
   row.innerHTML='<label>'+lab+'</label><input type="range" min="'+mn+'" max="'+mx+'" step="0.5" value="'+P[k]+'"><b>'+P[k]+'</b>';
   const inp=row.querySelector('input'),val=row.querySelector('b');
+  inp.id='sl-'+k;val.id='val-'+k;
   inp.addEventListener('input',()=>{P[k]=parseFloat(inp.value);val.textContent=P[k];draw();});
   c.appendChild(row);});}
 const gsel=document.getElementById('garment');
 for(const g in GARMENTS){const o=document.createElement('option');o.value=g;o.textContent=GARMENTS[g].label;gsel.appendChild(o);}
 gsel.addEventListener('change',()=>{current=gsel.value;build();draw();});
 document.getElementById('reset').addEventListener('click',()=>{GARMENTS[current].keys.forEach(k=>P[k]=DEFS[k][3]);build();draw();});
+
+// ---- arrastre de puntos (edición directa sobre el lienzo) ----
+const svgBox=document.getElementById('svg');let active=-1;
+document.getElementById('edit').addEventListener('change',e=>{editMode=e.target.checked;
+ svgBox.style.cursor=editMode?'crosshair':'';
+ document.getElementById('edithint').style.display=editMode?'inline':'none';draw();});
+function svgPt(e){const svg=svgBox.querySelector('svg');const pt=svg.createSVGPoint();
+ pt.x=e.clientX;pt.y=e.clientY;const r=pt.matrixTransform(svg.getScreenCTM().inverse());return r;}
+svgBox.addEventListener('pointerdown',e=>{
+ if(!editMode||!window.HANDLES||!window.HANDLES.length)return;
+ const svg=svgBox.querySelector('svg');if(!svg)return;const m=svg.getScreenCTM();
+ let best=-1,bd=1e9;
+ window.HANDLES.forEach((h,i)=>{const sx=m.a*h.ax+m.c*h.ay+m.e,sy=m.b*h.ax+m.d*h.ay+m.f;
+  const d=Math.hypot(sx-e.clientX,sy-e.clientY);if(d<bd){bd=d;best=i;}});
+ if(bd<20){active=best;svgBox.setPointerCapture(e.pointerId);e.preventDefault();}});
+svgBox.addEventListener('pointermove',e=>{
+ if(active<0)return;const h=window.HANDLES[active],r=svgPt(e);
+ const loc=h.axis==='x'?(r.x-h.dx):r.y;setParam(h.key,h.inv(loc));draw();});
+function endDrag(){active=-1;}
+svgBox.addEventListener('pointerup',endDrag);svgBox.addEventListener('pointercancel',endDrag);
 build();draw();
 </script></body></html>"""
 
