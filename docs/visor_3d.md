@@ -86,6 +86,18 @@ axila ni facetas.
   cada tipo (torso para camisa/vestido/blazer; falda acampanada; dos perneras para
   el pantalón). Se muestra sin mangas sobre la horma, como en un atelier.
 
+## Prueba virtual (try-on): patrón real drapeado
+
+Activando *«Caída (sim)»* con una prenda de torso (camisa/vestido/blazer), la
+simulación no usa un tubo genérico sino la **prenda real del bloque**: el borde
+superior lleva el **escote, la sisa y el hombro** reales (del método), los anchos
+salen del **perfil del cuerpo + holgura**, y la prenda se **drapea por gravedad**
+(solver PBD) sobre la horma. Como en un atelier, al drapear la horma queda **sin
+brazos** para que la tela caiga limpia. La **colisión es exacta**: la tela se
+empuja fuera del **campo de distancia del cuerpo** (`bodyField` = torso + piernas
++ busto + glúteos), así no atraviesa la figura. El motor de patrones (`fittedBodice`,
+`skirtPanel`…) es el **mismo** que el del visor 2D (módulo compartido, `engine_js()`).
+
 ## Simulación de caída (PBD)
 
 Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:

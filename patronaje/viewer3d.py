@@ -409,12 +409,16 @@ function stepCloth(cl,dt){
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
-  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
-   if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=1.6;d+=1.6;
+  if(!cl.B)for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+   if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=1.6;d+=1.6;   // colisión aproximada (falda/pantalón)
     const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
     if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
    for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);
    if(cl.blobs)for(let j=0;j<cl.blobs.length;j++)ellipsoidPush(p,cl.blobs[j].c,cl.blobs[j].r);}}
+ // prendas de torso: colisión EXACTA contra el campo del cuerpo (una vez por paso)
+ if(cl.B){const mg=0.9;for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+  const f=bodyField(p,cl.B);if(f<mg){const n=fieldNormal(cl.B,p[0],p[1],p[2]),d=mg-f;
+   p[0]+=n[0]*d;p[1]+=n[1]*d;p[2]+=n[2]*d;}}}
 }
 
 // ===== TRY-ON completo: prenda REAL cosida (tubo con escote/sisa/hombro del bloque)
@@ -427,7 +431,7 @@ function topEdgeArr(L,g){                 // altura del borde superior por azimu
   const a=cK[i],b=(i+1<cK.length)?cK[i+1]:cK[0]+N,va=cV[i],vb=cV[(i+1)%cK.length];
   const t=(k-a)/(b-a),s=0.5-0.5*Math.cos(Math.PI*t);arr[k]=va+(vb-va)*s;}
  return arr;}
-function clothFromRings(grids,prof,legs,hipY,pinTop,blobs){  // como buildCloth, pin selectivo en r=0
+function clothFromRings(grids,prof,legs,hipY,pinTop,blobs,B){  // como buildCloth, pin selectivo en r=0
  const pos=[],prev=[],pin=[],cons=[],faces=[];
  for(const rings of grids){const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());
@@ -439,8 +443,8 @@ function clothFromRings(grids,prof,legs,hipY,pinTop,blobs){  // como buildCloth,
    if(r<R-2)add(idx(r,k),idx(r+2,k));}
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}}
- return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[]};}
-function buildGarmentCloth(L,g,prof,legs,blobs){  // prenda de torso real (escote/sisa) cosida
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null};}
+function buildGarmentCloth(L,g,prof,legs,blobs,B){  // prenda de torso real (escote/sisa) cosida
  const top=topEdgeArr(L,g),M=15,eB=P.holgura_busto;
  const hemY=(g==='vestido')?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
  const rad=y=>{const yy=Math.max(prof[0].y,Math.min(prof[prof.length-1].y,y));
@@ -452,7 +456,7 @@ function buildGarmentCloth(L,g,prof,legs,blobs){  // prenda de torso real (escot
    ring.push([ad[0]*Math.cos(th),y,ad[1]*Math.sin(th)]);}
   rings.push(ring);}
  // sujeta TODO el borde superior (escote/sisa/hombro): la prenda cuelga de ahí y cae
- return clothFromRings([rings],prof,legs||[],L.hipY,null,blobs);}
+ return clothFromRings([rings],prof,legs||[],L.hipY,null,blobs,B);}
 
 // ================= escena Three.js =================
 const cv=document.getElementById('cv');
@@ -665,7 +669,7 @@ function rebuild(){
 
 function startSim(){
  const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
- CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs)
+ CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
             :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY);
  const cg=clothGeom(CLOTH);
  const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
