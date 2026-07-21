@@ -725,7 +725,7 @@ function updateCamera(){
 function rebuild(){
  const g=document.getElementById('garment').value;
  const torsoG=(g==='camisa'||g==='vestido'||g==='blazer');   // solo el torso se drapea sin brazos
- const L=bodyLevels(),body=buildBody(L,simMode&&torsoG);
+ const L=bodyLevels(),body=buildBody(L,false);   // el maniquí conserva los brazos (la tela colisiona con ellos)
  const H=P.estatura;
  clearRoot();
  let tris=0;
