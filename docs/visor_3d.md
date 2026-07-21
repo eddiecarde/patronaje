@@ -115,11 +115,15 @@ empuja fuera del **campo de distancia del cuerpo** (`bodyField` = torso + pierna
   de superficie** (rugosidad, brillo). La seda flexa suave y brilla; la mezclilla
   es rígida y mate; la gasa cae ligerísima. Cambiar el tejido re-drapea con esa
   física y aplica su acabado a la tela.
-- **Casilla «Ver tensión»**: colorea la prenda por el **estiramiento** de la malla
-  **relativo a la media** (🔵 flojo · 🟢 reposo · 🔴 estirado). Es un **diagnóstico
-  de ajuste**: la zona que agarra el cuerpo (busto, cintura, cadera) sale cálida y
-  la tela que cuelga libre sale fría. Es la lectura que un diseñador mira para
-  juzgar el ajuste antes de coser una muestra.
+- **Selector «Mapa»** con dos diagnósticos de ajuste sobre la prenda drapeada:
+  - **Tensión (estiramiento)**: colorea por el estiramiento de la malla **relativo
+    a la media** (🔵 flojo · 🟢 reposo · 🔴 estirado) — cuánto trabaja la tela
+    respecto de su patrón plano.
+  - **Presión de contacto**: colorea por cuánto **empuja el cuerpo** a la tela en
+    la colisión (🔵 sin contacto · 🟢 contacto · 🔴 aprieta) — mide **dónde la
+    prenda agarra la figura**. Es el fit map que un patronista mira: los focos
+    cálidos (busto, cadera) señalan dónde falta holgura. Se lee del propio campo
+    de distancia del cuerpo (`bodyField`), sin avatar nuevo.
 
 > Alcance honesto: el drapeado es **indicativo**, no un solver de fit certificado.
 > El maniquí es una **horma estática**; los avatares con pose (tensión sobre un

@@ -68,12 +68,12 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
    <button id="redrape" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer">Re-drapear</button></div>
   <div class="row"><label>Tejido</label>
    <select id="fabric" style="flex:1;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff"></select></div>
-  <div class="row"><label>Ver tensión</label>
-   <span style="flex:1"><input type="checkbox" id="tension"> <span style="font-size:12px;color:#6b8199">mapa de estiramiento de la tela</span></span></div>
-  <div id="tlegend" class="legend" style="display:none">
-   <span><i style="background:#2f7fd0"></i>flojo</span>
-   <span><i style="background:#3aa85a"></i>reposo</span>
-   <span><i style="background:#d84a3a"></i>estirado</span></div>
+  <div class="row"><label>Mapa</label>
+   <select id="mapmode" style="flex:1;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff">
+    <option value="off">Ninguno</option>
+    <option value="tension">Tensión (estiramiento)</option>
+    <option value="pressure">Presión de contacto</option></select></div>
+  <div id="maplegend" class="legend" style="display:none"></div>
   <div id="sliders"></div>
   <div class="legend">
    <span><i style="background:#c0392b"></i>tira (&lt;0)</span>
@@ -411,7 +411,7 @@ function buildCloth(grids,prof,legs,hipY,B){
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
   gridInfo.push({base,R});}
- return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,B:B||null};}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,B:B||null,press:new Float32Array(pos.length)};}
 
 // biblioteca de tejidos: parámetros físicos (rigidez de flexión, amortiguación,
 // peso) + acabado de superficie (rugosidad, brillo). Un "material digital" ligero
@@ -423,7 +423,7 @@ const FABRICS={
  seda:   {label:"Seda",   bendK:0.28,damp:0.972,gmul:0.9, rough:0.42,sheen:1.1},
  denim:  {label:"Mezclilla",bendK:0.9,damp:0.990,gmul:1.2,rough:0.80,sheen:0.45},
  gasa:   {label:"Gasa",   bendK:0.16,damp:0.965,gmul:0.8, rough:0.55,sheen:0.95}};
-let FAB=FABRICS.algodon, showTension=false;
+let FAB=FABRICS.algodon, mapMode='off';   // 'off' | 'tension' | 'pressure'
 
 // mapa de tensión: color por vértice según el estiramiento medio de sus aristas
 // (azul = flojo, verde = reposo, rojo = estirado) — diagnóstico de ajuste.
@@ -442,8 +442,23 @@ function clothTension(cl){
   col[i*3]=r;col[i*3+1]=g;col[i*3+2]=bl;}
  return col;}
 
+// mapa de PRESIÓN DE CONTACTO: color por cuánto empuja el cuerpo a cada partícula
+// en la colisión (acumulado en cl.press durante el drapeado). Mide dónde la prenda
+// AGARRA la figura, no cuánto se estira la malla — un fit map real sobre la horma.
+function clothPressure(cl){
+ const n=cl.pos.length,col=new Float32Array(n*3);
+ if(!cl.press)return col;
+ let mx=1e-6;for(let i=0;i<n;i++)mx=Math.max(mx,cl.press[i]);
+ for(let i=0;i<n;i++){const t=Math.max(0,Math.min(1,cl.press[i]/mx));let r,g,bl;
+  if(t<0.5){const s=t/0.5;r=0.13+0.10*s;g=0.42+0.30*s;bl=0.76-0.44*s;}   // sin contacto (azul) -> contacto (verde)
+  else{const s=(t-0.5)/0.5;r=0.23+0.65*s;g=0.72-0.50*s;bl=0.32-0.26*s;}  // contacto (verde) -> aprieta (rojo)
+  col[i*3]=r;col[i*3+1]=g;col[i*3+2]=bl;}
+ return col;}
+function clothColors(cl){return mapMode==='pressure'?clothPressure(cl):clothTension(cl);}
+
 function stepCloth(cl,dt){
  const g=-160*dt*dt*FAB.gmul, damp=FAB.damp;
+ if(cl.press)cl.press.fill(0);                 // presión de contacto de este paso
  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i],q=cl.prev[i];
   const vx=(p[0]-q[0])*damp,vy=(p[1]-q[1])*damp,vz=(p[2]-q[2])*damp;
   q[0]=p[0];q[1]=p[1];q[2]=p[2];p[0]+=vx;p[1]+=vy+g;p[2]+=vz;}
@@ -456,17 +471,19 @@ function stepCloth(cl,dt){
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
   if(!cl.B)for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i];
+   const bx=p[0],bz=p[2];
    if(p[1]>cl.hipY-2){let [a,d]=bodyAD(cl.prof,p[1]);a+=1.6;d+=1.6;   // colisión aproximada (falda/pantalón)
     const e=(p[0]*p[0])/(a*a)+(p[2]*p[2])/(d*d);
     if(e<1&&e>1e-6){const s=1/Math.sqrt(e);p[0]*=s;p[2]*=s;}}
    for(let j=0;j<cl.legs.length;j++)capsulePush(p,cl.legs[j]);
-   if(cl.blobs)for(let j=0;j<cl.blobs.length;j++)ellipsoidPush(p,cl.blobs[j].c,cl.blobs[j].r);}}
+   if(cl.blobs)for(let j=0;j<cl.blobs.length;j++)ellipsoidPush(p,cl.blobs[j].c,cl.blobs[j].r);
+   if(cl.press)cl.press[i]+=Math.hypot(p[0]-bx,p[2]-bz);}}
  // prendas de torso: colisión EXACTA contra el campo del cuerpo (una vez por paso).
  // También se empujan los puntos FIJADOS del borde superior (escote/sisa) para que
  // se apoyen por delante del busto en vez de que éste asome.
  if(cl.B){const mg=1.4;for(let i=0;i<cl.pos.length;i++){const p=cl.pos[i];
   const f=bodyField(p,cl.B);if(f<mg){const n=fieldNormal(cl.B,p[0],p[1],p[2]),d=mg-f;
-   p[0]+=n[0]*d;p[1]+=n[1]*d;p[2]+=n[2]*d;}}}
+   p[0]+=n[0]*d;p[1]+=n[1]*d;p[2]+=n[2]*d;if(cl.press)cl.press[i]=d;}}}
 }
 
 // ===== TRY-ON completo: prenda REAL cosida (tubo con escote/sisa/hombro del bloque)
@@ -491,7 +508,7 @@ function clothFromRings(grids,prof,legs,hipY,pinTop,blobs,B){  // como buildClot
    if(r<R-2)add(idx(r,k),idx(r+2,k),1);}
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}}
- return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null};}
+ return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null,press:new Float32Array(pos.length)};}
 function buildGarmentCloth(L,g,prof,legs,blobs,B){  // prenda de torso real (escote/sisa) cosida
  const top=topEdgeArr(L,g),M=15,eB=P.holgura_busto;
  const hemY=(g==='vestido')?L.waistY-(P.largo-P.talle*0.44):L.hipY-2;
@@ -753,16 +770,17 @@ function startSim(){
  const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
  CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
             :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY,MESH.body);
+ const useMap=(mapMode!=='off');
  const cg=clothGeom(CLOTH);
- if(showTension)cg.setAttribute('color',new THREE.BufferAttribute(clothTension(CLOTH),3));
- const clothMesh=new THREE.Mesh(cg,showTension?MAT_TENSION:MAT_CLOTH);clothMesh.castShadow=true;
+ if(useMap)cg.setAttribute('color',new THREE.BufferAttribute(clothColors(CLOTH),3));
+ const clothMesh=new THREE.Mesh(cg,useMap?MAT_TENSION:MAT_CLOTH);clothMesh.castShadow=true;
  clothMesh.name='__cloth';ROOT.add(clothMesh);
  if(raf)cancelAnimationFrame(raf);
  let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);
   const pa=cg.attributes.position.array;
   for(let i=0;i<CLOTH.pos.length;i++){pa[i*3]=CLOTH.pos[i][0];pa[i*3+1]=CLOTH.pos[i][1];pa[i*3+2]=CLOTH.pos[i][2];}
   cg.attributes.position.needsUpdate=true;
-  if(showTension){const cc=clothTension(CLOTH),ca=cg.attributes.color.array;ca.set(cc);cg.attributes.color.needsUpdate=true;}
+  if(useMap){const cc=clothColors(CLOTH),ca=cg.attributes.color.array;ca.set(cc);cg.attributes.color.needsUpdate=true;}
   cg.computeVertexNormals();
   window.__rendered=cg.__tris+200;n++;draw();
   if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
@@ -787,8 +805,12 @@ document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
 const fabsel=document.getElementById('fabric');
 for(const k in FABRICS){const o=document.createElement('option');o.value=k;o.textContent=FABRICS[k].label;fabsel.appendChild(o);}
 fabsel.onchange=e=>{FAB=FABRICS[e.target.value];if(simMode)startSim();};
-document.getElementById('tension').onchange=e=>{showTension=e.target.checked;
- document.getElementById('tlegend').style.display=showTension?'flex':'none';if(simMode)startSim();};
+function updateMapLegend(){const el=document.getElementById('maplegend');
+ if(mapMode==='off'){el.style.display='none';return;}el.style.display='flex';
+ el.innerHTML=(mapMode==='pressure')
+  ?'<span><i style="background:#2f7fd0"></i>sin contacto</span><span><i style="background:#3aa85a"></i>contacto</span><span><i style="background:#d84a3a"></i>aprieta</span>'
+  :'<span><i style="background:#2f7fd0"></i>flojo</span><span><i style="background:#3aa85a"></i>reposo</span><span><i style="background:#d84a3a"></i>estirado</span>';}
+document.getElementById('mapmode').onchange=e=>{mapMode=e.target.value;updateMapLegend();if(simMode)startSim();};
 cv.onpointerdown=e=>{cv.__drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
 cv.onpointermove=e=>{if(!cv.__drag)return;theta-=(e.clientX-cv.__drag[0])*0.01;phi-=(e.clientY-cv.__drag[1])*0.01;
  phi=Math.max(0.25,Math.min(2.7,phi));cv.__drag=[e.clientX,e.clientY];draw();};

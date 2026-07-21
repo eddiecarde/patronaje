@@ -232,9 +232,10 @@ def test_cloth_simulation_is_stable():
 
 
 @pytest.mark.skipif(not _browser_available(), reason="Playwright/Chromium no disponible")
-def test_fabric_presets_and_tension_map():
-    """El tejido cambia la física (rigidez de flexión) y el mapa de tensión pinta
-    color por vértice, sin errores y estable."""
+def test_fabric_presets_and_maps():
+    """El tejido cambia la física (rigidez de flexión) y los mapas de tensión y de
+    presión de contacto pintan color por vértice válido; la presión registra
+    contacto real con el cuerpo."""
     playwright = pytest.importorskip("playwright.sync_api")
     from patronaje.viewer3d import build_body_viewer
     d = tempfile.mkdtemp()
@@ -249,13 +250,18 @@ def test_fabric_presets_and_tension_map():
         # presets: la seda flexa mucho más suave que la mezclilla
         soft = pg.evaluate("FABRICS.seda.bendK")
         stiff = pg.evaluate("FABRICS.denim.bendK")
-        # mapa de tensión: color por vértice válido (RGB en [0,1]) y del tamaño de la malla
+        # simula un vestido (prenda de torso que agarra el cuerpo) y valida ambos mapas
         info = pg.evaluate(
-            "(()=>{simMode=true;showTension=true;rebuild();if(raf)cancelAnimationFrame(raf);"
-            "for(let i=0;i<120;i++)stepCloth(CLOTH,0.12);const c=clothTension(CLOTH);"
-            "let ok=c.length===CLOTH.pos.length*3;for(const v of c)if(v<0||v>1)ok=false;"
-            "return {ok,len:c.length,n:CLOTH.pos.length};})()")
+            "(()=>{document.getElementById('garment').value='vestido';mapMode='pressure';"
+            "simMode=true;rebuild();if(raf)cancelAnimationFrame(raf);"
+            "for(let i=0;i<150;i++)stepCloth(CLOTH,0.12);"
+            "const n=CLOTH.pos.length,cp=clothPressure(CLOTH),ct=clothTension(CLOTH);"
+            "let ok=cp.length===n*3&&ct.length===n*3;"
+            "for(const v of cp)if(v<0||v>1)ok=false;for(const v of ct)if(v<0||v>1)ok=false;"
+            "let mx=0;for(const v of CLOTH.press)mx=Math.max(mx,v);"
+            "return {ok,mx,n};})()")
         b.close()
     assert not errs, errs
     assert soft < stiff, "la seda debe flexar más suave que la mezclilla"
-    assert info["ok"] and info["len"] == info["n"] * 3
+    assert info["ok"], "los mapas deben dar RGB válido del tamaño de la malla"
+    assert info["mx"] > 0.05, "la presión de contacto debe registrar agarre sobre el cuerpo"
