@@ -175,6 +175,7 @@ button{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radiu
 </div></div>
 <script>
 // ====== núcleo paramétrico portado (fiel a patronaje.core.curves + blocks Aldrich) ======
+/*__ENGINE_START__*/
 function solveM(t,y){const n=t.length,M=new Array(n).fill(0);if(n<3)return M;
  const h=[];for(let i=0;i<n-1;i++)h.push(t[i+1]-t[i]);
  const lo=new Array(n).fill(0),di=new Array(n).fill(1),up=new Array(n).fill(0),r=new Array(n).fill(0);
@@ -366,6 +367,7 @@ function trouserPieces(P){
  return {list:[["Pantalón delantero",f.contour,[f.dart]],["Pantalón trasero",b.contour,[b.dart]]],
   metrics:[["Entrepierna del.",plen(f.inseam).toFixed(1)+" cm"],["Entrepierna tra.",plen(b.inseam).toFixed(1)+" cm"],["Largo",P.largo_pantalon.toFixed(0)+" cm"]]};}
 
+/*__ENGINE_END__*/
 const DEFS={
  busto:["Busto",76,120,88],holgura_busto:["Holgura busto",2,16,8],
  contorno_cuello:["Contorno cuello",32,46,37],ancho_espalda:["Ancho espalda",32,46,37],
@@ -417,6 +419,16 @@ gsel.addEventListener('change',()=>{current=gsel.value;build();draw();});
 document.getElementById('reset').addEventListener('click',()=>{GARMENTS[current].keys.forEach(k=>P[k]=DEFS[k][3]);build();draw();});
 build();draw();
 </script></body></html>"""
+
+
+def engine_js() -> str:
+    """Devuelve el **motor de patrones portado a JS** (splines G2, bloques Aldrich,
+    piezas de camisa/falda/pantalón/vestido/blazer con pinzas), delimitado por
+    sentinelas en `_LIVE_PAGE`. Es la **única fuente de verdad** del motor JS: tanto
+    el visor 2D como el 3D (try-on) lo incrustan, sin duplicar código."""
+    a = _LIVE_PAGE.index("/*__ENGINE_START__*/")
+    b = _LIVE_PAGE.index("/*__ENGINE_END__*/")
+    return _LIVE_PAGE[a:b]
 
 
 def build_live_viewer(outdir: str = "output") -> str:

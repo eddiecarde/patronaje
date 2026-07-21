@@ -77,6 +77,7 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
  <div class="view"><canvas id="cv" width="640" height="760"></canvas></div>
 </div></div>
 <script>/*__THREE__*/</script>
+<script>/*__ENGINE__*/</script>
 <script>
 // ================= parámetros =================
 const DEFS={
@@ -662,7 +663,9 @@ def build_body_viewer(outdir: str = "output") -> str:
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "viewer_3d.html")
     from .webshell import inject_shell
-    html = inject_shell(_PAGE.replace("/*__THREE__*/", _three_js()))
+    from .viewer import engine_js
+    html = _PAGE.replace("/*__THREE__*/", _three_js()).replace("/*__ENGINE__*/", engine_js())
+    html = inject_shell(html)
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     return path
