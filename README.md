@@ -89,6 +89,14 @@ Con `--all-sizes`: subcarpeta por talla + `output/nido_grading_*.svg`.
 > control de versiones (`.gitignore`); el repo solo conserva una **muestra
 > talla S** + el visor como escaparate. Regenera todo con los comandos de arriba.
 
+**Plataforma web**: `python -m patronaje.viewer --output output` genera además
+`output/index.html`, una **página de inicio unificada** que ata los visores: eliges
+**talla / cuerpo / prenda** y **medidas** (prefijadas por talla, editables o desde
+JSON) y abres el **patrón 2D en vivo** o el **maniquí 3D** con esa configuración
+aplicada (pasada por query-string). Todos los visores comparten una **barra de
+navegación** común. Se publica en **GitHub Pages** (workflow `pages.yml`). Es
+autocontenido/offline (sin CDN).
+
 **Visor interactivo**: `python -m patronaje.viewer --output output` genera
 `output/viewer.html` (elige método y estilo, con consumo y nº de piezas) y
 `output/viewer_live.html`, un **visor en vivo** donde mueves las medidas y el
@@ -173,3 +181,13 @@ imprime el reporte y **bloquea la exportación** si hay errores (usar `--force`)
 ```bash
 python -m pytest -q
 ```
+
+Los tests del visor 3D (render WebGL y simulación) usan **Playwright + Chromium**;
+si el navegador no está disponible se **saltan** en local, pero el **CI los ejecuta**
+(instala Chromium) para cubrir el visor de verdad.
+
+## Licencia
+
+**MIT** — ver [`LICENSE`](LICENSE). El visor 3D incrusta **three.js** (r160, MIT);
+su aviso de licencia está en [`NOTICE`](NOTICE) y la librería vendorizada en
+`patronaje/assets/three.min.js`.

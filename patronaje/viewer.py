@@ -425,9 +425,10 @@ def build_live_viewer(outdir: str = "output") -> str:
     servidor ni dependencias. Es una reimplementación de presentación del núcleo;
     la fuente de verdad sigue siendo el motor Python."""
     os.makedirs(outdir, exist_ok=True)
+    from .webshell import inject_shell
     path = os.path.join(outdir, "viewer_live.html")
     with open(path, "w", encoding="utf-8") as f:
-        f.write(_LIVE_PAGE)
+        f.write(inject_shell(_LIVE_PAGE))
     return path
 
 
@@ -453,6 +454,9 @@ def main(argv=None):
     from .viewer3d import build_body_viewer
     v3 = build_body_viewer(args.output)
     print(f"Maniquí 3D:     {v3} ({os.path.getsize(v3)/1024:.0f} KB)")
+    from .webapp import build_web_app
+    idx = build_web_app(args.output)
+    print(f"Plataforma:     {idx} ({os.path.getsize(idx)/1024:.0f} KB)")
 
 
 if __name__ == "__main__":

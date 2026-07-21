@@ -661,7 +661,8 @@ def build_body_viewer(outdir: str = "output") -> str:
     """Genera el visor 3D del maniquí a medida (HTML autocontenido, Three.js incrustado)."""
     os.makedirs(outdir, exist_ok=True)
     path = os.path.join(outdir, "viewer_3d.html")
-    html = _PAGE.replace("/*__THREE__*/", _three_js())
+    from .webshell import inject_shell
+    html = inject_shell(_PAGE.replace("/*__THREE__*/", _three_js()))
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     return path
