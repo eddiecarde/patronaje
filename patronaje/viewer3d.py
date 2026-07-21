@@ -66,6 +66,14 @@ select{width:100%;font-size:14px;padding:6px 8px;border:1px solid var(--line);bo
   <div class="row"><label>Caída (sim)</label>
    <span style="flex:1"><input type="checkbox" id="sim"> <span style="font-size:12px;color:#6b8199">simula la caída de la tela (PBD)</span></span>
    <button id="redrape" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer">Re-drapear</button></div>
+  <div class="row"><label>Tejido</label>
+   <select id="fabric" style="flex:1;font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff"></select></div>
+  <div class="row"><label>Ver tensión</label>
+   <span style="flex:1"><input type="checkbox" id="tension"> <span style="font-size:12px;color:#6b8199">mapa de estiramiento de la tela</span></span></div>
+  <div id="tlegend" class="legend" style="display:none">
+   <span><i style="background:#2f7fd0"></i>flojo</span>
+   <span><i style="background:#3aa85a"></i>reposo</span>
+   <span><i style="background:#d84a3a"></i>estirado</span></div>
   <div id="sliders"></div>
   <div class="legend">
    <span><i style="background:#c0392b"></i>tira (&lt;0)</span>
@@ -394,26 +402,56 @@ function buildCloth(grids,prof,legs,hipY,B){
  for(const rings of grids){
   const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());pin.push(r===0?1:0);}
-  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
-   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  const add=(a,b,t)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz),t||0]);};             // t=1 -> flexión (rigidez de tejido)
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    add(idx(r,k),idx(r,k2));                                   // anillo
    if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}  // columna + cizalla
-   if(r<R-2)add(idx(r,k),idx(r+2,k));}                        // flexión
+   if(r<R-2)add(idx(r,k),idx(r+2,k),1);}                      // flexión
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}
   gridInfo.push({base,R});}
  return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,B:B||null};}
 
+// biblioteca de tejidos: parámetros físicos (rigidez de flexión, amortiguación,
+// peso) + acabado de superficie (rugosidad, brillo). Un "material digital" ligero
+// y reutilizable, en la línea de un U3M sin archivos externos.
+const FABRICS={
+ algodon:{label:"Algodón",bendK:0.55,damp:0.985,gmul:1.0,rough:0.86,sheen:0.5},
+ lino:   {label:"Lino",   bendK:0.72,damp:0.985,gmul:1.05,rough:0.92,sheen:0.32},
+ lana:   {label:"Lana",   bendK:0.5, damp:0.980,gmul:1.15,rough:0.95,sheen:0.28},
+ seda:   {label:"Seda",   bendK:0.28,damp:0.972,gmul:0.9, rough:0.42,sheen:1.1},
+ denim:  {label:"Mezclilla",bendK:0.9,damp:0.990,gmul:1.2,rough:0.80,sheen:0.45},
+ gasa:   {label:"Gasa",   bendK:0.16,damp:0.965,gmul:0.8, rough:0.55,sheen:0.95}};
+let FAB=FABRICS.algodon, showTension=false;
+
+// mapa de tensión: color por vértice según el estiramiento medio de sus aristas
+// (azul = flojo, verde = reposo, rojo = estirado) — diagnóstico de ajuste.
+function clothTension(cl){
+ const n=cl.pos.length,ratio=new Float32Array(n),cnt=new Float32Array(n);
+ for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
+  const d=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]),r=d/(c[2]||1e-6);
+  ratio[c[0]]+=r;cnt[c[0]]++;ratio[c[1]]+=r;cnt[c[1]]++;}
+ let mean=0,m=0;
+ for(let i=0;i<n;i++){if(cnt[i]){ratio[i]/=cnt[i];mean+=ratio[i];m++;}else ratio[i]=1;}
+ mean=m?mean/m:1;                        // tensión RELATIVA a la media: resalta focos
+ const col=new Float32Array(n*3);
+ for(let i=0;i<n;i++){const t=Math.max(-1,Math.min(1,(ratio[i]-mean)*16));let r,g,bl;
+  if(t>=0){r=0.16+0.74*t;g=0.66-0.42*t;bl=0.30*(1-t);}      // media -> estirado (rojo)
+  else{const s=-t;r=0.16*(1-s);g=0.66-0.30*s;bl=0.30+0.55*s;} // media -> flojo (azul)
+  col[i*3]=r;col[i*3+1]=g;col[i*3+2]=bl;}
+ return col;}
+
 function stepCloth(cl,dt){
- const g=-160*dt*dt, damp=0.985;
+ const g=-160*dt*dt*FAB.gmul, damp=FAB.damp;
  for(let i=0;i<cl.pos.length;i++){if(cl.pin[i])continue;const p=cl.pos[i],q=cl.prev[i];
   const vx=(p[0]-q[0])*damp,vy=(p[1]-q[1])*damp,vz=(p[2]-q[2])*damp;
   q[0]=p[0];q[1]=p[1];q[2]=p[2];p[0]+=vx;p[1]+=vy+g;p[2]+=vz;}
  for(let it=0;it<8;it++){
   for(const c of cl.cons){const a=cl.pos[c[0]],b=cl.pos[c[1]];
    let dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],d=Math.hypot(dx,dy,dz)||1e-6;
-   const diff=(d-c[2])/d*0.5,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
+   const st=c[3]?FAB.bendK:1.0;                              // flexión suave según tejido
+   const diff=(d-c[2])/d*0.5*st,wa=cl.pin[c[0]]?0:1,wb=cl.pin[c[1]]?0:1,ws=wa+wb||1;
    dx*=diff;dy*=diff;dz*=diff;
    if(wa){a[0]+=dx*wa/ws;a[1]+=dy*wa/ws;a[2]+=dz*wa/ws;}
    if(wb){b[0]-=dx*wb/ws;b[1]-=dy*wb/ws;b[2]-=dz*wb/ws;}}
@@ -446,11 +484,11 @@ function clothFromRings(grids,prof,legs,hipY,pinTop,blobs,B){  // como buildClot
  for(const rings of grids){const R=rings.length,base=pos.length,idx=(r,k)=>base+r*N+k;
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){pos.push(rings[r][k].slice());prev.push(rings[r][k].slice());
    pin.push((r===0&&(!pinTop||pinTop[k]))?1:0);}
-  const add=(a,b)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
-   cons.push([a,b,Math.hypot(dx,dy,dz)]);};
+  const add=(a,b,t)=>{const dx=pos[a][0]-pos[b][0],dy=pos[a][1]-pos[b][1],dz=pos[a][2]-pos[b][2];
+   cons.push([a,b,Math.hypot(dx,dy,dz),t||0]);};
   for(let r=0;r<R;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    add(idx(r,k),idx(r,k2));if(r<R-1){add(idx(r,k),idx(r+1,k));add(idx(r,k),idx(r+1,k2));}
-   if(r<R-2)add(idx(r,k),idx(r+2,k));}
+   if(r<R-2)add(idx(r,k),idx(r+2,k),1);}
   for(let r=0;r<R-1;r++)for(let k=0;k<N;k++){const k2=(k+1)%N;
    faces.push([idx(r,k),idx(r,k2),idx(r+1,k2),idx(r+1,k)]);}}
  return {pos,prev,pin,cons,faces,prof,legs:legs||[],hipY:hipY||0,blobs:blobs||[],B:B||null};}
@@ -576,6 +614,8 @@ function garmentMat(alpha){return new THREE.MeshStandardMaterial({
  side:THREE.DoubleSide});}
 const MAT_CLOTH=new THREE.MeshStandardMaterial({color:0x3f6fa0,roughness:0.86,metalness:0.02,side:THREE.DoubleSide,envMapIntensity:0.55});
 applyLinen(MAT_CLOTH,0.9,0.5);                 // la prenda también con relieve de tela (más fino)
+// material del mapa de tensión (color por vértice, sin relieve para leer bien el color)
+const MAT_TENSION=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,metalness:0.02,side:THREE.DoubleSide});
 // color de tela por prenda
 const GCOL={camisa:0xdfe3ea,falda:0x7d5a86,pantalon:0x36435c,vestido:0xa8455a,blazer:0x3a4150};
 const MAT_SEAM=new THREE.LineDashedMaterial({color:0x5b5140,transparent:true,opacity:0.72,dashSize:1.4,gapSize:0.9});
@@ -709,17 +749,21 @@ function rebuild(){
 
 function startSim(){
  MAT_CLOTH.color.setHex(GCOL[MESH.g]||0x3f6fa0);
+ MAT_CLOTH.roughness=FAB.rough;MAT_CLOTH.envMapIntensity=FAB.sheen;MAT_CLOTH.needsUpdate=true;
  const torso=(MESH.g==='camisa'||MESH.g==='vestido'||MESH.g==='blazer');
  CLOTH=torso?buildGarmentCloth(MESH.L,MESH.g,MESH.prof,MESH.legs.concat(MESH.armCaps||[]),MESH.colBlobs,MESH.body)
             :buildCloth(garmentGrids(MESH.L,MESH.g,MESH.prof),MESH.prof,MESH.legs,MESH.L.hipY,MESH.body);
  const cg=clothGeom(CLOTH);
- const clothMesh=new THREE.Mesh(cg,MAT_CLOTH);clothMesh.castShadow=true;
+ if(showTension)cg.setAttribute('color',new THREE.BufferAttribute(clothTension(CLOTH),3));
+ const clothMesh=new THREE.Mesh(cg,showTension?MAT_TENSION:MAT_CLOTH);clothMesh.castShadow=true;
  clothMesh.name='__cloth';ROOT.add(clothMesh);
  if(raf)cancelAnimationFrame(raf);
  let n=0;const loop=()=>{for(let s=0;s<2;s++)stepCloth(CLOTH,0.12);
   const pa=cg.attributes.position.array;
   for(let i=0;i<CLOTH.pos.length;i++){pa[i*3]=CLOTH.pos[i][0];pa[i*3+1]=CLOTH.pos[i][1];pa[i*3+2]=CLOTH.pos[i][2];}
-  cg.attributes.position.needsUpdate=true;cg.computeVertexNormals();
+  cg.attributes.position.needsUpdate=true;
+  if(showTension){const cc=clothTension(CLOTH),ca=cg.attributes.color.array;ca.set(cc);cg.attributes.color.needsUpdate=true;}
+  cg.computeVertexNormals();
   window.__rendered=cg.__tris+200;n++;draw();
   if(n<220&&simMode)raf=requestAnimationFrame(loop);};loop();}
 
@@ -740,6 +784,11 @@ document.getElementById('sexo').onchange=e=>{SEX=e.target.value;
 document.getElementById('showg').onchange=e=>{showG=e.target.checked;rebuild();};
 document.getElementById('sim').onchange=e=>{simMode=e.target.checked;rebuild();};
 document.getElementById('redrape').onclick=()=>{if(simMode)startSim();};
+const fabsel=document.getElementById('fabric');
+for(const k in FABRICS){const o=document.createElement('option');o.value=k;o.textContent=FABRICS[k].label;fabsel.appendChild(o);}
+fabsel.onchange=e=>{FAB=FABRICS[e.target.value];if(simMode)startSim();};
+document.getElementById('tension').onchange=e=>{showTension=e.target.checked;
+ document.getElementById('tlegend').style.display=showTension?'flex':'none';if(simMode)startSim();};
 cv.onpointerdown=e=>{cv.__drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';};
 cv.onpointermove=e=>{if(!cv.__drag)return;theta-=(e.clientX-cv.__drag[0])*0.01;phi-=(e.clientY-cv.__drag[1])*0.01;
  phi=Math.max(0.25,Math.min(2.7,phi));cv.__drag=[e.clientX,e.clientY];draw();};

@@ -107,6 +107,24 @@ empuja fuera del **campo de distancia del cuerpo** (`bodyField` = torso + pierna
 + busto + glúteos), así no atraviesa la figura. El motor de patrones (`fittedBodice`,
 `skirtPanel`…) es el **mismo** que el del visor 2D (módulo compartido, `engine_js()`).
 
+## Tejido y mapa de tensión
+
+- **Selector «Tejido»** (algodón, lino, lana, seda, mezclilla, gasa): cada tejido
+  es un **material digital ligero** —en la línea de un U3M sin archivos externos—
+  con **parámetros físicos** (rigidez de flexión, amortiguación, peso) y **acabado
+  de superficie** (rugosidad, brillo). La seda flexa suave y brilla; la mezclilla
+  es rígida y mate; la gasa cae ligerísima. Cambiar el tejido re-drapea con esa
+  física y aplica su acabado a la tela.
+- **Casilla «Ver tensión»**: colorea la prenda por el **estiramiento** de la malla
+  **relativo a la media** (🔵 flojo · 🟢 reposo · 🔴 estirado). Es un **diagnóstico
+  de ajuste**: la zona que agarra el cuerpo (busto, cintura, cadera) sale cálida y
+  la tela que cuelga libre sale fría. Es la lectura que un diseñador mira para
+  juzgar el ajuste antes de coser una muestra.
+
+> Alcance honesto: el drapeado es **indicativo**, no un solver de fit certificado.
+> El maniquí es una **horma estática**; los avatares con pose (tensión sobre un
+> cuerpo en movimiento) siguen fuera del alcance, como en el benchmark.
+
 ## Simulación de caída (PBD)
 
 Un solver **PBD (Position-Based Dynamics)** en el navegador, sin dependencias:
