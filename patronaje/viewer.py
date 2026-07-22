@@ -350,7 +350,9 @@ function skirtPanel(P,dartIn,dartLen,dartFrac){
  const s=smooth([[sw,0],[qh-0.3,hipY*0.55],[qh,hipY]],8);
  return {contour:r.out.concat(s.slice(1),[[qh,hemY]],[[0,hemY]]),dart:r.dart};}
 function skirtPieces(P){
- const f=skirtPanel(P,2.5,10,0.45),b=skirtPanel(P,3.5,14,0.50),qh=(P.cadera+4)/4,qw=(P.cintura+1)/4;
+ // pinza del delantero editable (P.dart_in_f / P.dart_len_f); defaults = valores previos
+ const f=skirtPanel(P,P.dart_in_f==null?2.5:P.dart_in_f,P.dart_len_f==null?10:P.dart_len_f,0.45),
+       b=skirtPanel(P,3.5,14,0.50),qh=(P.cadera+4)/4,qw=(P.cintura+1)/4;
  return {list:[["Falda delantera",f.contour,[f.dart]],["Falda trasera",b.contour,[b.dart]]],
   metrics:[["Cintura (total)",(4*qw).toFixed(1)+" cm"],["Cadera (total)",(4*qh).toFixed(1)+" cm"],["Largo",P.largo_falda.toFixed(0)+" cm"]]};}
 
@@ -381,10 +383,11 @@ const DEFS={
  hombro:["Hombro",10,16,12.5],contorno_brazo:["Contorno brazo",24,42,30],muneca:["Muñeca",14,24,18],
  largo_camisa:["Largo camisa",50,90,68],largo_manga:["Largo manga",45,74,60],
  cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],altura_cadera:["Altura cadera",16,26,20],
- largo_falda:["Largo falda",35,95,60],largo_pantalon:["Largo pantalón",70,115,100]};
+ largo_falda:["Largo falda",35,95,60],largo_pantalon:["Largo pantalón",70,115,100],
+ dart_in_f:["Pinza cint. (fondo)",0,5,2.5],dart_len_f:["Pinza cint. (largo)",5,18,10]};
 const GARMENTS={
  camisa:{label:"Camisa",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","contorno_brazo","muneca","largo_camisa","largo_manga"],fn:shirtPieces},
- falda:{label:"Falda",keys:["cintura","cadera","altura_cadera","largo_falda"],fn:skirtPieces},
+ falda:{label:"Falda",keys:["cintura","cadera","altura_cadera","largo_falda","dart_in_f","dart_len_f"],fn:skirtPieces},
  pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon"],fn:trouserPieces},
  vestido:{label:"Vestido",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","altura_cadera","largo_falda"],fn:dressPieces},
  blazer:{label:"Blazer",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","contorno_brazo","muneca","largo_manga"],fn:blazerPieces}};
@@ -414,12 +417,16 @@ GARMENTS.camisa.handles=function(P){
   {key:'largo_camisa',axis:'y',x:cuarto,y:P.largo_camisa,inv:y=>y},
   {key:'largo_manga',axis:'y',x:(P.muneca+6)/2,y:P.largo_manga,piece:3,inv:y=>y}];};
 GARMENTS.falda.handles=function(P){
- const qh=(P.cadera+4)/4,qw=(P.cintura+1)/4,supp=Math.max(0,qh-qw),dart=Math.min(2.5,supp),sw=qh-(supp-dart);
+ const qh=(P.cadera+4)/4,qw=(P.cintura+1)/4,supp=Math.max(0,qh-qw);
+ const din=Math.min(P.dart_in_f==null?2.5:P.dart_in_f,supp),sw=qh-(supp-din);
+ const cx=sw*0.45,dlen=(P.dart_len_f==null?10:P.dart_len_f);   // ápice de la pinza del delantero
  return [
-  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-1},
+  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-din)-1},
   {key:'cadera',axis:'x',x:qh,y:P.altura_cadera,inv:x=>4*x-4},
   {key:'altura_cadera',axis:'y',x:0,y:P.altura_cadera,inv:y=>y},
-  {key:'largo_falda',axis:'y',x:qh,y:P.largo_falda,inv:y=>y}];};
+  {key:'largo_falda',axis:'y',x:qh,y:P.largo_falda,inv:y=>y},
+  {key:'dart_len_f',axis:'y',x:cx,y:dlen,inv:y=>y,dart:true},          // arrastra el ápice → largo de pinza
+  {key:'dart_in_f',axis:'x',x:cx+din/2,y:0,inv:x=>2*(x-cx),dart:true}];};  // arrastra la pata → fondo de pinza
 GARMENTS.pantalon.handles=function(P){
  const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,supp=Math.max(0,hq-wq),dart=Math.min(2,supp),sw=hq-(supp-dart);
  const rise=P.cadera/4+4,hemY=P.largo_pantalon,fork=hq*0.20,lc=(hq-fork)/2,hout=lc+(42/4)*0.92;
@@ -460,13 +467,14 @@ function draw(){
   svg+='<g class="handles">';
   hs.forEach((h,idx)=>{const pd=parts[h.piece||0];if(!pd)return;const ax=h.x+pd.dx,ay=h.y;
    window.HANDLES.push({ax,ay,dx:pd.dx,axis:h.axis,key:h.key,inv:h.inv});
+   const col=h.dart?'#0d9488':'#e0872a';           // pinza (teal) vs medida (ámbar)
    const g=h.axis==='x'
-    ?'<line x1="'+(ax-7).toFixed(1)+'" y1="'+ay.toFixed(1)+'" x2="'+(ax+7).toFixed(1)+'" y2="'+ay.toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>'
-    :'<line x1="'+ax.toFixed(1)+'" y1="'+(ay-7).toFixed(1)+'" x2="'+ax.toFixed(1)+'" y2="'+(ay+7).toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>';
+    ?'<line x1="'+(ax-7).toFixed(1)+'" y1="'+ay.toFixed(1)+'" x2="'+(ax+7).toFixed(1)+'" y2="'+ay.toFixed(1)+'" stroke="'+col+'" stroke-width="0.35" stroke-dasharray="1.2 1"/>'
+    :'<line x1="'+ax.toFixed(1)+'" y1="'+(ay-7).toFixed(1)+'" x2="'+ax.toFixed(1)+'" y2="'+(ay+7).toFixed(1)+'" stroke="'+col+'" stroke-width="0.35" stroke-dasharray="1.2 1"/>';
    const on=(active===idx);
-   svg+=g+'<circle cx="'+ax.toFixed(2)+'" cy="'+ay.toFixed(2)+'" r="'+(on?2.4:1.8)+'" fill="'+(on?'#e0872a':'#fff')+'" stroke="#e0872a" stroke-width="0.7"/>';
+   svg+=g+'<circle cx="'+ax.toFixed(2)+'" cy="'+ay.toFixed(2)+'" r="'+(on?2.4:1.8)+'" fill="'+(on?col:'#fff')+'" stroke="'+col+'" stroke-width="0.7"/>';
    if(on){const lab=DEFS[h.key][0]+': '+P[h.key];    // lectura del valor en vivo al arrastrar
-    svg+='<text x="'+(ax+3).toFixed(1)+'" y="'+(ay-3).toFixed(1)+'" font-size="3.4" font-weight="bold" fill="#b45309" stroke="#fff" stroke-width="0.8" paint-order="stroke">'+lab+'</text>';}});
+    svg+='<text x="'+(ax+3).toFixed(1)+'" y="'+(ay-3).toFixed(1)+'" font-size="3.4" font-weight="bold" fill="'+(h.dart?'#0f766e':'#b45309')+'" stroke="#fff" stroke-width="0.8" paint-order="stroke">'+lab+'</text>';}});
   svg+='</g>';}
  svg+='</svg>';
  document.getElementById('svg').innerHTML=svg;
