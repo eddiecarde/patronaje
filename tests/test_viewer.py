@@ -173,13 +173,15 @@ def test_live_viewer_drag_edits_measurement():
         # cada prenda expone manijas de edición
         counts = {g: pg.evaluate(f"GARMENTS['{g}'].handles(P).length")
                   for g in ["camisa", "falda", "pantalon", "vestido", "blazer"]}
-        # la falda expone manijas de PINZA (ápice + pata) además de las de medida
-        has_dart = pg.evaluate(
-            "GARMENTS.falda.handles(P).some(h=>h.dart&&h.key==='dart_len_f')")
+        # falda, pantalón y vestido exponen manijas de PINZA (ápice + pata)
+        darts = {g: pg.evaluate(
+            f"GARMENTS['{g}'].handles(P).filter(h=>h.dart).length")
+            for g in ["falda", "pantalon", "vestido"]}
         b.close()
     assert not errs, errs
     assert n == 5
-    assert counts["falda"] == 6 and has_dart, counts
+    assert counts["falda"] == 6 and counts["pantalon"] == 6 and counts["vestido"] == 5, counts
+    assert all(v == 2 for v in darts.values()), darts     # ápice + pata por prenda
     assert after < before                        # arrastrar hacia dentro reduce el busto
     assert abs(slider - after) < 1e-6            # el slider refleja la medida
     assert abs(undone - before) < 1e-6           # Ctrl+Z deshace la edición

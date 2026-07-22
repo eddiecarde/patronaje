@@ -234,14 +234,17 @@ const DSPEC={bust_dart:3.0,front_waist_dart:3.5,back_waist_dart:3.5,side_supp:1.
 function fittedBodice(P){
  const b=bodice(P),S=DSPEC,bust_y=b.scye,quarter=b.cuarto;
  const waist_y=bust_y+S.bust_to_waist,qw=(P.cintura+S.waist_ease)/4,supp=quarter-qw;
- const side=Math.min(S.side_supp,supp),fwd=Math.max(0,Math.min(S.front_waist_dart,supp-side)),
+ // pinza de talle del delantero editable (P.dart_in_v / P.dart_len_v); defaults = bloque original
+ const side=Math.min(S.side_supp,supp),
+  fwd=Math.max(0,Math.min(P.dart_in_v==null?S.front_waist_dart:P.dart_in_v,supp-side)),
   bwd=Math.max(0,Math.min(S.back_waist_dart,supp-side)),w_side=quarter-side;
  const BP=[S.bust_point_x,bust_y+S.bp_drop],bd=S.bust_dart,fwaist_y=waist_y+bd;
  const us=[quarter,bust_y];
  const side_edge=[us,[BP[0]+2,bust_y+bd/2],[quarter,bust_y+bd]].concat(
   smooth([[quarter,bust_y+bd],[w_side+0.6,(bust_y+bd+fwaist_y)/2],[w_side,fwaist_y]],6).slice(1));
  const bustDart=[us,[BP[0]+2,bust_y+bd/2],[quarter,bust_y+bd]];
- const fwx=BP[0],fwAp=[fwx,BP[1]+3],fl1=[fwx+fwd/2,fwaist_y],fl2=[fwx-fwd/2,fwaist_y];
+ const fwx=BP[0],fwApY=(P.dart_len_v==null)?(BP[1]+3):(fwaist_y-P.dart_len_v),
+  fwAp=[fwx,fwApY],fl1=[fwx+fwd/2,fwaist_y],fl2=[fwx-fwd/2,fwaist_y];
  const front=dedup(b.frontNeck.slice().reverse().concat([b.spF],b.frontArm.slice(1),
   side_edge.slice(1),[fl1,fwAp,fl2,[0,fwaist_y]]));
  const bwx=w_side*0.42,bwAp=[bwx,waist_y-12],bl1=[bwx+bwd/2,waist_y],bl2=[bwx-bwd/2,waist_y];
@@ -361,7 +364,8 @@ function trouserPanel(P,back){
  const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,rise=P.cadera/4+4,hipY=P.altura_cadera,hemY=P.largo_pantalon;
  const kneeY=rise+(hemY-rise)*0.47,fork=hq*(back?0.45:0.20);
  const knH=(44/4)*(back?1.05:0.92),hmH=(42/4)*(back?1.05:0.92);
- const dIn=back?3:2,dLen=back?13:10,tilt=back?2:0;
+ // pinza del delantero editable (P.dart_in_p / P.dart_len_p); defaults = valores previos
+ const dIn=back?3:(P.dart_in_p==null?2:P.dart_in_p),dLen=back?13:(P.dart_len_p==null?10:P.dart_len_p),tilt=back?2:0;
  const supp=Math.max(0,hq-wq),dart=Math.min(dIn,supp),side=supp-dart,sw=hq-side;
  const lc=(hq-fork)/2,kin=lc-knH,kout=lc+knH,hin=lc-hmH,hout=lc+hmH;
  const cf=smooth([[tilt,0],[0,hipY*0.7],[0,hipY],[-fork*0.45,rise-2.5],[-fork,rise]],8);
@@ -384,12 +388,14 @@ const DEFS={
  largo_camisa:["Largo camisa",50,90,68],largo_manga:["Largo manga",45,74,60],
  cintura:["Cintura",55,115,70],cadera:["Cadera",78,135,94],altura_cadera:["Altura cadera",16,26,20],
  largo_falda:["Largo falda",35,95,60],largo_pantalon:["Largo pantalón",70,115,100],
- dart_in_f:["Pinza cint. (fondo)",0,5,2.5],dart_len_f:["Pinza cint. (largo)",5,18,10]};
+ dart_in_f:["Pinza cint. (fondo)",0,5,2.5],dart_len_f:["Pinza cint. (largo)",5,18,10],
+ dart_in_p:["Pinza pant. (fondo)",0,5,2],dart_len_p:["Pinza pant. (largo)",5,18,10],
+ dart_in_v:["Pinza talle (fondo)",0,6,3.5],dart_len_v:["Pinza talle (largo)",6,26,18.5]};
 const GARMENTS={
  camisa:{label:"Camisa",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","contorno_brazo","muneca","largo_camisa","largo_manga"],fn:shirtPieces},
  falda:{label:"Falda",keys:["cintura","cadera","altura_cadera","largo_falda","dart_in_f","dart_len_f"],fn:skirtPieces},
- pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon"],fn:trouserPieces},
- vestido:{label:"Vestido",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","altura_cadera","largo_falda"],fn:dressPieces},
+ pantalon:{label:"Pantalón",keys:["cintura","cadera","altura_cadera","largo_pantalon","dart_in_p","dart_len_p"],fn:trouserPieces},
+ vestido:{label:"Vestido",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","altura_cadera","largo_falda","dart_in_v","dart_len_v"],fn:dressPieces},
  blazer:{label:"Blazer",keys:["busto","holgura_busto","contorno_cuello","ancho_espalda","hombro","cintura","cadera","contorno_brazo","muneca","largo_manga"],fn:blazerPieces}};
 const P={};for(const k in DEFS)P[k]=DEFS[k][3];
 let current="camisa",editMode=false;
@@ -428,19 +434,30 @@ GARMENTS.falda.handles=function(P){
   {key:'dart_len_f',axis:'y',x:cx,y:dlen,inv:y=>y,dart:true},          // arrastra el ápice → largo de pinza
   {key:'dart_in_f',axis:'x',x:cx+din/2,y:0,inv:x=>2*(x-cx),dart:true}];};  // arrastra la pata → fondo de pinza
 GARMENTS.pantalon.handles=function(P){
- const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,supp=Math.max(0,hq-wq),dart=Math.min(2,supp),sw=hq-(supp-dart);
+ const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,supp=Math.max(0,hq-wq);
+ const din=Math.min(P.dart_in_p==null?2:P.dart_in_p,supp),sw=hq-(supp-din);
  const rise=P.cadera/4+4,hemY=P.largo_pantalon,fork=hq*0.20,lc=(hq-fork)/2,hout=lc+(42/4)*0.92;
+ const cx=sw*0.45,dlen=(P.dart_len_p==null?10:P.dart_len_p);
  return [
-  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-2},
+  {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-din)-2},
   {key:'cadera',axis:'x',x:hq,y:P.altura_cadera,inv:x=>4*x-5},
   {key:'altura_cadera',axis:'y',x:0,y:P.altura_cadera,inv:y=>y},
-  {key:'largo_pantalon',axis:'y',x:hout,y:hemY,inv:y=>y}];};
+  {key:'largo_pantalon',axis:'y',x:hout,y:hemY,inv:y=>y},
+  {key:'dart_len_p',axis:'y',x:cx,y:dlen,inv:y=>y,dart:true},
+  {key:'dart_in_p',axis:'x',x:cx+din/2,y:0,inv:x=>2*(x-cx),dart:true}];};
 GARMENTS.vestido.handles=function(P){
  const cc=P.contorno_cuello,fnw=cc/5-0.5,cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
+ // pinza de talle del cuerpo entallado (delantero, pieza 0)
+ const bust_y=scye,waist_y=bust_y+20,qw=(P.cintura+4)/4,supp=cuarto-qw,side=Math.min(1.5,supp);
+ const fwd=Math.max(0,Math.min(P.dart_in_v==null?3.5:P.dart_in_v,supp-side));
+ const fwaist_y=waist_y+3,fwx=9.3,BP1=bust_y+1.5;
+ const fwApY=(P.dart_len_v==null)?(BP1+3):(fwaist_y-P.dart_len_v);
  return [
   {key:'contorno_cuello',axis:'x',x:fnw,y:0,inv:x=>(x+0.5)*5},
   {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto},
-  {key:'largo_falda',axis:'y',x:(P.cadera+4)/4,y:P.largo_falda,piece:2,inv:y=>y}];};
+  {key:'largo_falda',axis:'y',x:(P.cadera+4)/4,y:P.largo_falda,piece:2,inv:y=>y},
+  {key:'dart_len_v',axis:'y',x:fwx,y:fwApY,inv:y=>fwaist_y-y,dart:true},
+  {key:'dart_in_v',axis:'x',x:fwx+fwd/2,y:fwaist_y,inv:x=>2*(x-fwx),dart:true}];};
 GARMENTS.blazer.handles=function(P){
  const cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
  return [{key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto}];};
