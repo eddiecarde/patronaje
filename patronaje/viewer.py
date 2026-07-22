@@ -172,10 +172,11 @@ button{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radiu
   <div id="metrics"></div>
   <div style="margin-top:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
    <button id="reset">Restablecer medidas</button>
+   <button id="undo">Deshacer</button>
    <label style="font-size:13px;display:flex;gap:6px;align-items:center">
     <input type="checkbox" id="edit"> Editar (arrastrar puntos)</label>
    <span id="edithint" class="sub" style="margin:0;display:none">Arrastra los puntos
-    <i class="dot" style="background:#e0872a"></i> para cambiar las medidas.</span>
+    <i class="dot" style="background:#e0872a"></i> para cambiar las medidas · Ctrl+Z deshace.</span>
   </div>
  </div>
 </div></div>
@@ -398,6 +399,11 @@ function clampP(k,v){const d=DEFS[k];return Math.max(d[1],Math.min(d[2],v));}
 function setParam(k,v){v=Math.round(clampP(k,v)*2)/2;P[k]=v;
  const inp=document.getElementById('sl-'+k);if(inp){inp.value=v;
   const b=document.getElementById('val-'+k);if(b)b.textContent=v;}}
+// deshacer: pila de instantáneas de las medidas (una por interacción)
+let UNDO=[];
+function snapshot(){UNDO.push(JSON.stringify(P));if(UNDO.length>60)UNDO.shift();}
+function undo(){if(!UNDO.length)return;const q=JSON.parse(UNDO.pop());
+ for(const k in q)P[k]=q[k];build();draw();}
 GARMENTS.camisa.handles=function(P){
  const cc=P.contorno_cuello,fnw=cc/5-0.5,H=P.hombro,dropF=5.0,dxF=Math.sqrt(Math.max(0,H*H-dropF*dropF));
  const cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
@@ -405,12 +411,14 @@ GARMENTS.camisa.handles=function(P){
   {key:'contorno_cuello',axis:'x',x:fnw,y:0,inv:x=>(x+0.5)*5},
   {key:'hombro',axis:'x',x:fnw+dxF,y:dropF,inv:x=>Math.sqrt((x-fnw)*(x-fnw)+dropF*dropF)},
   {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto},
-  {key:'largo_camisa',axis:'y',x:cuarto,y:P.largo_camisa,inv:y=>y}];};
+  {key:'largo_camisa',axis:'y',x:cuarto,y:P.largo_camisa,inv:y=>y},
+  {key:'largo_manga',axis:'y',x:(P.muneca+6)/2,y:P.largo_manga,piece:3,inv:y=>y}];};
 GARMENTS.falda.handles=function(P){
  const qh=(P.cadera+4)/4,qw=(P.cintura+1)/4,supp=Math.max(0,qh-qw),dart=Math.min(2.5,supp),sw=qh-(supp-dart);
  return [
   {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-1},
   {key:'cadera',axis:'x',x:qh,y:P.altura_cadera,inv:x=>4*x-4},
+  {key:'altura_cadera',axis:'y',x:0,y:P.altura_cadera,inv:y=>y},
   {key:'largo_falda',axis:'y',x:qh,y:P.largo_falda,inv:y=>y}];};
 GARMENTS.pantalon.handles=function(P){
  const hq=(P.cadera+5)/4,wq=(P.cintura+2)/4,supp=Math.max(0,hq-wq),dart=Math.min(2,supp),sw=hq-(supp-dart);
@@ -418,12 +426,14 @@ GARMENTS.pantalon.handles=function(P){
  return [
   {key:'cintura',axis:'x',x:sw,y:0,inv:x=>4*(x-dart)-2},
   {key:'cadera',axis:'x',x:hq,y:P.altura_cadera,inv:x=>4*x-5},
+  {key:'altura_cadera',axis:'y',x:0,y:P.altura_cadera,inv:y=>y},
   {key:'largo_pantalon',axis:'y',x:hout,y:hemY,inv:y=>y}];};
 GARMENTS.vestido.handles=function(P){
  const cc=P.contorno_cuello,fnw=cc/5-0.5,cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
  return [
   {key:'contorno_cuello',axis:'x',x:fnw,y:0,inv:x=>(x+0.5)*5},
-  {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto}];};
+  {key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto},
+  {key:'largo_falda',axis:'y',x:(P.cadera+4)/4,y:P.largo_falda,piece:2,inv:y=>y}];};
 GARMENTS.blazer.handles=function(P){
  const cuarto=(P.busto+P.holgura_busto)/4,scye=P.busto/8+10.5+0.5;
  return [{key:'busto',axis:'x',x:cuarto,y:scye,inv:x=>4*x-P.holgura_busto}];};
@@ -448,12 +458,15 @@ function draw(){
  if(editMode&&GARMENTS[current].handles){
   const hs=GARMENTS[current].handles(P);
   svg+='<g class="handles">';
-  hs.forEach(h=>{const pd=parts[h.piece||0];if(!pd)return;const ax=h.x+pd.dx,ay=h.y;
+  hs.forEach((h,idx)=>{const pd=parts[h.piece||0];if(!pd)return;const ax=h.x+pd.dx,ay=h.y;
    window.HANDLES.push({ax,ay,dx:pd.dx,axis:h.axis,key:h.key,inv:h.inv});
    const g=h.axis==='x'
     ?'<line x1="'+(ax-7).toFixed(1)+'" y1="'+ay.toFixed(1)+'" x2="'+(ax+7).toFixed(1)+'" y2="'+ay.toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>'
     :'<line x1="'+ax.toFixed(1)+'" y1="'+(ay-7).toFixed(1)+'" x2="'+ax.toFixed(1)+'" y2="'+(ay+7).toFixed(1)+'" stroke="#e0872a" stroke-width="0.35" stroke-dasharray="1.2 1"/>';
-   svg+=g+'<circle cx="'+ax.toFixed(2)+'" cy="'+ay.toFixed(2)+'" r="1.8" fill="#fff" stroke="#e0872a" stroke-width="0.7"/>';});
+   const on=(active===idx);
+   svg+=g+'<circle cx="'+ax.toFixed(2)+'" cy="'+ay.toFixed(2)+'" r="'+(on?2.4:1.8)+'" fill="'+(on?'#e0872a':'#fff')+'" stroke="#e0872a" stroke-width="0.7"/>';
+   if(on){const lab=DEFS[h.key][0]+': '+P[h.key];    // lectura del valor en vivo al arrastrar
+    svg+='<text x="'+(ax+3).toFixed(1)+'" y="'+(ay-3).toFixed(1)+'" font-size="3.4" font-weight="bold" fill="#b45309" stroke="#fff" stroke-width="0.8" paint-order="stroke">'+lab+'</text>';}});
   svg+='</g>';}
  svg+='</svg>';
  document.getElementById('svg').innerHTML=svg;
@@ -467,12 +480,15 @@ function build(){const c=document.getElementById('ctrls');c.innerHTML='';
   row.innerHTML='<label>'+lab+'</label><input type="range" min="'+mn+'" max="'+mx+'" step="0.5" value="'+P[k]+'"><b>'+P[k]+'</b>';
   const inp=row.querySelector('input'),val=row.querySelector('b');
   inp.id='sl-'+k;val.id='val-'+k;
+  inp.addEventListener('pointerdown',snapshot);   // una instantánea por interacción (deshacer)
   inp.addEventListener('input',()=>{P[k]=parseFloat(inp.value);val.textContent=P[k];draw();});
   c.appendChild(row);});}
 const gsel=document.getElementById('garment');
 for(const g in GARMENTS){const o=document.createElement('option');o.value=g;o.textContent=GARMENTS[g].label;gsel.appendChild(o);}
 gsel.addEventListener('change',()=>{current=gsel.value;build();draw();});
-document.getElementById('reset').addEventListener('click',()=>{GARMENTS[current].keys.forEach(k=>P[k]=DEFS[k][3]);build();draw();});
+document.getElementById('reset').addEventListener('click',()=>{snapshot();GARMENTS[current].keys.forEach(k=>P[k]=DEFS[k][3]);build();draw();});
+document.getElementById('undo').addEventListener('click',undo);
+window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')){e.preventDefault();undo();}});
 
 // ---- arrastre de puntos (edición directa sobre el lienzo) ----
 const svgBox=document.getElementById('svg');let active=-1;
@@ -487,7 +503,7 @@ svgBox.addEventListener('pointerdown',e=>{
  let best=-1,bd=1e9;
  window.HANDLES.forEach((h,i)=>{const sx=m.a*h.ax+m.c*h.ay+m.e,sy=m.b*h.ax+m.d*h.ay+m.f;
   const d=Math.hypot(sx-e.clientX,sy-e.clientY);if(d<bd){bd=d;best=i;}});
- if(bd<20){active=best;svgBox.setPointerCapture(e.pointerId);e.preventDefault();}});
+ if(bd<20){snapshot();active=best;svgBox.setPointerCapture(e.pointerId);e.preventDefault();}});
 svgBox.addEventListener('pointermove',e=>{
  if(active<0)return;const h=window.HANDLES[active],r=svgPt(e);
  const loc=h.axis==='x'?(r.x-h.dx):r.y;setParam(h.key,h.inv(loc));draw();});

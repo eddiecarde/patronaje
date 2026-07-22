@@ -155,7 +155,7 @@ def test_live_viewer_drag_edits_measurement():
         pg.goto(url)
         pg.wait_for_function("window.HANDLES !== undefined")
         pg.check("#edit")
-        n = pg.evaluate("window.HANDLES.length")            # camisa: 4 manijas
+        n = pg.evaluate("window.HANDLES.length")            # camisa: manijas de edición
         before = pg.evaluate("P.busto")
         pos = pg.eval_on_selector(
             "#svg svg",
@@ -167,14 +167,18 @@ def test_live_viewer_drag_edits_measurement():
         pg.mouse.up()
         after = pg.evaluate("P.busto")
         slider = float(pg.eval_on_selector("#sl-busto", "e=>e.value"))
+        # deshacer restaura la medida previa a la última edición
+        pg.keyboard.press("Control+z")
+        undone = pg.evaluate("P.busto")
         # cada prenda expone manijas de edición
         counts = {g: pg.evaluate(f"GARMENTS['{g}'].handles(P).length")
                   for g in ["camisa", "falda", "pantalon", "vestido", "blazer"]}
         b.close()
     assert not errs, errs
-    assert n == 4
+    assert n == 5
     assert after < before                        # arrastrar hacia dentro reduce el busto
     assert abs(slider - after) < 1e-6            # el slider refleja la medida
+    assert abs(undone - before) < 1e-6           # Ctrl+Z deshace la edición
     assert all(v >= 1 for v in counts.values()), counts
 
 
