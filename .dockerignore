@@ -1,0 +1,10 @@
+.git
+__pycache__
+*.pyc
+output
+dist
+dist_sample
+tests
+docs
+.github
+*.tar.gz
