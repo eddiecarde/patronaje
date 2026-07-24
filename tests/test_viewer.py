@@ -155,7 +155,7 @@ def test_live_viewer_drag_edits_measurement():
         pg.goto(url)
         pg.wait_for_function("window.HANDLES !== undefined")
         pg.check("#edit")
-        n = pg.evaluate("window.HANDLES.length")            # camisa: 4 manijas
+        n = pg.evaluate("window.HANDLES.length")            # camisa: manijas de edición
         before = pg.evaluate("P.busto")
         pos = pg.eval_on_selector(
             "#svg svg",
@@ -167,14 +167,24 @@ def test_live_viewer_drag_edits_measurement():
         pg.mouse.up()
         after = pg.evaluate("P.busto")
         slider = float(pg.eval_on_selector("#sl-busto", "e=>e.value"))
+        # deshacer restaura la medida previa a la última edición
+        pg.keyboard.press("Control+z")
+        undone = pg.evaluate("P.busto")
         # cada prenda expone manijas de edición
         counts = {g: pg.evaluate(f"GARMENTS['{g}'].handles(P).length")
                   for g in ["camisa", "falda", "pantalon", "vestido", "blazer"]}
+        # falda, pantalón y vestido exponen manijas de PINZA (ápice + pata)
+        darts = {g: pg.evaluate(
+            f"GARMENTS['{g}'].handles(P).filter(h=>h.dart).length")
+            for g in ["falda", "pantalon", "vestido"]}
         b.close()
     assert not errs, errs
-    assert n == 4
+    assert n == 5
+    assert counts["falda"] == 6 and counts["pantalon"] == 6 and counts["vestido"] == 5, counts
+    assert all(v == 2 for v in darts.values()), darts     # ápice + pata por prenda
     assert after < before                        # arrastrar hacia dentro reduce el busto
     assert abs(slider - after) < 1e-6            # el slider refleja la medida
+    assert abs(undone - before) < 1e-6           # Ctrl+Z deshace la edición
     assert all(v >= 1 for v in counts.values()), counts
 
 
@@ -232,9 +242,10 @@ def test_cloth_simulation_is_stable():
 
 
 @pytest.mark.skipif(not _browser_available(), reason="Playwright/Chromium no disponible")
-def test_fabric_presets_and_tension_map():
-    """El tejido cambia la física (rigidez de flexión) y el mapa de tensión pinta
-    color por vértice, sin errores y estable."""
+def test_fabric_presets_and_maps():
+    """El tejido cambia la física (rigidez de flexión) y los mapas de tensión y de
+    presión de contacto pintan color por vértice válido; la presión registra
+    contacto real con el cuerpo."""
     playwright = pytest.importorskip("playwright.sync_api")
     from patronaje.viewer3d import build_body_viewer
     d = tempfile.mkdtemp()
@@ -249,13 +260,18 @@ def test_fabric_presets_and_tension_map():
         # presets: la seda flexa mucho más suave que la mezclilla
         soft = pg.evaluate("FABRICS.seda.bendK")
         stiff = pg.evaluate("FABRICS.denim.bendK")
-        # mapa de tensión: color por vértice válido (RGB en [0,1]) y del tamaño de la malla
+        # simula un vestido (prenda de torso que agarra el cuerpo) y valida ambos mapas
         info = pg.evaluate(
-            "(()=>{simMode=true;showTension=true;rebuild();if(raf)cancelAnimationFrame(raf);"
-            "for(let i=0;i<120;i++)stepCloth(CLOTH,0.12);const c=clothTension(CLOTH);"
-            "let ok=c.length===CLOTH.pos.length*3;for(const v of c)if(v<0||v>1)ok=false;"
-            "return {ok,len:c.length,n:CLOTH.pos.length};})()")
+            "(()=>{document.getElementById('garment').value='vestido';mapMode='pressure';"
+            "simMode=true;rebuild();if(raf)cancelAnimationFrame(raf);"
+            "for(let i=0;i<150;i++)stepCloth(CLOTH,0.12);"
+            "const n=CLOTH.pos.length,cp=clothPressure(CLOTH),ct=clothTension(CLOTH);"
+            "let ok=cp.length===n*3&&ct.length===n*3;"
+            "for(const v of cp)if(v<0||v>1)ok=false;for(const v of ct)if(v<0||v>1)ok=false;"
+            "let mx=0;for(const v of CLOTH.press)mx=Math.max(mx,v);"
+            "return {ok,mx,n};})()")
         b.close()
     assert not errs, errs
     assert soft < stiff, "la seda debe flexar más suave que la mezclilla"
-    assert info["ok"] and info["len"] == info["n"] * 3
+    assert info["ok"], "los mapas deben dar RGB válido del tamaño de la malla"
+    assert info["mx"] > 0.05, "la presión de contacto debe registrar agarre sobre el cuerpo"

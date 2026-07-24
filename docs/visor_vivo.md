@@ -31,8 +31,22 @@ suelto (eso rompería el bloque), sino que su posición se **invierte a la medid
 que la genera (p. ej. arrastrar el costado de la sisa reescribe el busto vía
 `(busto+holgura)/4`), y el bloque se vuelve a trazar entero desde los parámetros.
 Así se acerca la experiencia a la de un CAD de patronaje sin perder la coherencia
-paramétrica. Cada prenda expone sus manijas (camisa 4, falda y pantalón 3,
-vestido 2, blazer 1).
+paramétrica. Cada prenda expone sus manijas (camisa 5 —escote, hombro, busto,
+bajo y largo de manga—, falda y pantalón 4 —cintura, cadera, altura de cadera y
+largo—, vestido 3, blazer 1).
+
+Al arrastrar, la manija activa **muestra el valor en vivo** (p. ej. «Busto: 92»).
+**Deshacer** con el botón o **Ctrl+Z** revierte la última edición (también las de
+los sliders y el restablecer); la pila guarda las últimas 60 interacciones.
+
+**Editar pinzas** (falda, pantalón y vestido): además de las manijas de medida
+(ámbar), la pinza del delantero trae **dos manijas de pinza (teal)** — arrastra el
+**ápice** para cambiar su **largo** y la **pata** para cambiar su **fondo**. En la
+falda y el pantalón es la pinza de cintura del delantero; en el vestido, la **pinza
+de talle** del cuerpo entallado (la V que apunta al busto). La pinza es un
+parámetro real del bloque (`insertDart` / `fittedBodice`), así que al moverla el
+**contorno de la cintura se re-traza** alrededor de ella; los valores por defecto
+reproducen el bloque original (y el visor 3D, que comparte el motor, no cambia).
 
 ## Cómo funciona
 
