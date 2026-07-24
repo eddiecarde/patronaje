@@ -8,6 +8,15 @@ venv/
 build/
 dist/
 
+# Android: los patrones offline (SVG) se generan en CI, no se versionan;
+# salidas de compilación del APK
+android/app/src/main/assets/www/
+android/.gradle/
+android/app/build/
+android/build/
+app_offline/
+*.apk
+
 # Artefactos generados por el CLI (regenerables). Se conserva solo una
 # muestra representativa (talla S) + el visor como escaparate del repo.
 output/*
