@@ -55,6 +55,18 @@ GARMENTS = {
     "blazer":   {"label": "Blazer", "garment": "blazer", "fit": "shirt"},
 }
 
+# largos de prenda ajustables por prenda (además de las medidas del cuerpo), para
+# el modo a medida
+_LENGTHS = {
+    "camisa":   [("largo_camisa", "Largo camisa"), ("largo_manga", "Largo manga")],
+    "falda":    [("largo_falda", "Largo falda")],
+    "pantalon": [("largo_pantalon", "Largo pantalón")],
+    "vestido":  [("largo_falda", "Largo de la falda")],
+    "blazer":   [("largo_manga", "Largo manga")],
+}
+_LEN_KEYS = ("largo_camisa", "largo_manga", "largo_falda", "largo_pantalon")
+_LEN_DEFAULT = {"largo_falda": 60.0, "largo_pantalon": 100.0}
+
 # etiqueta legible por tipo de archivo generado
 _FILE_LABELS = {
     "dxf_r2013": "DXF R2013 (CAD por capas)",
@@ -143,6 +155,8 @@ def _sizes_table():
         d = {}
         for k, _ in _FIELDS:
             d[k] = ch.get(k, _ESTATURA.get(size, 168) if k == "estatura" else 0)
+        for lk in _LEN_KEYS:                       # largos de prenda (para prefijar)
+            d[lk] = ch.get(lk, _LEN_DEFAULT.get(lk, 0))
         out[size] = d
     return out
 
@@ -196,6 +210,7 @@ def create_app() -> FastAPI:
             "sizes": _sizes_table(),
             "size_order": list(SIZE_CHART),
             "fields": _FIELDS,
+            "lengths": _LENGTHS,
         }
 
     @app.post("/api/generate")
@@ -221,6 +236,14 @@ def create_app() -> FastAPI:
                 p = build_parameters_from_measurements(meas, name="custom")
             except ValueError as e:
                 raise HTTPException(status_code=422, detail=str(e))
+            # largos de prenda a medida (el usuario los fija; sobrescriben el default)
+            for lk in _LEN_KEYS:
+                v = (req.measurements or {}).get(lk)
+                if v is not None:
+                    try:
+                        p.set(lk, float(v), descripcion="largo de prenda (a medida)")
+                    except Exception:
+                        pass
             size = "custom"
 
         job_id = uuid.uuid4().hex
@@ -339,6 +362,9 @@ select,input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--lin
 @media(prefers-color-scheme:dark){.err{background:#3a1c1c;border-color:#5a2a2a;color:#f0a8a0}.preview{background:#f4f7fb}}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
+.share{width:100%;margin-top:8px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1d2733;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.subhead{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--soft);font-weight:700;grid-column:1/-1;margin-top:6px}
 </style></head><body>
 <div class="top"><b>&#9986; Patronaje</b>
  <a href="/">Inicio</a><a href="/viewer_live.html">Patrón 2D</a><a href="/viewer_3d.html">Maniquí 3D</a></div>
@@ -347,6 +373,7 @@ select,input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--lin
  <div class="sub">Elige la prenda y las medidas; el <b>motor paramétrico</b> traza el
   patrón con curvas CAD reales y validación de casado, y genera los archivos listos
   para producción para que los <b>descargues</b> — el mismo motor que la línea de comandos.</div>
+ <div id="toast"></div>
  <div class="stage">
   <div class="card" id="panel">
    <label class="f">Prenda</label><select id="garment"></select>
@@ -359,6 +386,7 @@ select,input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--lin
    <label class="f">Estilo</label><select id="style"></select>
    <label class="chk"><input type="checkbox" id="seam" checked> Incluir margen de costura</label>
    <button class="gen" id="gen" onclick="doGenerate()">Generar patrón</button>
+   <button class="btn share" id="share" onclick="shareLink()">&#128279; Copiar enlace del proyecto</button>
    <div id="err"></div>
   </div>
   <div class="card" id="result"><div class="empty">Configura a la izquierda y pulsa
@@ -373,23 +401,46 @@ async function boot(){
  const gs=$('garment');CFG.garments.forEach(g=>gs.add(new Option(g.label,g.id)));
  const ms=$('method');CFG.methods.forEach(m=>ms.add(new Option(m.label,m.id)));
  const ss=$('size');CFG.size_order.forEach(s=>ss.add(new Option(s,s)));ss.value='S';
- gs.onchange=fillStyles;fillStyles();buildMeas();
+ gs.onchange=()=>{fillStyles();if(MODE==='custom')buildMeas();};
+ ss.onchange=()=>{if(MODE==='custom')buildMeas();};
+ fillStyles();buildMeas();
+ if(restore())doGenerate();     // proyecto compartido por enlace -> restaura y genera
 }
 function garment(){return CFG.garments.find(g=>g.id===$('garment').value);}
 function fillStyles(){const st=$('style');st.innerHTML='';st.add(new Option('Base (sin estilo)','none'));
  garment().styles.forEach(s=>st.add(new Option(s,s)));}
+function meaInput(k,lab,v){return '<div class="m"><label>'+lab+'</label><input type="number" step="0.5" id="fx-'+k+'" value="'+v+'"></div>';}
 function buildMeas(){const box=$('meas');box.innerHTML='';const sz=CFG.sizes[$('size').value]||{};
- CFG.fields.forEach(([k,lab])=>{const v=sz[k]||0;
-  box.insertAdjacentHTML('beforeend',
-   '<div class="m"><label>'+lab+'</label><input type="number" step="0.5" id="fx-'+k+'" value="'+v+'"></div>');});}
+ CFG.fields.forEach(([k,lab])=>box.insertAdjacentHTML('beforeend',meaInput(k,lab,sz[k]||0)));
+ const lens=CFG.lengths[$('garment').value]||[];
+ if(lens.length){box.insertAdjacentHTML('beforeend','<div class="subhead">Largos de prenda</div>');
+  lens.forEach(([k,lab])=>box.insertAdjacentHTML('beforeend',meaInput(k,lab,sz[k]||0)));}}
 function setMode(m){MODE=m;$('mSize').classList.toggle('on',m==='size');$('mCustom').classList.toggle('on',m==='custom');
  $('sizeBox').style.display=m==='size'?'':'none';$('customBox').style.display=m==='custom'?'':'none';
  if(m==='custom')buildMeas();}
+function customMeas(){const m={};document.querySelectorAll('#meas [id^=fx-]').forEach(el=>{m[el.id.slice(3)]=parseFloat(el.value);});return m;}
+// --- guardar / compartir el proyecto por enlace (estado en la URL, sin backend) ---
+function projState(){const s={garment:$('garment').value,mode:MODE,size:$('size').value,
+ method:$('method').value,style:$('style').value,seam:$('seam').checked};
+ if(MODE==='custom')s.measurements=customMeas();return s;}
+function toast(msg){const t=$('toast');t.textContent=msg;t.style.opacity=1;clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity=0,2600);}
+function shareLink(){const code=btoa(unescape(encodeURIComponent(JSON.stringify(projState()))));
+ const url=location.origin+location.pathname+'?p='+encodeURIComponent(code);
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(()=>toast('Enlace del proyecto copiado')).catch(()=>toast(url));
+ else toast(url);}
+function restore(){const q=new URLSearchParams(location.search).get('p');if(!q)return false;
+ try{const s=JSON.parse(decodeURIComponent(escape(atob(q))));
+  $('garment').value=s.garment||'camisa';fillStyles();
+  $('method').value=s.method||'aldrich';$('style').value=s.style||'none';
+  $('seam').checked=s.seam!==false;$('size').value=s.size||'S';
+  setMode(s.mode||'size');
+  if(s.mode==='custom'&&s.measurements){buildMeas();for(const k in s.measurements){const el=$('fx-'+k);if(el)el.value=s.measurements[k];}}
+  return true;}catch(e){return false;}}
 async function doGenerate(){
  $('err').innerHTML='';const btn=$('gen');btn.disabled=true;btn.innerHTML='<span class="spin"></span>Generando…';
  const body={garment:$('garment').value,mode:MODE,size:$('size').value,method:$('method').value,
   style:$('style').value,include_seam:$('seam').checked};
- if(MODE==='custom'){const m={};CFG.fields.forEach(([k])=>{const el=$('fx-'+k);if(el)m[k]=parseFloat(el.value);});body.measurements=m;}
+ if(MODE==='custom')body.measurements=customMeas();
  try{
   const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await r.json();

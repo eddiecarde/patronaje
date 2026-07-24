@@ -69,6 +69,23 @@ def test_made_to_measure_and_validation(client):
     assert "issues" in bad.json()["detail"]
 
 
+def test_custom_measurements_honor_garment_length(client):
+    cfg = client.get("/api/config").json()
+    # cada prenda expone sus largos de prenda ajustables
+    assert set(cfg["lengths"]) == {"camisa", "falda", "pantalon", "vestido", "blazer"}
+    assert cfg["lengths"]["falda"][0][0] == "largo_falda"
+
+    base = dict(cfg["sizes"]["S"])
+    def consumo(largo):
+        m = dict(base); m["largo_falda"] = largo
+        r = client.post("/api/generate", json={"garment": "falda", "mode": "custom",
+                                               "size": "S", "measurements": m})
+        assert r.status_code == 200, r.text
+        return r.json()["stats"]["consumo_m"]
+    # una falda más larga consume más tela: el largo a medida llega al motor
+    assert consumo(90) > consumo(45)
+
+
 def test_home_and_viewers_served(client):
     assert client.get("/").status_code == 200
     assert "Genera tu patr" in client.get("/").text

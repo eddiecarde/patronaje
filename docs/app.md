@@ -31,9 +31,12 @@ docker run -p 8000:8000 patronaje          # http://localhost:8000
 ## Interfaz
 
 - **Prenda**: camisa, falda, pantalón, vestido o blazer.
-- **Medidas**: *por talla* (XS–XXL) o *a medida* (rellenas tus medidas; se parte
-  de la tabla de la talla de referencia para los largos de prenda y se validan
-  antes de trazar).
+- **Medidas**: *por talla* (XS–XXL) o *a medida* (rellenas tus medidas del cuerpo
+  **y los largos de la prenda** —largo de camisa/manga, falda o pantalón según
+  corresponda—; se validan antes de trazar).
+- **Guardar / compartir**: el botón *«Copiar enlace del proyecto»* codifica toda
+  la configuración (prenda, medidas, método, estilo…) en la URL; al abrir ese
+  enlace la app **restaura el proyecto y lo regenera**. Sin backend ni cuentas.
 - **Método de trazado**: Aldrich, Müller & Sohn, Bunka, ESMOD, Martí, Armstrong.
 - **Estilo**: la base o cualquiera de los estilos de la prenda.
 - **Incluir margen de costura** (sí/no).
