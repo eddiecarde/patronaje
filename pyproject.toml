@@ -24,6 +24,7 @@ app = ["fastapi>=0.110", "uvicorn>=0.27", "httpx>=0.26"]
 [project.scripts]
 patronaje = "patronaje.cli:main"
 patronaje-serve = "patronaje.app:main"
+patronaje-mobile = "patronaje.mobile:main"
 
 [tool.setuptools.packages.find]
 include = ["patronaje*"]

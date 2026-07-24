@@ -32,6 +32,19 @@ medida**, método y estilo, y **descargas los archivos de producción** (DXF R20
 DXF AAMA/ASTM, PDF 1:1/A4, SVG, AI, JSON, CSV, SCR, tech pack y markers), con los
 visores 2D/3D integrados y la API en `/docs`. Ver `docs/app.md`.
 
+## App para celular (APK Android, offline)
+
+```bash
+python -m patronaje.mobile --output android/app/src/main/assets/www   # genera la app web offline
+# el APK se compila en GitHub Actions (workflow «APK») y se descarga como artefacto
+```
+
+Una **app Android instalable** que funciona **sin servidor ni internet**: eliges
+**prenda, talla y estilo** y ves el patrón del **motor real** (SVG pre-generados que
+viajan dentro del APK); el modo **a medida** usa el motor portado a JS, e incluye el
+**maniquí 3D**. Comparte el patrón en SVG desde el diálogo nativo. El APK se compila
+en CI (los runners tienen el Android SDK). Ver `docs/apk.md`.
+
 ## Uso (CLI)
 
 ```bash
