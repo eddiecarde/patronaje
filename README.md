@@ -20,7 +20,19 @@ vestidos, chaquetas, pantalones, faldas).
 pip install -r requirements.txt      # numpy, ezdxf, shapely, reportlab, svgwrite
 ```
 
-## Uso
+## Aplicación web
+
+```bash
+python -m patronaje.app                 # http://127.0.0.1:8000
+docker build -t patronaje . && docker run -p 8000:8000 patronaje
+```
+
+Una **app web (FastAPI)** sobre el motor real: eliges prenda, talla o **medidas a
+medida**, método y estilo, y **descargas los archivos de producción** (DXF R2013,
+DXF AAMA/ASTM, PDF 1:1/A4, SVG, AI, JSON, CSV, SCR, tech pack y markers), con los
+visores 2D/3D integrados y la API en `/docs`. Ver `docs/app.md`.
+
+## Uso (CLI)
 
 ```bash
 python -m patronaje.cli --size S --output output              # una talla (Aldrich)
