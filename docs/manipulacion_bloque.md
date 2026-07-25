@@ -75,7 +75,28 @@ sigue casando con la sisa** (la copa alta estrecha el bíceps; el bloque limita
 cuánto sube según el contorno de brazo). `gigot` alarga y frunce la cabeza a
 propósito (rompe sisa=copa, como `puff`).
 
-**29 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+### Familia campana / vuelo (variantes de manga)
+Todas parten de `bell` y **conservan la copa** (casado sisa=copa) salvo donde se
+frunce a propósito. La copa se reutiliza tal cual y se reconstruye la parte por
+debajo (costados + bajo) con `flare_symmetric` o costuras a medida.
+
+| Estilo | Efecto | Técnica |
+|--------|--------|---------|
+| `trumpet` | **Trompeta** (campana completa: vuelo desde justo bajo la copa) | `flare_symmetric` (top alto) |
+| `flounce` | **Volante circular** (anillo de corte circular cosido al bajo; ondula en olas) | pieza anular aparte |
+| `cascade` | **Cascada / pañuelo** (bajo en puntas que cuelgan, no recto) | costados + bajo en picos |
+| `angel` | **Ángel / capa** (campana muy amplia y larga; bajo abierto que cuelga) | costuras a medida + alargue |
+| `lantern` | **Farol / linterna** (se abomba en el centro; banda intermedia fruncida) | costado convexo + banda |
+| `pagoda` | **Pagoda / escalonada** (niveles de campana superpuestos en escalón) | costado escalonado por niveles |
+| `bell_gathered` | **Campana fruncida** (puff + campana: volumen fruncido arriba, vuelo abajo) | `widen`+`lift`+`flare_symmetric` |
+
+`flounce` añade la pieza **VOLANTE MANGA** (anillo abierto: arco interior = ancho
+de la boca de manga, borde exterior mayor → ondas) y termina el bajo de la manga
+con dobladillo. `lantern` marca la **banda intermedia** (línea de construcción) a
+fruncir. `cascade`/`angel`/`pagoda` reconstruyen las costuras de costado y el bajo
+desde la copa del bloque (`flare_symmetric` no basta para el bajo no recto).
+
+**36 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
 función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
 `lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 

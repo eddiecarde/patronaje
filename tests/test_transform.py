@@ -76,6 +76,35 @@ def test_bell_widens_wrist():
     assert w1 > w0 + 6
 
 
+def _wrist_w(sh):
+    pc = next(p for p in sh.pieces if p.name.startswith("MANGA"))
+    ys = [q[1] for q in pc.net_contour]; ymax = max(ys)
+    xs = [q[0] for q in pc.net_contour if abs(q[1] - ymax) < 1.0]
+    return max(xs) - min(xs)
+
+
+@pytest.mark.parametrize("style", ["trumpet", "cascade", "angel", "pagoda", "bell_gathered"])
+def test_bell_family_widens_hem(style):
+    w0 = _wrist_w(build_shirt("S"))
+    w1 = _wrist_w(apply_style(build_shirt("S"), style))
+    assert w1 > w0 + 4, f"{style} no ensancha el bajo de manga"
+
+
+def test_flounce_adds_ring_piece():
+    sh = apply_style(build_shirt("S"), "flounce")
+    vol = [p for p in sh.pieces if p.name == "VOLANTE MANGA"]
+    assert len(vol) == 1
+    # sin puño/tapeta (la manga termina en volante)
+    assert not any(p.name in ("PUNO", "TAPETA MANGA") for p in sh.pieces)
+    assert _geom_ok(sh)
+
+
+def test_lantern_marks_band():
+    sh = apply_style(build_shirt("S"), "lantern")
+    pc = next(p for p in sh.pieces if p.name.startswith("MANGA"))
+    assert pc.construction_lines, "farol debe marcar la banda intermedia"
+
+
 def test_pivot_operation():
     import math
     pts = [(0, 0), (10, 0)]

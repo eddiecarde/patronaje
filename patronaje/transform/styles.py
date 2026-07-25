@@ -145,6 +145,198 @@ def bell_sleeve(shirt: Shirt, added: float = 16.0) -> Shirt:
     return shirt
 
 
+# --------------------------------------------------------------------------
+# Familia campana / vuelo (variantes)
+# --------------------------------------------------------------------------
+def _cap_ends(shirt):
+    """Devuelve (cap_curve, BL, BR, biceps_half, cap_height, largo) de la manga."""
+    s = shirt.sleeve
+    cap = list(s.cap_curve)                 # BL ... SH ... BR
+    return cap, cap[0], cap[-1], s.biceps_half, s.cap_height, shirt.p.largo_manga_efec
+
+
+def _sleeve_from_seams(cap, right_seam, hem, left_seam):
+    """Rearma el contorno de manga: copa (BL..BR) + costado derecho + bajo +
+    costado izquierdo. Cada tramo excluye su primer punto (duplica el anterior)."""
+    contour = list(cap)                      # termina en BR
+    contour += list(right_seam)[1:]          # BR -> ... -> boca derecha
+    contour += list(hem)[1:]                 # -> ... -> boca izquierda
+    contour += list(left_seam)[1:-1]         # -> ... (excl BL, lo cierra la copa)
+    return ops.dedup(contour)
+
+
+def trumpet_sleeve(shirt: Shirt, added: float = 26.0) -> Shirt:
+    """Trompeta (campana completa): el vuelo arranca justo bajo la copa y toda la
+    manga cae acampanada (más dramática que ``bell``)."""
+    pc = _find(shirt, "MANGA")
+    if pc:
+        s = shirt.sleeve
+        largo = shirt.p.largo_manga_efec
+        top_y = s.cap_height + (largo - s.cap_height) * 0.06
+        pc.net_contour = ops.flare_symmetric(pc.net_contour, 0.0, top_y,
+                                             largo, added / 24.0)
+        pc.hem_allowance = shirt.p.margen_dobladillo
+        pc.name = "MANGA (trompeta)"
+    return shirt
+
+
+def flounce_sleeve(shirt: Shirt, depth: float = 15.0) -> Shirt:
+    """Volante circular (flounce): un volante de corte circular cosido al bajo de
+    la manga; su borde ondula en olas. Se añade como pieza aparte (anillo)."""
+    import math
+    from ..piece import Piece
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    p = shirt.p
+    # largo de la costura de unión (ancho de la boca de manga en plano)
+    ys = [q[1] for q in pc.net_contour]
+    ymax = max(ys)
+    xs = [q[0] for q in pc.net_contour if abs(q[1] - ymax) < 0.6]
+    L = (max(xs) - min(xs)) if len(xs) >= 2 else p.boca_manga
+    # anillo abierto: arco interior = L; el exterior ondula (r_o > r_i)
+    theta = math.radians(300.0)
+    r_i = L / theta
+    r_o = r_i + depth
+    n = 40
+    a0, a1 = -theta / 2.0, theta / 2.0
+    outer = [(r_o * math.cos(a0 + (a1 - a0) * k / n),
+              r_o * math.sin(a0 + (a1 - a0) * k / n)) for k in range(n + 1)]
+    inner = [(r_i * math.cos(a1 - (a1 - a0) * k / n),
+              r_i * math.sin(a1 - (a1 - a0) * k / n)) for k in range(n + 1)]
+    contour = ops.dedup(outer + inner)
+    fl = Piece(name="VOLANTE MANGA", number=41, size=pc.size, quantity=2,
+               cut_type="par: izq + der", net_contour=contour,
+               seam_allowance=p.margen_costura, hem_allowance=p.margen_dobladillo,
+               grain=((0.0, r_i + 0.5), (0.0, r_o - 0.5)),
+               reference_texts=[((0.0, (r_i + r_o) / 2), "volante circular")])
+    shirt.pieces.append(fl)
+    pc.hem_allowance = None
+    pc.reference_texts = list(pc.reference_texts) + [((0.0, ymax - 2), "unir volante")]
+    pc.name = "MANGA (base de volante)"
+    shirt.pieces = [x for x in shirt.pieces if x.name not in ("PUNO", "TAPETA MANGA")]
+    return shirt
+
+
+def cascade_sleeve(shirt: Shirt, added: float = 16.0) -> Shirt:
+    """Cascada / pañuelo (handkerchief): manga con vuelo y bajo en puntas que
+    cuelgan (el dobladillo hace picos en vez de ser recto)."""
+    from ..core.curves import smooth_curve
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    cap, bl, br, bh, ch, largo = _cap_ends(shirt)
+    half_w = shirt.p.boca_manga / 2.0 + added
+    mid_y = ch + (largo - ch) * 0.5
+    drop = (largo - ch) * 0.30
+    r_seam = smooth_curve([br, (bh * 1.05, mid_y), (half_w, largo)], samples_per_span=6)
+    hem = smooth_curve([(half_w, largo), (half_w * 0.55, largo + drop),
+                        (0.0, largo + drop * 0.35), (-half_w * 0.55, largo + drop),
+                        (-half_w, largo)], samples_per_span=6)
+    l_seam = smooth_curve([(-half_w, largo), (-bh * 1.05, mid_y), bl], samples_per_span=6)
+    pc.net_contour = _sleeve_from_seams(cap, r_seam, hem, l_seam)
+    pc.hem_allowance = shirt.p.margen_dobladillo
+    pc.name = "MANGA (cascada / pañuelo)"
+    shirt.pieces = [x for x in shirt.pieces if x.name not in ("PUNO", "TAPETA MANGA")]
+    return shirt
+
+
+def angel_sleeve(shirt: Shirt, added: float = 34.0) -> Shirt:
+    """Ángel / capa: campana muy amplia y larga, con caída de capa; la costura del
+    bajo queda abierta (cuelga suelta desde el brazo)."""
+    from ..core.curves import smooth_curve
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    cap, bl, br, bh, ch, largo = _cap_ends(shirt)
+    newlargo = largo + (largo - ch) * 0.28
+    half_w = shirt.p.boca_manga / 2.0 + added
+    r_seam = smooth_curve([br, (bh * 1.1, ch + (newlargo - ch) * 0.45),
+                           (half_w, newlargo)], samples_per_span=6)
+    hem = [(half_w, newlargo), (-half_w, newlargo)]
+    l_seam = smooth_curve([(-half_w, newlargo), (-bh * 1.1, ch + (newlargo - ch) * 0.45),
+                           bl], samples_per_span=6)
+    pc.net_contour = _sleeve_from_seams(cap, r_seam, hem, l_seam)
+    pc.hem_allowance = shirt.p.margen_dobladillo
+    pc.reference_texts = list(pc.reference_texts) + [
+        ((0.0, newlargo * 0.7), "bajo abierto (capa)")]
+    pc.name = "MANGA (ángel / capa)"
+    shirt.pieces = [x for x in shirt.pieces if x.name not in ("PUNO", "TAPETA MANGA")]
+    return shirt
+
+
+def lantern_sleeve(shirt: Shirt, bulge: float = 12.0) -> Shirt:
+    """Farol / linterna (lantern): la manga se abomba en el centro (volumen arriba
+    y abajo, recogido en una banda intermedia que se frunce)."""
+    from ..core.curves import smooth_curve
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    cap, bl, br, bh, ch, largo = _cap_ends(shirt)
+    mid_y = ch + (largo - ch) * 0.5
+    wrist = shirt.p.boca_manga / 2.0
+    r_seam = smooth_curve([br, (bh + bulge, mid_y), (wrist, largo)], samples_per_span=8)
+    hem = [(wrist, largo), (-wrist, largo)]
+    l_seam = smooth_curve([(-wrist, largo), (-bh - bulge, mid_y), bl], samples_per_span=8)
+    pc.net_contour = _sleeve_from_seams(cap, r_seam, hem, l_seam)
+    pc.construction_lines = list(pc.construction_lines) + [
+        ((-(bh + bulge), mid_y), (bh + bulge, mid_y))]        # banda intermedia
+    pc.reference_texts = list(pc.reference_texts) + [
+        ((0.0, mid_y - 1.5), "banda (fruncir)")]
+    pc.hem_allowance = shirt.p.margen_dobladillo
+    pc.name = "MANGA (farol / linterna)"
+    return shirt
+
+
+def pagoda_sleeve(shirt: Shirt, tiers: int = 3, step: float = 6.0) -> Shirt:
+    """Pagoda / escalonada: varios niveles de campana superpuestos; el costado
+    baja en escalones que se abren en cada nivel."""
+    from ..core.curves import smooth_curve
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    cap, bl, br, bh, ch, largo = _cap_ends(shirt)
+    right = [br]
+    for k in range(1, tiers + 1):
+        y_bot = ch + (largo - ch) * k / tiers
+        w_out = bh + step * k * 1.6           # abre dentro del nivel
+        w_top = right[-1][0]
+        right += smooth_curve([(w_top, right[-1][1]), (w_out, y_bot)],
+                              samples_per_span=5)[1:]
+        if k < tiers:
+            w_in = bh + step * k               # escalón hacia dentro (solape)
+            right.append((w_in, y_bot))
+    left = [(-x, y) for x, y in reversed(right)]
+    hem = [right[-1], left[0]]
+    pc.net_contour = _sleeve_from_seams(cap, right, hem, left)
+    pc.reference_texts = list(pc.reference_texts) + [
+        ((0.0, (ch + largo) / 2), "niveles pagoda")]
+    pc.hem_allowance = shirt.p.margen_dobladillo
+    pc.name = "MANGA (pagoda / escalonada)"
+    return shirt
+
+
+def gathered_bell_sleeve(shirt: Shirt, added: float = 18.0,
+                         volume: float = 1.28, cap_lift: float = 3.5) -> Shirt:
+    """Campana fruncida: mezcla puff + campana — volumen fruncido en la cabeza y
+    vuelo acampanado en el bajo. Rompe a propósito el casado sisa=copa."""
+    pc = _find(shirt, "MANGA")
+    if pc is None:
+        return shirt
+    s = shirt.sleeve
+    ch = s.cap_height
+    largo = shirt.p.largo_manga_efec
+    pts = ops.widen(pc.net_contour, 0.0, volume)              # volumen general
+    pts = ops.lift(pts, cap_lift, ch, above=True)             # cabeza más alta (frunce)
+    pts = ops.flare_symmetric(pts, 0.0, ch + (largo - ch) * 0.45, largo, added / 24.0)
+    pc.net_contour = ops.dedup(pts)
+    pc.hem_allowance = shirt.p.margen_dobladillo
+    pc.reference_texts = list(pc.reference_texts) + [
+        ((0.0, ch * 0.5), "fruncir cabeza")]
+    pc.name = "MANGA (campana fruncida)"
+    return shirt
+
+
 def mandarin_collar(shirt: Shirt) -> Shirt:
     """Cuello mao: elimina la hoja de cuello y deja sólo la banda (más alta)."""
     shirt.pieces = [p for p in shirt.pieces if p.name != "CUELLO"]
@@ -751,6 +943,13 @@ STYLES = {
     "flare": flare_shirt,
     "puff": puff_sleeve,
     "bell": bell_sleeve,
+    "trumpet": trumpet_sleeve,
+    "flounce": flounce_sleeve,
+    "cascade": cascade_sleeve,
+    "angel": angel_sleeve,
+    "lantern": lantern_sleeve,
+    "pagoda": pagoda_sleeve,
+    "bell_gathered": gathered_bell_sleeve,
     "mandarin": mandarin_collar,
     "sleeveless": sleeveless,
     "crop": crop_top,

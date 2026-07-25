@@ -22,8 +22,9 @@ from .marker.layout import marker_report
 
 METHODS = [("aldrich", "Aldrich"), ("mueller", "Müller & Sohn"), ("bunka", "Bunka"),
            ("esmod", "ESMOD"), ("marti", "Sistema Martí"), ("armstrong", "Joseph-Armstrong")]
-STYLES = ["flare", "puff", "bell", "princess", "empire", "peplum", "dolman", "raglan",
-          "v_neck", "boat_neck", "dress", "oversized", "wrap", "godet"]
+STYLES = ["flare", "puff", "bell", "trumpet", "flounce", "cascade", "angel",
+          "lantern", "pagoda", "bell_gathered", "princess", "empire", "peplum",
+          "dolman", "raglan", "v_neck", "boat_neck", "dress", "oversized", "wrap", "godet"]
 
 
 def _svg_of(shirt) -> str:
