@@ -161,14 +161,17 @@ def validate_matching(shirt, report: ValidationReport, tol: float = 0.5) -> None
                f"boca={boca:.2f}  puño={puno:.2f}  pliegues={pliegues:.2f}",
                valor=pliegues)
 
-    # 7) canesú coincide con espalda (ancho en línea de canesú)
-    yoke = next(pc for pc in shirt.pieces if pc.name == "CANESU")
-    back = next(pc for pc in shirt.pieces if pc.name == "ESPALDA")
-    yoke_bottom = _width_at_bottom(yoke.net_contour, b.yoke_line_y)
-    back_top = _width_at_top(back.net_contour, b.yoke_line_y)
-    report.add("Canesú = Espalda", abs(yoke_bottom - back_top) <= tol,
-               f"canesú_inf={yoke_bottom:.2f}  espalda_sup={back_top:.2f}",
-               tolerancia=tol, valor=yoke_bottom - back_top)
+    # 7) canesú coincide con espalda (ancho en línea de canesú).
+    #    Con el estilo "canesú de una pieza" no hay costura de canesú que casar
+    #    (la espalda se corta entera), así que este chequeo no aplica.
+    yoke = next((pc for pc in shirt.pieces if pc.name == "CANESU"), None)
+    back = next((pc for pc in shirt.pieces if pc.name == "ESPALDA"), None)
+    if yoke is not None and back is not None:
+        yoke_bottom = _width_at_bottom(yoke.net_contour, b.yoke_line_y)
+        back_top = _width_at_top(back.net_contour, b.yoke_line_y)
+        report.add("Canesú = Espalda", abs(yoke_bottom - back_top) <= tol,
+                   f"canesú_inf={yoke_bottom:.2f}  espalda_sup={back_top:.2f}",
+                   tolerancia=tol, valor=yoke_bottom - back_top)
 
 
 def _bottom_len(contour) -> float:

@@ -16,6 +16,23 @@ def test_ten_pieces():
         assert req in names
 
 
+def test_one_piece_back_merges_yoke_into_back():
+    from patronaje.transform.styles import apply_style
+    for method in ("aldrich", "mueller", "bunka", "esmod"):
+        sh = apply_style(build_shirt("S", method=method), "canesu_entero")
+        names = {p.name for p in sh.pieces}
+        # el canesú deja de ser pieza aparte; queda la espalda entera
+        assert not any(n.startswith("CANESU") for n in names), method
+        assert any(n.startswith("ESPALDA ENTERA") for n in names), method
+        assert len(sh.pieces) == 9, method
+        # la espalda entera es un polígono cerrado válido y llega del escote al bajo
+        esp = next(p for p in sh.pieces if p.name.startswith("ESPALDA ENTERA"))
+        ys = [y for _, y in esp.net_contour]
+        assert min(ys) < 1.0 and max(ys) > sh.p.largo_camisa - 1.0, method
+        assert not esp.notches                      # sin costura de canesú que casar
+        validate_all(sh)                            # validaciones geométricas OK
+
+
 def test_all_validations_pass_S():
     sh = build_shirt("S")
     report = validate_all(sh, tol=0.5)

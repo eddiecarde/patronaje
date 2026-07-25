@@ -184,6 +184,19 @@ class BodiceDraft:
         outline += [self.points["E-Hc"].as_tuple()]       # dobladillo a CB
         return _dedup(outline)
 
+    def back_full_outline(self) -> list[tuple[float, float]]:
+        """Espalda **entera** (canesú + espalda de una sola pieza, sin costura de
+        canesú). Mitad, al doblez en CB: del CB por el escote a SNP, hombro, toda
+        la sisa hasta la axila, costado al dobladillo y de vuelta al CB."""
+        outline: list[tuple[float, float]] = []
+        outline += [self.points["E-CBn"].as_tuple()]
+        outline += self.back_neck[1:]                     # escote a SNP
+        outline += [self.points["E-SP"].as_tuple()]       # hombro
+        outline += self.back_armhole                      # toda la sisa SP -> axila
+        outline += [self.points["E-Hs"].as_tuple()]       # costado a dobladillo
+        outline += [self.points["E-Hc"].as_tuple()]       # dobladillo a CB
+        return _dedup(outline)
+
     def front_outline(self) -> list[tuple[float, float]]:
         """Delantero (mitad; la extensión de botonadura la añade la pieza)."""
         outline: list[tuple[float, float]] = []

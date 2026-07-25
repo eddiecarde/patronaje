@@ -59,8 +59,14 @@ no lleva canesú (dolman/kimono/raglan).
 | `back_pleat` | **Pliegue de tabla** en el centro de la espalda | extensión en CB |
 | `off_shoulder` | **Hombros descubiertos** (bardot: escote ancho/bajo + manga corta) | remodelado + recorte |
 | `tie_front` | **Nudo delantero** (corto, bajo estrechado) | recorte + vuelo negativo |
+| `canesu_entero` | **Canesú de una pieza** (fusiona canesú + espalda, sin costura de canesú) | fusión de piezas |
 
-**25 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+`canesu_entero` reemplaza la espalda por la **espalda entera** (`back_full_outline`
+del bloque, común a todos los métodos) y elimina la pieza de canesú; marca a trazos,
+solo como referencia, dónde iba la línea de canesú. La validación de casado
+canesú↔espalda se omite cuando no hay canesú separado.
+
+**26 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
 función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
 `lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 

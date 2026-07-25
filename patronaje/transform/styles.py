@@ -650,7 +650,38 @@ FITTED_STYLES = {
 }
 
 
+def one_piece_back(shirt: Shirt) -> Shirt:
+    """Canesú de **una sola pieza**: fusiona el canesú con la espalda en un único
+    molde, sin costura de canesú. La espalda se corta entera al doblez en el CB;
+    se elimina la pieza de canesú y se marca (a trazos) dónde iba la línea de
+    canesú, ahora solo como referencia."""
+    b = getattr(shirt, "bodice", None)
+    back = _find(shirt, "ESPALDA")
+    yoke = _find(shirt, "CANESU")
+    if b is None or back is None:
+        return shirt
+    p = shirt.p
+    yl = b.yoke_line_y
+    # x de la sisa en la línea de canesú (para dibujar la referencia)
+    arm_x = 0.0
+    if yoke is not None:
+        arm_x = max((x for (x, y) in yoke.net_contour if abs(y - yl) < 1e-3),
+                    default=0.0)
+    back.net_contour = b.back_full_outline()
+    back.name = "ESPALDA ENTERA (canesú de una pieza)"
+    back.notches = []                       # ya no hay costura de canesú que casar
+    back.grain = ((0.5, 3.0), (0.5, p.largo_camisa - 3))
+    back.construction_lines = list(back.construction_lines) + [
+        ((0.0, yl), (arm_x, yl))]           # línea de canesú (solo referencia)
+    back.reference_texts = list(back.reference_texts) + [
+        ((arm_x * 0.25, yl - 1.2), "canesú de una pieza")]
+    if yoke is not None and yoke in shirt.pieces:
+        shirt.pieces.remove(yoke)           # el canesú deja de ser pieza aparte
+    return shirt
+
+
 STYLES = {
+    "canesu_entero": one_piece_back,
     "flare": flare_shirt,
     "puff": puff_sleeve,
     "bell": bell_sleeve,
