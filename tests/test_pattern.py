@@ -33,6 +33,30 @@ def test_one_piece_back_merges_yoke_into_back():
         validate_all(sh)                            # validaciones geométricas OK
 
 
+def test_cap_variation_styles():
+    from patronaje.transform.styles import apply_style
+
+    base = build_shirt("S").layout()
+    sisa = base.bodice.armhole_length()
+    h0 = base.sleeve.cap_height
+
+    alta = apply_style(build_shirt("S"), "copa_alta")
+    baja = apply_style(build_shirt("S"), "copa_baja")
+    # copa alta más alta y estrecha; copa baja más plana y ancha
+    assert alta.sleeve.cap_height > h0 > baja.sleeve.cap_height
+    assert alta.sleeve.biceps_half < base.sleeve.biceps_half < baja.sleeve.biceps_half
+    # ambas SIGUEN casando la sisa (copa = sisa + holgura de montaje)
+    for s in (alta, baja):
+        assert abs(s.sleeve.cap_length() - (sisa + s.sleeve.sleeve_ease)) < 0.2
+        validate_all(s)                       # sin errores geométricos
+
+    # gigot: gran volumen (más ancho que la base) y sigue siendo válido
+    gig = apply_style(build_shirt("S"), "gigot")
+    mg = next(p for p in gig.pieces if p.name.startswith("MANGA"))
+    assert max(x for x, _ in mg.net_contour) > base.sleeve.biceps_half * 1.3
+    validate_all(gig)
+
+
 def test_all_validations_pass_S():
     sh = build_shirt("S")
     report = validate_all(sh, tol=0.5)

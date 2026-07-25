@@ -60,13 +60,22 @@ no lleva canesú (dolman/kimono/raglan).
 | `off_shoulder` | **Hombros descubiertos** (bardot: escote ancho/bajo + manga corta) | remodelado + recorte |
 | `tie_front` | **Nudo delantero** (corto, bajo estrechado) | recorte + vuelo negativo |
 | `canesu_entero` | **Canesú de una pieza** (fusiona canesú + espalda, sin costura de canesú) | fusión de piezas |
+| `copa_alta` | **Copa alta** (manga sastre: copa más alta, bíceps ajustado) | rebobina copa (sisa=copa) |
+| `copa_baja` | **Copa baja** (manga deportiva: copa plana, bíceps ancho, movilidad) | rebobina copa (sisa=copa) |
+| `gigot` | **Gigot / pernil** (leg-of-mutton: volumen fruncido arriba, antebrazo ajustado) | volumen + fruncido |
 
 `canesu_entero` reemplaza la espalda por la **espalda entera** (`back_full_outline`
 del bloque, común a todos los métodos) y elimina la pieza de canesú; marca a trazos,
 solo como referencia, dónde iba la línea de canesú. La validación de casado
 canesú↔espalda se omite cuando no hay canesú separado.
 
-**26 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
+`copa_alta`/`copa_baja` **rebobinan** el bloque de manga con otra altura de copa
+(`cap_ratio`) y resuelven de nuevo el bíceps por bisección, de modo que **la copa
+sigue casando con la sisa** (la copa alta estrecha el bíceps; el bloque limita
+cuánto sube según el contorno de brazo). `gigot` alarga y frunce la cabeza a
+propósito (rompe sisa=copa, como `puff`).
+
+**29 estilos** en total. `STYLES` en `styles.py` es el registro; añadir uno = una
 función más. Primitivas: `pivot`, `flare`, `flare_symmetric`, `widen`, `lift`,
 `lengthen`, `clip_below/clip_above`, `insert_on_contour`, `split_panel`, `dedup`.
 

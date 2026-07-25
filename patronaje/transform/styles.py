@@ -69,6 +69,69 @@ def puff_sleeve(shirt: Shirt, width_factor: float = 1.30, cap_lift: float = 3.5)
     return shirt
 
 
+def _rebuild_cap(shirt: Shirt, ratio_factor: float, label: str,
+                 note: str, min_arm_ease: float = None) -> Shirt:
+    """Rebobina la manga con otra **altura de copa** (``cap_ratio`` × factor),
+    resolviendo de nuevo el bíceps por bisección para que **siga casando**
+    (sisa = copa). Regenera la pieza MANGA con sus piquetes/hilo coherentes.
+
+    ``min_arm_ease`` permite estrechar el bíceps (una copa alta *sastre* va con
+    un bíceps más ajustado; si no, el bloque frena la subida de la copa)."""
+    from ..blocks.aldrich_sleeve import SleeveDraft
+    old = shirt.sleeve
+    pc = _find(shirt, "MANGA")
+    if old is None or pc is None:
+        return shirt
+    new = SleeveDraft(p=shirt.p, target_armhole=old.target_armhole,
+                      sleeve_ease=old.sleeve_ease,
+                      cap_ratio=old.cap_ratio * ratio_factor,
+                      min_arm_ease=(old.min_arm_ease if min_arm_ease is None
+                                    else min_arm_ease)).build()
+    shirt.sleeve = new
+    idx = shirt.pieces.index(pc)
+    fresh = shirt._sleeve_piece(pc.size)
+    fresh.name = label
+    fresh.reference_texts = list(fresh.reference_texts) + [
+        ((0.0, new.cap_height * 0.5), note)]
+    shirt.pieces[idx] = fresh
+    return shirt
+
+
+def high_cap_sleeve(shirt: Shirt) -> Shirt:
+    """Copa alta (manga sastre/entallada): copa más alta y bíceps más estrecho
+    → manga ajustada y elegante, con menos movilidad. Sigue casando la sisa."""
+    return _rebuild_cap(shirt, 1.55, "MANGA (copa alta / sastre)", "copa alta",
+                        min_arm_ease=0.5)
+
+
+def low_cap_sleeve(shirt: Shirt) -> Shirt:
+    """Copa baja (manga camisera/deportiva): copa más plana y bíceps más ancho
+    → mucha movilidad y caída relajada. Sigue casando la sisa."""
+    return _rebuild_cap(shirt, 0.68, "MANGA (copa baja / deportiva)", "copa baja")
+
+
+def gigot_sleeve(shirt: Shirt) -> Shirt:
+    """Gigot / pernil (leg-of-mutton): gran volumen fruncido en la cabeza y el
+    bíceps que se estrecha hacia un antebrazo ajustado. Rompe a propósito el
+    casado sisa=copa (la cabeza se frunce al montar)."""
+    s = shirt.sleeve
+    pc = _find(shirt, "MANGA")
+    if s is None or pc is None:
+        return shirt
+    cap_h = s.cap_height
+    largo = shirt.p.largo_manga_efec
+    elbow = cap_h + (largo - cap_h) * 0.42
+    pts = pc.net_contour
+    pts = ops.widen(pts, 0.0, 1.60, y0=0.0, y1=elbow)     # volumen copa..codo
+    pts = ops.lift(pts, 6.5, cap_h, above=True)           # cabeza más alta (fruncido)
+    pts = ops.widen(pts, 0.0, 0.78, y0=elbow, y1=largo)   # antebrazo ajustado
+    pc.net_contour = ops.dedup(pts)
+    pc.name = "MANGA (gigot / pernil)"
+    pc.reference_texts = list(pc.reference_texts) + [
+        ((0.0, cap_h * 0.45), "fruncir cabeza (gigot)")]
+    return shirt
+
+
 def bell_sleeve(shirt: Shirt, added: float = 16.0) -> Shirt:
     """Manga campana: vuelo simétrico desde el codo hasta la boca de manga."""
     pc = _find(shirt, "MANGA")
@@ -682,6 +745,9 @@ def one_piece_back(shirt: Shirt) -> Shirt:
 
 STYLES = {
     "canesu_entero": one_piece_back,
+    "copa_alta": high_cap_sleeve,
+    "copa_baja": low_cap_sleeve,
+    "gigot": gigot_sleeve,
     "flare": flare_shirt,
     "puff": puff_sleeve,
     "bell": bell_sleeve,
