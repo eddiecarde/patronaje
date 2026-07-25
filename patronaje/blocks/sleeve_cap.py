@@ -35,8 +35,9 @@ from ..core.curves import CubicBezier
 # --------------------------------------------------------------------------
 GUIA2_FRAC_X = 0.30      # 2ª guía (cerca de la base): x = frac · W
 GUIA2_FRAC_Y = 0.30      # 2ª guía: y = frac · H
-GUIA1_FRAC_X = 0.65      # 1ª guía (cerca de la cima): x = frac · W
-GUIA1_FRAC_Y = 0.80      # 1ª guía: y = frac · H
+GUIA1_FRAC_X = 0.74      # 1ª guía (cerca de la cima): x = frac · W
+GUIA1_FRAC_Y = 0.94      # 1ª guía: y = frac · H (cerca de H ⇒ tangente casi
+                         # horizontal en la cima ⇒ cabeza de copa redondeada)
 DELANTERO_DIP = 0.7      # cm que baja la 2ª guía del delantero (concavidad)
 
 CAP_SAMPLES = 32         # muestras por media copa (densidad de la polilínea)
