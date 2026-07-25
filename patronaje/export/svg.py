@@ -28,6 +28,7 @@ LAYER_CSS = {
     "BOTONES": "#ff8000",
     "OJAL": "#ff40a0",
     "REFERENCIAS": "#b0b0b0",
+    "GUIA": "#8000c0",
 }
 
 

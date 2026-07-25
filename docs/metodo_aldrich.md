@@ -48,8 +48,21 @@ industrial es **longitud de copa = longitud de sisa ± tolerancia**.
 - **Ancho de bíceps** resuelto por **bisección** hasta que la longitud de la
   curva de copa iguale `sisa + sleeve_ease`. Resulta `biceps ≈ contorno_brazo +
   3 cm` de holgura, garantizando ajuste del brazo **y** casado con la sisa.
-- **Copa:** dos ramas spline (delantera más plana, trasera más llena) con el
-  "scoop" de axila; muestreadas para CNC.
+- **Copa (por defecto, `cap_style="bezier"`):** cada mitad se traza como una
+  **Bézier cúbica** entre el bíceps (base) y la cima, con dos puntos-guía
+  proporcionales — `curvaCopaManga(ancho_manga, altura_copa, lado)` en
+  `blocks/sleeve_cap.py`:
+  - 2ª guía (cerca de la base) = `(0.30·W, 0.30·H)`; 1ª guía (cerca de la cima) =
+    `(0.65·W, 0.80·H)`, con `W = ancho_manga/2`, `H = altura_copa`.
+  - **delantero**: la 2ª guía baja `0.7 cm` en Y → concavidad característica cerca
+    de la base (para reconocer el delantero al coser); **espalda**: valores base.
+  - Los coeficientes (`0.30, 0.65, 0.80, 0.7 cm`) son **constantes ajustables**
+    (calibrables contra el sistema de referencia). El bíceps se sigue resolviendo
+    por bisección, así que la copa **sigue casando** con la sisa.
+  - Las **guías** (polígono de control + bisectriz) son de construcción: se
+    dibujan sólo en **modo debug** (`gather_entities(..., debug=True)`), **nunca**
+    en el PDF imprimible.
+  - `cap_style="spline"` mantiene el trazo spline clásico (dos ramas con "scoop").
 - **Boca de manga:** `boca_manga = muneca + holgura_muneca`; se reduce a
   `largo_puno` mediante pliegues (`boca_manga − largo_puno`).
 

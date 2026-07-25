@@ -34,15 +34,23 @@ class SleeveDraft:
     sleeve_ease: float = 1.0
     cap_ratio: float = 0.45          # altura de copa = cap_ratio * prof_sisa
     min_arm_ease: float = 2.0        # holgura mínima de bíceps sobre contorno_brazo
+    cap_style: str = "bezier"        # "bezier" (copa Bézier calibrable) | "spline"
     points: dict[str, Point] = field(default_factory=dict)
 
     cap_curve: list = field(default_factory=list)   # copa completa BL->SH->BR (net)
+    cap_guides: list = field(default_factory=list)  # guías de construcción (solo debug)
     cap_height: float = 0.0
     biceps_half: float = 0.0
 
     # ------------------------------------------------------------------
     def _cap_for(self, h: float, bh: float) -> list[tuple[float, float]]:
-        """Construye la curva de copa (net) para altura ``h`` y bíceps medio ``bh``."""
+        """Construye la curva de copa (net) para altura ``h`` y bíceps medio ``bh``.
+
+        Con ``cap_style="bezier"`` usa la copa Bézier calibrable (delantero/espalda
+        diferenciados); con ``"spline"`` el trazo spline clásico de Aldrich."""
+        if self.cap_style == "bezier":
+            from .sleeve_cap import bezier_cap_curve
+            return bezier_cap_curve(bh, h)
         sh = (0.0, 0.0)                                   # sleeve head (centro alto)
         br = (bh, h)                                      # biceps derecho (delantero)
         bl = (-bh, h)                                     # biceps izquierdo (trasero)
@@ -90,6 +98,9 @@ class SleeveDraft:
         self.cap_height = h
         self.biceps_half = bh
         self.cap_curve = self._cap_for(h, bh)
+        if self.cap_style == "bezier":
+            from .sleeve_cap import bezier_cap_guides
+            self.cap_guides = bezier_cap_guides(bh, h)
 
         # landmarks
         bh = self.biceps_half

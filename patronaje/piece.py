@@ -37,11 +37,13 @@ class Layer:
     BOTONES = "BOTONES"
     OJAL = "OJAL"
     REFERENCIAS = "REFERENCIAS"
+    GUIA = "GUIA"            # guías de construcción (Bézier de copa): solo modo debug
 
 
 ALL_LAYERS = [
     Layer.CONSTRUCCION, Layer.CORTE, Layer.COSTURA, Layer.PIQUETES, Layer.TEXTOS,
     Layer.CENTROS, Layer.HILO, Layer.DOBLEZ, Layer.BOTONES, Layer.OJAL, Layer.REFERENCIAS,
+    Layer.GUIA,
 ]
 
 # color ACI por capa para el DXF (AutoCAD Color Index)
@@ -57,6 +59,7 @@ LAYER_COLORS = {
     Layer.BOTONES: 30,       # naranja
     Layer.OJAL: 200,         # rosa
     Layer.REFERENCIAS: 9,    # gris claro
+    Layer.GUIA: 140,         # violeta (guías de construcción)
 }
 
 
@@ -132,6 +135,10 @@ class Piece:
     # aquí se guardan para dibujar el vértice (perforación) y las líneas de pinza.
     darts: list[tuple[tuple[float, float], tuple[float, float], tuple[float, float]]] = \
         field(default_factory=list)
+    # guías de construcción (p. ej. polígono de control y bisectriz de la copa
+    # Bézier): cada una es una polilínea. Solo se dibujan en modo debug; NUNCA
+    # salen en el PDF imprimible final.
+    debug_guides: list[list[tuple[float, float]]] = field(default_factory=list)
 
     offset: tuple[float, float] = (0.0, 0.0)  # posición al colocar en el plano/lienzo
 
@@ -205,8 +212,15 @@ class Piece:
         return self.net_polygon().length
 
     # ---- entidades para exportar ----------------------------------------
-    def get_entities(self, *, include_seam: bool = True) -> list[Entity]:
+    def get_entities(self, *, include_seam: bool = True,
+                     debug: bool = False) -> list[Entity]:
         ents: list[Entity] = []
+        # guías de construcción (Bézier de copa): SOLO en modo debug, nunca en el
+        # PDF imprimible. Se dibujan primero para quedar bajo el resto.
+        if debug:
+            for guide in self.debug_guides:
+                if len(guide) >= 2:
+                    ents.append(EPolyline(Layer.GUIA, points=list(guide), closed=False))
         # línea de corte (contorno principal)
         ents.append(EPolyline(Layer.CORTE, points=self.cut_contour(), closed=True))
         # línea de costura (net)

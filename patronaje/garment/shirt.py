@@ -189,6 +189,7 @@ class Shirt:
             net_contour=contour, seam_allowance=p.margen_costura,
             grain=grain, notches=notches, drills=drills,
             construction_lines=[((bh * 0.25, largo), (bh * 0.25, largo - 12.0))],  # abertura
+            debug_guides=list(getattr(s, "cap_guides", [])),  # Bézier de copa (solo debug)
         )
 
     # ------------------------------------------------------------------

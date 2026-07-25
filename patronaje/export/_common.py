@@ -28,12 +28,16 @@ def flip_entity(e: Entity) -> Entity:
     return e
 
 
-def gather_entities(shirt_or_pieces, *, flip: bool = True, include_seam: bool = True):
-    """Devuelve todas las entidades de todas las piezas, ya posicionadas."""
+def gather_entities(shirt_or_pieces, *, flip: bool = True, include_seam: bool = True,
+                    debug: bool = False):
+    """Devuelve todas las entidades de todas las piezas, ya posicionadas.
+
+    ``debug=True`` incluye las guías de construcción (p. ej. la Bézier de la copa);
+    los exportadores imprimibles (PDF) llaman con ``debug=False`` para omitirlas."""
     pieces = getattr(shirt_or_pieces, "pieces", shirt_or_pieces)
     ents: list[Entity] = []
     for pc in pieces:
-        for e in pc.get_entities(include_seam=include_seam):
+        for e in pc.get_entities(include_seam=include_seam, debug=debug):
             ents.append(flip_entity(e) if flip else e)
     return ents
 
